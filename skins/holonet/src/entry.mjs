@@ -5,6 +5,7 @@ import { avatarPicture, openPictureEditor, pastePictures } from "./pictures.mjs"
 import { topicControls } from './topics.mjs';
 import { pendingSends, sendID } from "./optimistic.mjs";
 import { markup } from './template.mjs';
+import { consoleMotion } from './skin-motion.mjs';
 import manifest from './manifest.mjs';
 const mounted = new WeakMap();
 // ---- people words (MEL-529, MEL-525) -------------------------------------
@@ -80,6 +81,7 @@ const setTimeout = (fn, ms) => { const timer = globalThis.setTimeout(() => { tim
 "use strict";
 
 const $ = (id) => root.querySelector("#" + CSS.escape(id));
+const motion=consoleMotion(root);cleanups.push(()=>motion.stop());
 const topicSelections={},topicFresh={};
 const sends = pendingSends(host, () => { if (alive) renderBody(false); });
 const state = { thread: null, data: null, seq: -1, answering: null, lastSeen: {}, presence: {},
@@ -137,7 +139,7 @@ function el(tag, attrs, ...kids) {
 
 // Every operation keeps the host it started with.
 async function api(path, body, host = currentHost) { return host.api(path, body); }
-const topicUI=topicControls(root,{api,announce:text=>announce(text),choose:id=>{if(state.dm){topicSelections[state.dm]=id;topicFresh[state.dm]=false;setDMReply(null);renderDMBody(false);}else if(id!==state.thread)void openThread(id);},fresh:()=>{const id=state.dm||state.thread;topicFresh[id]=true;if(state.dm){topicSelections[id]='';renderDMBody(false);}announce('New topic: your next message starts a separate flow.');$('body').focus();},changed:async()=>{await loadOverview();state.dm?await loadDM(false):await loadThread(false);}});
+const topicUI=topicControls(root,{api,announce:text=>announce(text),choose:async id=>{motion.acquire();if(state.dm){topicSelections[state.dm]=id;topicFresh[state.dm]=false;setDMReply(null);renderDMBody(false);}else if(id!==state.thread)await openThread(id);},fresh:()=>{const id=state.dm||state.thread;topicFresh[id]=true;if(state.dm){topicSelections[id]='';renderDMBody(false);}announce('New topic: your next message starts a separate flow.');$('body').focus();},changed:async()=>{await loadOverview();state.dm?await loadDM(false):await loadThread(false);}});
 cleanups.push(()=>topicUI.stop());
 
 // A time is an RFC 3339 string, or unix seconds (a host's report and its
@@ -2025,6 +2027,7 @@ async function openDM(id) {
   await loadDM(true);
   if (gen !== state.gen) return;
   await loadOverview();
+  if (changed) motion.acquire();
   if (changed) api("/api/refresh", { id }).catch(() => {}); // once per open: receipts the server still holds
 }
 
@@ -2177,7 +2180,6 @@ function dmMsg(m, t, prev) {
         messageReference(m,t),
         (m.deleted || shownText(m)) && bodyOf(m),
         !m.deleted && fileChips(humanGroup(t) && (m.synced_from || m.via) ? {...m,dir:"in"} : m, m.attachments)),
-      reactionsRow(m, t.id),
       held && el("div", { class: "decide" }, el("p", { class: "decide-why" }, m.state_text)),
       m.job_detail && ((m.actions || []).includes("resolve") || m.exec?.state === "needs_human") && el("div", {class:"agent-turn", role:"region", tabindex:"-1", "aria-label":"Your agent says"},
         el("strong", {}, "Your agent couldn’t finish — it needs your answer"), el("p", {class:"agent-detail"}, m.job_detail),
@@ -2187,7 +2189,7 @@ function dmMsg(m, t, prev) {
         m.job_detail && !acts.includes("resolve") && m.exec?.state !== "needs_human" && el("p", {class:"hint"}, m.job_detail),
         el("div", { class: "acts" }, acts.map((a, i) => actionButton(a, m, t, i === 0)))),
       sharedWith.length > 0 && el("p", { class: "shared-note" }, "Shared with " + sharedWith.map((a) => agentName(a).replace(/^Your/, "your")).join(" and ")),
-      el("div", { class: "foot" }, execLine(m, t), !held && !acts.length && (m.delivery||m.state_text) && el("span", {}, m.dir==="out"&&m.delivery?(deliveryText(m)):m.state_text),
+      el("div", { class: "foot" }, reactionsRow(m, t.id), execLine(m, t), !held && !acts.length && (m.delivery||m.state_text) && el("span", {}, m.dir==="out"&&m.delivery?(deliveryText(m)):m.state_text),
         !t.frozen && !dmVisitor(t) && !m.excerpt_pid && !m.deleted && el("button", { type: "button", class: "text-btn", onclick: () => { setDMReply(m); $("body").focus(); } }, "Reply"),
         !t.frozen&&!dmVisitor(t)&&!m.topic&&!m.topic_event&&!m.excerpt_pid&&!m.deleted&&el("button",{type:"button",class:"text-btn",onclick:async()=>{try{await api("/api/topic/create",{conv:t.id,peer:"",id:m.lid||m.id});topicSelections[t.id]=m.lid||m.id;await loadDM(false);}catch(e){announce(e.message);}}},"Make a topic"),
         reminderLine(m),
@@ -3115,7 +3117,7 @@ async function openThread(id, focusId) {
   }
   await loadOverview();
   if (focusId) flash(focusId);
-  if (changed) refreshThread();
+  if (changed) { motion.acquire(); refreshThread(); }
 }
 
 function flash(id) {
@@ -3568,9 +3570,9 @@ function renderMsg(m, byId, prev, t) {
   const parts = [execLine(m, t), waiting && el("span", { class: "waiting" }, waiting), footText && el("span", {}, footText), reminderLine(m), details(m)]
     .filter(Boolean).flatMap((p, i) => i ? [el("span", { class: "sep", "aria-hidden": "true" }, "·"), p] : [p]);
 
-  const col = el("div", { class: "col" }, meta, bubble, reactionsRow(m, ""),
+  const col = el("div", { class: "col" }, meta, bubble,
     m.summary && el("div", { class: "note" }, el("p", { class: "note-label" }, "Summary written on this computer by your responder"), el("p", { class: "body" }, m.summary)),
-    panel, el("div", { class: "foot" }, parts, messageMenu(m, "", bubble)));
+    panel, el("div", { class: "foot" }, reactionsRow(m, ""), parts, messageMenu(m, "", bubble)));
   return el("li", { id: "m-" + m.id, class: "msg " + m.dir + (cont ? " cont" : "") + (needs ? " needs" : "") },
     m.dir === "in" && (cont ? el("span", { class: "avatar sm", "aria-hidden": "true" }) : avatar(m.from, "sm")),
     col);
@@ -3741,7 +3743,7 @@ function dialog({ title, body, ok, run, gate, focus }) {
       if (state.newVersion) updated(state.newVersion);
     }
   };
-  d.showModal();
+  d.showModal(); motion.panel(d);
   (focus || $("dialog-cancel")).focus();
 }
 
@@ -4910,7 +4912,7 @@ function showSettings() {
   toggleReview(false);
   if (state.overview) renderProfile(state.overview);
   settingsTab("profile");
-  $("settings").showModal();
+  $("settings").showModal(); motion.panel($("settings"));
 }
 function setTheme(theme) {
   if (!["system", "light", "dark"].includes(theme)) theme = "system";
@@ -4944,6 +4946,12 @@ function renderInstalledInterfaces() {
 // start wires the page; the relay's page loads this file after the device
 // is ready, when the document has loaded already.
 function start() {
+  on($("crew-toggle"),"click",()=>{const panel=$("crew-drawer");$("crew-drawer-slot").append($("agents"));panel.showModal();motion.panel(panel);});
+  on($("crew-close"),"click",()=>$("crew-drawer").close());
+  const restoreCrew = () => { if (alive && $("crew-slot") && $("agents")) $("crew-slot").append($("agents")); };
+  on($("crew-drawer"),"beforetoggle",event=>{if(event.newState==="closed")restoreCrew();});
+  on($("crew-drawer"),"close",()=>{if(!$("crew-drawer")?.open)restoreCrew();});
+
   $("conversation-details").addEventListener("click", () => {
     const t = state.dmData || state.data;
     if (!t) return;
@@ -5081,6 +5089,7 @@ const ready = start();
 const stop = () => {
   keepDraft();
   if (wsAPI()?.state) workspaceCapture(wsNow(), wsAPI().state(wsNow()));
+  if ($("crew-drawer").open) $("crew-drawer").close();
   alive = false; state.gen++; sends.dispose();
   if (pending.changed === pendingChanged) pending.changed = null;
   if (pending.accepted === pendingAccepted) pending.accepted = null;

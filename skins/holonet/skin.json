@@ -19,6 +19,7 @@
     "topics.mjs",
     "optimistic.mjs",
     "pictures.mjs",
-    "signal.svg"
+    "signal.svg",
+    "skin-motion.mjs"
   ]
 }

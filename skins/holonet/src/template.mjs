@@ -23,9 +23,11 @@ export const markup = `
   <button type="button" id="reload" class="chip" hidden>Reload</button>
 </div>
 
-<div class="workspace">
-<nav class="nav-rail" aria-label="Main navigation">
-  <img class="rail-logo" src="${new URL('./signal.svg', import.meta.url).href}" alt="Holonet" width="32" height="32">
+<div class="console-workspace">
+<header class="bridge-header">
+<div class="console-id"><img class="rail-logo" src="${new URL('./signal.svg', import.meta.url).href}" alt="" width="40" height="40"><div><span class="console-name">HOLONET</span><span class="console-caption">AGENTNET / COMMUNICATIONS</span></div></div>
+<div class="wall-slots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+<nav class="command-nav" aria-label="Main navigation">
   <button id="nav-chats" class="nav-item selected" type="button" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H9l-5 4zM8 8h8M8 12h5"/></svg><span class="nav-label">Chats</span></button>
   <button id="nav-people" class="nav-item" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v2"/></svg><span class="nav-label">People</span></button>
         <div class="review-wrap">
@@ -40,10 +42,11 @@ export const markup = `
         </div>
   <button id="profile-btn" class="nav-item profile-btn" type="button" aria-label="Your profile and settings"><span id="profile-initial" class="profile-initial">A</span><span class="nav-label">You</span></button>
 </nav>
-<div class="view-stack">
-<div class="app">
+</header>
+<div class="console-body">
+<div class="console-layout">
   <aside class="side" aria-label="Conversations">
-    <div class="console-id"><span class="console-name">HOLONET</span><span class="console-caption">AGENTNET · COMMS CONSOLE</span></div>
+    <div class="instrument-label">CHANNEL SELECTOR <span aria-hidden="true">//</span></div>
     <header class="side-head">
       <h1 id="section-title">Chats</h1>
       <div class="side-actions">
@@ -77,28 +80,28 @@ export const markup = `
 
   </aside>
 
-  <main class="conv" id="conv" aria-labelledby="conv-name">
+  <main class="conv transmission-console" id="conv" aria-labelledby="conv-name">
     <header class="conv-head">
       <button type="button" id="back" class="icon-btn back" aria-label="Back to conversations">
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <span id="conv-avatar" class="avatar" aria-hidden="true"></span>
-      <div class="conv-title">
+      <div class="conv-title"><span class="instrument-label">SELECTED CHANNEL</span>
         <button type="button" id="hub-back" class="text-btn hub-back" hidden></button>
         <h1 id="conv-name">Choose a conversation</h1>
         <p id="conv-topic" class="topic"></p>
         <p id="conv-presence" class="presence"></p>
         <p id="typing-line" class="presence" hidden></p>
       </div>
-      <div id="peer-chips" class="peer-chips"></div><button id="conversation-details" class="icon-btn" type="button" aria-label="Conversation details">⋯</button>
+      <div id="peer-chips" class="peer-chips"></div><button id="crew-toggle" class="crew-toggle chip" type="button" aria-haspopup="dialog" aria-controls="crew-drawer">Crew</button><button id="conversation-details" class="icon-btn" type="button" aria-label="Conversation details">Details</button>
     </header>
     <div id="notice" class="notice" role="alert" hidden></div>
-    <section id="agents" class="agents" aria-label="Conversation participants" hidden></section>
     <section id="drive-panel" class="drive-panel" aria-label="Project space" hidden></section>
     <section id="hub" class="hub" aria-labelledby="conv-name" hidden></section>
-    <ol id="timeline" class="timeline" tabindex="-1" aria-label="Messages"></ol>
+    <div class="transmission-port"><div class="port-label"><span>TRANSMISSION DISPLAY</span><span aria-hidden="true">◈</span></div><div class="instrument-sweep" aria-hidden="true"></div><ol id="timeline" class="timeline" tabindex="-1" aria-label="Messages"></ol></div>
 
-    <form id="composer" class="composer" hidden>
+    <form id="composer" class="composer command-dock" hidden>
+      <div class="dock-label instrument-label">OUTGOING / COMMAND DOCK <span aria-hidden="true">▰ ▰ ▰</span></div>
       <div id="target" class="target" aria-live="polite">
         <span id="to-line" class="to-line"><span class="to-label">To</span> <span id="to-name" class="to-name"></span> <span id="to-how" class="to-how"></span></span>
         <div id="agent-target" class="agent-target" hidden></div>
@@ -136,10 +139,14 @@ export const markup = `
       <p id="compose-error" class="error" role="alert"></p>
     </form>
   </main>
+  <aside class="crew-console" aria-label="Crew console"><header><span class="instrument-label">AUDIENCE / CONTEXT</span><h2>Crew</h2></header><div id="crew-slot">    <section id="agents" class="agents" aria-label="Conversation participants" hidden></section>
+</div><p class="crew-empty hint">Conversation participants appear here when available. Details remain in the selected channel.</p><div class="console-vents" aria-hidden="true"></div></aside>
 </div>
 
 </div>
 </div>
+
+<dialog id="crew-drawer" class="settings crew-drawer" aria-modal="true" aria-labelledby="crew-title"><header class="settings-head"><h2 id="crew-title">Conversation crew</h2><button id="crew-close" class="icon-btn" type="button" aria-label="Close crew">×</button></header><div id="crew-drawer-slot"></div></dialog>
 
 <div id="live" class="sr-only" aria-live="polite"></div>
 

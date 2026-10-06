@@ -4,35 +4,6 @@
 @import url("./drivespace.css");
 /* AgentNet messenger. Calm surfaces, one accent for you, amber only for
    what needs you. No external fonts or images: CSP allows only this origin. */
-.holonet-root {
-  --canvas: #fafaf9; --surface: #ffffff; --sunken: #eef0f3; --hover: #f1f2f5; --line: #e3e5e9;
-  --text: #20262d; --muted: #5d6370;
-  --accent: #147d73; --accent-ink: #ffffff; --accent-soft: #e9f4f1; --accent-text: #126a62;
-  --theirs: #eceef2;
-  --attn: #a14a07; --attn-soft: #fdf1e1; --attn-line: #f0c48a;
-  --danger: #b42318; --danger-soft: #fdecea;
-  --future: #6d28d9; --future-soft: #f2ecfe;
-  --focus: #147d73;
-  --shadow: 0 1px 2px rgb(16 24 40 / .06), 0 8px 24px rgb(16 24 40 / .08);
-  --r-bubble: 8px; --r-card: 8px;
-  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  color: var(--text); background: var(--canvas);
-  -webkit-font-smoothing: antialiased;
-}
-@media (prefers-color-scheme: dark) {
-  .holonet-root:not([data-theme="light"]) {
-    --canvas: #0f1115; --surface: #161920; --sunken: #1d212a; --hover: #1b1f27; --line: #272b35;
-    --text: #e8eaef; --muted: #a2a8b4;
-    --accent: #329e92; --accent-ink: #ffffff; --accent-soft: #173831; --accent-text: #8bddca;
-    --theirs: #20242d;
-    --attn: #f4b35e; --attn-soft: #2e2211; --attn-line: #6b4a1c;
-    --danger: #f4978e; --danger-soft: #361a18;
-    --future: #c9b8ff; --future-soft: #261f3b;
-    --focus: #8bddca;
-    --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 10px 30px rgb(0 0 0 / .45);
-  }
-}
-
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 .holonet-root { height: 100%; margin: 0; }
@@ -561,17 +532,7 @@ input[type="datetime-local"] { font: inherit; padding: 6px 10px; border: 1px sol
 .contact-modes button[aria-pressed="true"] { background: var(--sunken); color: var(--text); font-weight: 600; }
 .more-contacts { margin: 12px; }
 
-.holonet-root[data-theme="dark"] {
-    --canvas: #0f1115; --surface: #161920; --sunken: #1d212a; --hover: #1b1f27; --line: #272b35;
-    --text: #e8eaef; --muted: #a2a8b4;
-    --accent: #329e92; --accent-ink: #ffffff; --accent-soft: #173831; --accent-text: #8bddca;
-    --theirs: #20242d;
-    --attn: #f4b35e; --attn-soft: #2e2211; --attn-line: #6b4a1c;
-    --danger: #f4978e; --danger-soft: #361a18;
-    --future: #c9b8ff; --future-soft: #261f3b;
-    --focus: #8bddca;
-    --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 10px 30px rgb(0 0 0 / .45);
-}
+
 
 /* Default skin: quiet navigation, a focused conversation, settings on demand. */
 .workspace { flex: 1; min-height: 0; display: flex; }
@@ -782,87 +743,49 @@ button.reaction { cursor: pointer; }
 .avatar.profile-picture > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 .profile-picture-image { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 
-/* Holonet · original spacecraft-console direction, no franchise assets.
-   These root tokens override the retained reference layout in every theme. */
-.holonet-root, .holonet-root[data-theme="dark"], .holonet-root:not([data-theme="light"]) {
-  --canvas:#0c131b; --surface:#141e28; --sunken:#1b2935; --hover:#233645; --line:#3b5261;
-  --text:#edf4f7; --muted:#b5c4cd;
-  --accent:#edba62; --accent-ink:#171e25; --accent-soft:#342b1e; --accent-text:#f2c978;
-  --theirs:#1a2b37; --signal:#75def2;
-  --attn:#f4c575; --attn-soft:#30271b; --attn-line:#826638;
-  --danger:#ffada5; --danger-soft:#3b2427;
-  --future:#a9c5ff; --future-soft:#202d47;
-  --focus:#75def2; --shadow:0 12px 36px rgb(0 0 0 / .4);
-  --r-bubble:4px; --r-card:5px; color-scheme:dark;
+/* Original cockpit composition: structural light slots, bridge navigation,
+   transmission port and instrument dock. No franchise imagery or fake telemetry. */
+.holonet-root {
+ --canvas:#15191b;--surface:#252b2e;--sunken:#10191c;--hover:#353e42;--line:#576165;
+ --text:#f3f0e7;--muted:#b9c4c4;--accent:#f4bf68;--accent-ink:#211a10;--accent-soft:#413421;--accent-text:#f7c778;
+ --theirs:#1b2a30;--signal:#e5eadb;--attn:#f7c778;--attn-soft:#413421;--attn-line:#af8749;
+ --danger:#ffaea5;--danger-soft:#46241f;--future:#d4ccff;--future-soft:#302c45;--focus:#fff0c3;
+ --chassis:#a7aea7;--chassis-ink:#19272a;--port:#0b161b;--r-bubble:0;--r-card:2px;
+ color-scheme:dark;--shadow:0 12px 36px #0008;font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;
+ padding:0;min-width:0;overflow:hidden;background:var(--canvas);color:var(--text);
 }
-.holonet-root[data-theme="light"] {
-  --canvas:#e9eeed; --surface:#f9fbf8; --sunken:#dfe7e5; --hover:#d1deda; --line:#80968f;
-  --text:#182b2d; --muted:#445d5b;
-  --accent:#725005; --accent-ink:#fff8e5; --accent-soft:#f5e7c8; --accent-text:#684800;
-  --theirs:#dfe8e5; --signal:#006572;
-  --attn:#715004; --attn-soft:#f5e7c8; --attn-line:#a27a28;
-  --danger:#9d291f; --danger-soft:#fae2dc;
-  --future:#354d89; --future-soft:#e2e8f6;
-  --focus:#006572; --shadow:0 12px 36px rgb(21 42 34 / .15); color-scheme:light;
-}
-.holonet-root {font-size:15px; padding:0; min-width:0; overflow:hidden;}
-.holonet-root.mounting {visibility:hidden;}
-.holonet-root .proposal-text {white-space:pre-wrap;overflow-wrap:anywhere;}
-.holonet-root .wrap-anywhere {overflow-wrap:anywhere;}
-.console-id {display:grid; gap:6px; padding:24px 20px 16px; border-bottom:1px solid var(--line);}
-.console-name {font:700 25px/1.1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; letter-spacing:.17em; color:var(--accent-text);}
-.console-caption {font:500 10px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.09em;color:var(--muted);}
-.holonet-root .app {grid-template-columns:340px minmax(0,1fr);}
-.holonet-root .nav-rail {width:80px;background:var(--canvas);}
-.holonet-root .rail-logo {width:38px;height:38px;margin:0 0 20px;}
-.holonet-root .nav-item,.holonet-root .nav-rail .review-btn {border-radius:4px; min-height:58px;}
-.holonet-root .nav-item.selected,.holonet-root .nav-rail .review-btn.selected {box-shadow:inset 2px 0 var(--accent);}
-.holonet-root .nav-label {font:600 11px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:0;}
-.holonet-root .side-head h1 {font-size:20px;letter-spacing:0;}
-.holonet-root .search input {border-radius:4px;border:1px solid var(--line);min-height:44px;}
-.holonet-root .contact-modes button {min-height:40px;border-radius:4px;}
-.holonet-root .contact-item .conv-item {border-radius:4px; padding:13px 12px;}
-.holonet-root .conv-item[aria-current="true"] {background:var(--accent-soft);box-shadow:inset 2px 0 var(--accent);}
-.holonet-root .conv-item .conv-name {font-size:14px;}
-.holonet-root .conv-sub,.holonet-root .conv-time {font-size:12px;}
-.holonet-root .conv-head {min-height:80px;box-shadow:inset 0 2px var(--line);}
-.holonet-root .conv-title h1 {font-size:18px;}
-.holonet-root .presence {color:var(--signal);}
-.holonet-root .timeline {background-image:radial-gradient(circle at 12px 12px,color-mix(in srgb,var(--line) 36%,transparent) 1px,transparent 1px);background-size:44px 44px;}
-.holonet-root .bubble {border:1px solid var(--line);}
-.holonet-root .msg.out .bubble {background:var(--accent-soft);color:var(--text);border-color:var(--attn-line);}
-.holonet-root .msg.out .bubble a,.holonet-root .msg.out .edited,.holonet-root .msg.out .tombstone {color:var(--accent-text);}
-.holonet-root .composer {background:var(--surface);border-top:1px solid var(--line);}
-.holonet-root .compose-box {border-radius:5px;border-color:var(--line);background:var(--canvas);}
-.holonet-root .send {border-radius:4px;min-height:44px;background:var(--accent);color:var(--accent-ink);}
-.holonet-root .btn,.holonet-root .chip,.holonet-root .peer-chip,.holonet-root .new-btn,.holonet-root .topics-bar button,.holonet-root .topics-list button {border-radius:4px;}
-.holonet-root .avatar {border-radius:6px;}
-.holonet-root .settings,.holonet-root #dialog {border:1px solid var(--line);border-radius:6px;max-height:calc(var(--an-viewport-h,100dvh) - 24px);}
-.holonet-root .settings-head {border-top:3px solid var(--accent);}
-.holonet-root .settings-head h2 {letter-spacing:0;}
-.holonet-root .settings-tabs button {border-radius:3px;}
-.holonet-root .settings-panel .hint {line-height:1.6;}
-.holonet-root .icon-btn {min-width:44px;min-height:44px;}
-.holonet-root .topic,.holonet-root .report-excerpt,.holonet-root .balloon-text {overflow-wrap:anywhere;}
-.holonet-root .drive-panel {max-height:46%;}
-.holonet-root :focus-visible {outline:2px solid var(--focus);outline-offset:3px;}
-@media(min-width:761px) and (max-width:1050px) {.holonet-root .app {grid-template-columns:290px minmax(0,1fr);} .holonet-root .timeline {padding:20px;}}
-@media(max-width:760px) {
-  .console-id {padding:18px 20px 14px;} .console-name {font-size:23px;}
-  .holonet-root .app {display:grid;grid-template-columns:minmax(0,1fr);}
-  .holonet-root .nav-rail {width:100%;}
-  .holonet-root .nav-item.selected,.holonet-root .nav-rail .review-btn.selected {box-shadow:inset 0 -2px var(--accent);}
-  .holonet-root .conv-head {min-height:70px;}
-  .holonet-root .conv-title h1 {font-size:16px;}
-  .holonet-root .timeline {padding:16px 12px;background-size:36px 36px;}
-  .holonet-root .settings {width:calc(100% - 20px);}
-  .holonet-root .settings-tabs {gap:3px;} .holonet-root .settings-tabs button {padding:8px;}
-  .holonet-root .composer {padding-bottom:max(10px,env(safe-area-inset-bottom));}
-}
-@media(prefers-reduced-motion:reduce) {.holonet-root *,.holonet-root *::before,.holonet-root *::after {animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
+.holonet-root[data-theme=light] {--canvas:#a6afaa;--surface:#e5e8df;--sunken:#cbd2cb;--hover:#d8ded4;--line:#778781;--text:#182b2d;--muted:#3f5a57;--accent:#73500a;--accent-ink:#fff8e8;--accent-soft:#ede0bb;--accent-text:#6a4800;--theirs:#d1ddd6;--signal:#35443e;--attn:#705006;--attn-soft:#f1dfb5;--attn-line:#98702a;--danger:#96291e;--danger-soft:#f5dbd2;--future:#414579;--future-soft:#dddfee;--focus:#73500a;--chassis:#5f6b64;--chassis-ink:#f3f1e7;--port:#eef0e5;color-scheme:light;--shadow:0 12px 36px #23342c44;}
+.holonet-root.mounting{visibility:hidden}.proposal-text{white-space:pre-wrap;overflow-wrap:anywhere}.wrap-anywhere{overflow-wrap:anywhere}
+.console-workspace{flex:1;min-height:0;display:flex;flex-direction:column;position:relative;padding:14px;background:repeating-linear-gradient(90deg,transparent 0 36px,#ffffff04 36px 38px),var(--canvas)}
+.bridge-header{flex:none;display:grid;grid-template-columns:300px 1fr auto;align-items:center;gap:24px;padding:10px 20px 12px;border-top:2px solid var(--chassis);border-bottom:6px double var(--chassis);background:var(--surface);position:relative}
+.console-id{display:flex;align-items:center;gap:14px}.console-id>div{display:grid;gap:4px}.rail-logo{width:40px;height:40px;margin:0;padding:6px;border:1px solid var(--line);border-radius:50%}.console-name{font:800 25px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.15em;color:var(--text)}.console-caption,.instrument-label,.port-label,.topic-label{font:600 10px/1.4 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.12em;color:var(--muted)}
+.wall-slots{display:flex;gap:9px;justify-content:center}.wall-slots i{display:block;width:13px;height:32px;border-radius:9px;background:#ee8b74;box-shadow:0 0 10px #f55b3744;border:3px solid #444e4d}.wall-slots i:nth-child(2n){height:22px;margin-top:5px}
+.command-nav{display:flex;gap:8px;align-items:center}.command-nav .nav-item,.command-nav .review-btn{display:flex;flex-direction:row;gap:8px;align-items:center;justify-content:center;width:auto;min-height:46px;padding:10px 12px;border:1px solid var(--line);border-radius:2px;background:var(--canvas);color:var(--muted);box-shadow:inset 0 -4px #0004;position:relative}.command-nav svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5}.command-nav .review-wrap{flex:none}.command-nav .nav-label{font:700 11px/1 ui-monospace,monospace;text-transform:uppercase;letter-spacing:.05em}.command-nav .selected{color:var(--accent-ink);background:var(--accent);border-color:var(--accent);box-shadow:inset 0 -4px #0004,0 0 12px #eaa94022}.command-nav .profile-btn{margin:0}.profile-initial{width:24px;height:24px;border-radius:2px;background:var(--accent-soft);color:var(--accent-text)}.review-counts{display:flex}.command-nav .count{font-size:10px;min-width:18px;padding:0 3px}
+.console-body{flex:1;min-height:0;display:flex}.console-layout{flex:1;min-height:0;min-width:0;display:grid;grid-template-columns:260px minmax(0,1fr) 224px;gap:14px;padding-top:14px}
+.side{border:1px solid var(--line);border-top:4px solid var(--chassis);background:var(--surface);box-shadow:inset 0 0 0 4px var(--canvas);padding-top:12px}.side>.instrument-label{display:flex;justify-content:space-between;padding:0 18px;color:var(--signal)}.side-head{padding:10px 16px}.side-head h1{font:700 23px/1.2 ui-monospace,monospace;letter-spacing:-.03em}.search{padding:0 14px 10px}.search input{border-radius:0;background:var(--sunken);border:1px solid var(--line);min-height:40px;font-size:12px}.contact-modes button{border-radius:0}.contact-item .conv-item{border-radius:0;padding:12px 8px;border-bottom:1px solid color-mix(in srgb,var(--line) 50%,transparent)}.conv-item[aria-current=true]{background:var(--accent-soft);box-shadow:inset 4px 0 var(--accent)}.conv-item .conv-name{font-size:14px}.conv-item .avatar{width:30px;height:30px;border-radius:0}.conv-sub,.conv-time{font-size:11px}.who-agent{font-size:11px}.conv-list{padding:0 8px 12px}.person-mark{border-radius:0!important}.contact-item.open{border-radius:0}
+.transmission-console{min-width:0;min-height:0;background:var(--canvas);padding:0 2px}.conv-head{padding:4px 8px 12px;background:none;border:0;min-height:74px;gap:10px}.conv-title{flex:1}.conv-title h1{font-size:23px;letter-spacing:-.02em}.conv-title .instrument-label{display:block;color:var(--signal);margin-bottom:3px}.conv-head .topic{display:none}.conv-head .presence{font:11px/1.4 ui-monospace,monospace;color:var(--muted)}.conv-head .avatar{width:38px;height:38px;border-radius:4px 15px 4px 4px;background:var(--surface);color:var(--signal);border:1px solid var(--line)}.conv-head>.icon-btn{width:auto;padding:0 10px;font-size:11px;text-transform:uppercase;letter-spacing:.08em}.conv-head .peer-chips{display:none}
+.topics-bar{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-bottom:3px solid var(--chassis);margin-bottom:12px;position:relative}.topic-label{flex-basis:100%;color:var(--signal);font-size:9px}.topics-bar button{border-radius:0;min-height:34px;background:var(--canvas);padding:5px 10px;border-color:var(--line);font:12px/1.3 ui-monospace,monospace}.topics-bar button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);box-shadow:inset 0 -3px #0003}
+.transmission-port{flex:1;min-height:0;position:relative;display:flex;flex-direction:column;background:var(--port);border:7px solid var(--chassis);border-radius:32px 10px 24px 8px;box-shadow:0 0 0 1px #000,inset 0 0 0 2px #0008;overflow:hidden}.transmission-port:has(#timeline[hidden]){display:none}.port-label{display:flex;justify-content:space-between;flex:none;padding:10px 20px;color:var(--signal);border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--port) 88%,var(--signal));font-size:9px}.instrument-sweep{pointer-events:none;position:absolute;z-index:3;inset:32px auto 0 0;width:22%;opacity:0;background:repeating-linear-gradient(0deg,transparent 0 8px,color-mix(in srgb,var(--accent) 7%,transparent) 8px 9px),linear-gradient(90deg,transparent,color-mix(in srgb,var(--accent) 33%,transparent),transparent);border-inline-end:1px solid var(--signal);transform:translateX(-120%)}
+.timeline{padding:8px 20px 24px;min-height:0;background:none;gap:0}.msg,.msg.out{display:grid;grid-template-columns:28px minmax(0,1fr);width:100%;max-width:none;align-self:stretch;justify-items:stretch;gap:10px;padding:14px 0;margin:0;border-bottom:1px solid color-mix(in srgb,var(--line) 55%,transparent)}.msg.out::before{content:'TX';font:700 10px/1.5 ui-monospace,monospace;color:var(--accent-text);border:1px solid var(--attn-line);height:24px;display:grid;place-items:center;margin-top:1px}.msg>.avatar{width:26px;height:26px;font-size:11px;border-radius:0;margin-top:0}.msg.cont{margin:0}.col,.msg.out .col{justify-items:stretch;gap:7px}.meta{padding:0;font:11px/1.4 ui-monospace,monospace;letter-spacing:.02em}.meta .who{font-size:11px;text-transform:uppercase;color:var(--signal)}.meta time{margin-left:auto;font-size:10px}.bubble,.msg.out .bubble{background:none;color:var(--text);padding:0;border:0;border-radius:0!important;max-width:100%;font:15px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif}.msg.out .bubble a,.msg.out .edited,.msg.out .tombstone{color:var(--accent-text)}.msg .foot,.msg.out .foot{justify-content:flex-start;font-size:12px;gap:8px}.msg .acts button{font-size:13px;padding:6px;min-height:44px}.msg.needs{border-left:3px solid var(--attn);padding-left:10px}.msg.needs .bubble{box-shadow:none}.msg.flash{background:var(--accent-soft)}
+.command-dock{flex:none;padding:12px 0 0;background:none;border:0}.dock-label{display:flex;justify-content:space-between;color:var(--chassis);padding:0 4px 5px}.compose-box{border:3px solid var(--chassis);border-radius:3px;background:var(--sunken);box-shadow:inset 0 0 0 2px var(--canvas);padding:10px 12px}.command-dock .target{font:11px/1.4 ui-monospace,monospace;padding:0 4px 7px}.command-dock textarea{font:14px/1.5 ui-monospace,monospace;min-height:38px}.compose-bar{gap:8px}.command-dock .send{min-height:32px;border-radius:2px;background:var(--accent);color:var(--accent-ink);font:700 12px/1.2 ui-monospace,monospace;border:1px solid var(--accent-text);box-shadow:inset 0 -4px #0003}.compose-foot{padding:6px 4px 0;font-size:10px}.command-dock .hint{font-size:11px}
+.crew-console{min-width:0;min-height:0;display:flex;flex-direction:column;border:1px solid var(--line);border-bottom:5px solid var(--chassis);background:var(--surface);padding:18px 14px;overflow:auto}.crew-console>header{border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:12px}.crew-console h2{font:700 25px/1.3 ui-monospace,monospace;text-transform:uppercase;letter-spacing:.12em}.crew-console #agents{padding:0;display:flex;flex-direction:column;max-height:none;overflow:visible;border:0;background:none;gap:12px}.crew-console #agents .participant-list{display:flex;flex-direction:column;align-items:flex-start;gap:12px}.crew-console .participant{display:flex;gap:8px;align-items:center}.crew-console .avatar{border-radius:0;width:32px;height:32px}.crew-console .crew-empty{font-size:12px;line-height:1.7}.crew-console:has(#agents:not([hidden])) .crew-empty{display:none}.console-vents{margin-top:auto;min-height:70px;border:4px solid var(--canvas);background:repeating-linear-gradient(0deg,var(--canvas) 0 5px,var(--chassis) 5px 7px);border-radius:14px 14px 0 0;opacity:.6}.crew-toggle{font:11px/1.3 ui-monospace,monospace;border-radius:0;padding:8px;min-height:36px}.crew-drawer #agents{padding:20px;margin:0;background:none;max-height:none}.crew-drawer #crew-drawer-slot{overflow:auto;max-height:65vh}
+.settings,#dialog,.topics-list{border:8px solid var(--chassis);border-radius:0;background:var(--surface);box-shadow:var(--shadow);max-height:calc(var(--an-viewport-h,100dvh) - 28px)}.settings-head{background:var(--canvas);padding:18px 20px;border-bottom:3px double var(--line)}.settings-head h2{font:700 19px/1.3 ui-monospace,monospace;letter-spacing:0}.settings-tabs{padding:12px 16px;gap:4px}.settings-tabs button{border:1px solid var(--line);border-radius:0;background:var(--canvas);font:11px/1.3 ui-monospace,monospace}.settings-panel{padding:20px}.settings-panel .hint{line-height:1.7}.btn,.chip,.peer-chip,.new-btn,.topics-list button{border-radius:1px}.icon-btn{border-radius:0;min-width:40px;min-height:40px}.file,.msg.out .file{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:0}.file-icon,.msg.out .file-icon{background:var(--accent-soft);color:var(--accent-text)}.msg.out .file-size,.msg.out .file-note,.msg.out .file-state{color:var(--muted)}.msg.out .file .text-btn{color:var(--accent-text)}
+@media(prefers-reduced-motion:no-preference){.command-nav button,.command-dock .send,.topics-bar button{transition:transform 100ms ease,box-shadow 100ms ease}.command-nav button:active,.command-dock .send:active,.topics-bar button:active{transform:translateY(2px);box-shadow:inset 0 -1px #0004}}
+@media(max-width:1150px){.console-layout{grid-template-columns:240px minmax(0,1fr)}.crew-console{display:none}.bridge-header{grid-template-columns:260px 1fr;gap:12px}.wall-slots{display:none}.command-nav{justify-content:flex-end}.console-name{font-size:25px}}
+@media(max-width:760px){.console-workspace{padding:5px}.bridge-header{display:flex;flex-wrap:wrap;gap:8px;padding:8px 8px 10px;border-bottom-width:4px}.console-id{gap:8px;flex:1}.console-id .rail-logo{width:30px;height:30px;padding:3px}.console-name{font-size:19px;letter-spacing:.18em}.console-caption{font-size:8px;letter-spacing:.03em}.command-nav{width:100%;justify-content:stretch;gap:4px}.command-nav .nav-item,.command-nav .review-btn{flex:1;min-height:44px;padding:6px 8px;gap:5px}.command-nav .review-wrap{flex:1}.command-nav .review-btn{width:100%}.command-nav .nav-label{font-size:11px}.command-nav svg{width:14px;height:14px}.command-nav .profile-initial{width:18px;height:18px;font-size:10px}.console-layout{display:flex;flex-direction:column;padding-top:8px;gap:0}.side{flex:1;min-height:0}.holonet-root.show-conv .side{display:none}.transmission-console{display:none;flex:1}.holonet-root.show-conv .transmission-console{display:flex}.conv-head{min-height:60px;padding:0 4px 8px;gap:6px;flex-wrap:nowrap}.conv-title h1{font-size:15px;white-space:normal;line-height:1.2}.conv-title .instrument-label{font-size:8px}.conv-head .avatar{display:none}.conv-head .presence{font-size:9px}.conv-head>.icon-btn{min-width:44px;padding:0 5px;font-size:11px;min-height:44px}.conv-head .back{display:grid;margin:0;width:44px}.crew-toggle{font-size:12px;min-height:44px;padding:5px}.topics-bar{padding:6px;gap:4px;margin-bottom:8px}.topics-bar .topic-label{display:none}.topics-bar button{min-height:44px;font-size:12px;padding:4px 6px;max-width:116px}.transmission-port{border-width:4px;border-radius:18px 18px 4px 4px}.port-label{padding:6px 10px;font-size:8px}.timeline{padding:3px 10px 12px}.msg,.msg.out{grid-template-columns:22px minmax(0,1fr);gap:7px;padding:10px 0}.bubble,.msg.out .bubble{font-size:15px;line-height:1.6}.msg.out::before{font-size:8px;height:20px}.msg>.avatar{width:20px;height:20px}.msg .foot,.msg .acts button{font-size:12px}.meta,.meta .who{font-size:9px}.meta time{font-size:8px}.command-dock{padding-top:7px}.dock-label{display:none}.command-dock .target{font-size:12px;padding-bottom:4px}.compose-box{padding:7px 8px;border-width:2px}.command-dock textarea{font-size:15px;min-height:30px}.command-dock .send{min-height:44px;font-size:12px}.compose-foot{display:none}.command-dock .icon-btn{min-width:44px;min-height:44px;width:44px;height:44px}.settings{width:calc(100% - 16px);border-width:5px}.settings-tabs{flex-wrap:wrap;padding:10px}.settings-panel{padding:16px}.settings-head{padding:14px}.settings-head h2{font-size:16px}.instrument-sweep{inset-block-start:24px}}
+@media(prefers-reduced-motion:reduce){.holonet-root *,.holonet-root *::before,.holonet-root *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
-/* Files use the same readable console surfaces in either direction. */
-.holonet-root .file, .holonet-root .msg.out .file {background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:5px;}
-.holonet-root .file-icon {background:var(--accent-soft);color:var(--accent-text);}
-.holonet-root .msg.out .file-size,.holonet-root .msg.out .file-note,.holonet-root .msg.out .file-state {color:var(--muted);}
-.holonet-root .msg.out .file .text-btn {color:var(--accent-text);}
+/* Split panel shutters are decorative and never intercept controls or focus. */
+.panel-shutter{pointer-events:none;position:absolute;inset-block:0;width:50%;z-index:20;background:repeating-linear-gradient(0deg,transparent 0 28px,#0003 28px 30px),var(--chassis);border:3px solid var(--canvas);box-shadow:inset 0 0 0 1px var(--line)}
+.panel-shutter-left{inset-inline-start:0;border-inline-end:4px solid var(--accent)}.panel-shutter-right{inset-inline-end:0;border-inline-start:4px solid var(--accent)}
+
+/* Message tools share one readable control row rather than two tiny rows. */
+.msg .foot{align-items:center}.msg .foot .reactions{margin:0}.msg .foot .text-btn,.msg .foot summary{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;padding:4px 7px}.msg .foot .react-pick>summary{width:44px;height:44px}.msg .foot .msg-menu>summary{font-size:20px}.msg .foot details.tech[open]{flex-basis:100%}.msg .foot .reaction{min-height:44px}.crew-console .invite-assistant{min-height:44px;text-align:left}
+
+/* No empty audience instrumentation: device threads retain their Details path. */
+.console-layout:has(.crew-console #agents[hidden]),.console-layout:has(.crew-console #crew-slot:empty){grid-template-columns:260px minmax(0,1fr)}
+.crew-console:has(#agents[hidden]),.crew-console:has(#crew-slot:empty){display:none}.holonet-root:has(#agents[hidden]) #crew-toggle{display:none}
+@media(max-width:1150px) and (min-width:761px){.console-layout:has(.crew-console #agents[hidden]),.console-layout:has(.crew-console #crew-slot:empty){grid-template-columns:240px minmax(0,1fr)}}
+
+/* Short/keyboard-height phones prioritize transmission text over instrument decoration. */
+@media(max-width:760px) and (max-height:600px){.console-id{display:none}.bridge-header{padding:4px;gap:0}.console-layout{padding-top:4px}.conv-title .instrument-label{display:none}.conv-head{min-height:48px;padding-bottom:4px}.topics-bar{padding:4px;margin-bottom:4px}.port-label{padding:4px 8px}}

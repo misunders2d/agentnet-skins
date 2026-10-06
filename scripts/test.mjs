@@ -1,4 +1,4 @@
-import fs from 'node:fs';import path from 'node:path';import os from 'node:os';import {spawnSync} from 'node:child_process';import {createRequire} from 'node:module';import {root,listSkins,fixtureSkinId} from './lib.mjs';
+import fs from 'node:fs';import path from 'node:path';import os from 'node:os';import {spawnSync} from 'node:child_process';import {browserEnvironment} from './browser.mjs';import {root,listSkins,fixtureSkinId} from './lib.mjs';
 const pin=JSON.parse(fs.readFileSync(path.join(root,'upstream.json'))),cache=path.join(root,'.cache'),up=path.join(cache,'upstream');fs.mkdirSync(cache,{recursive:true,mode:0o700});
 function run(cmd,args,opts={}){const x=spawnSync(cmd,args,{cwd:root,stdio:'inherit',...opts});if(x.status!==0)throw Error(cmd+' failed ('+x.status+')');return x;}
 if(!fs.existsSync(path.join(up,'.agentnet-commit'))){
@@ -20,8 +20,8 @@ const scaffold=path.join(evidence,'scaffold');fs.mkdirSync(scaffold);fs.cpSync(p
 const ids=[...listSkins(),scaffoldId];
 const wrapper=path.join(evidence,'agentnet-fixture');
 fs.writeFileSync(wrapper,`#!/bin/sh\nset -eu\ntarget=""\nif [ "$1" = "--home" ] && [ "$3" = "daemon" ]; then target="$2/skins"; fi\nif [ "$1" = "hub" ] && [ "$2" = "serve" ] && [ "$3" = "--data" ]; then target="$4/skins"; fi\nif [ -n "$target" ]; then\n mkdir -p "$target"\n chmod 700 "$target"\n cp -R "${path.join(root,'dist')}/." "$target/"\n rm -f "$target/"*.SHA256SUMS\n chmod -R go-rwx "$target"\nfi\nexec "${bin}" "$@"\n`,{mode:0o700});
-const require=createRequire(import.meta.url),playwright=process.env.AGENTNET_PLAYWRIGHT||require.resolve('playwright');
-const env={...process.env,AGENTNET_UPSTREAM:up,AGENTNET_SKIN_IDS:JSON.stringify(ids),AGENTNET_PLAYWRIGHT:playwright,AGENTNET_COMPANY_BINARY:wrapper,AGENTNET_COMPANY_WORLD:world,AGENTNET_SKIN_WORLD:world,AGENTNET_COMPANY_GO:go,AGENTNET_COMPANY_SEED:'1',AGENTNET_TEST_ROOT:root,AGENTNET_SKINS_EVIDENCE:evidence,AGENTNET_COMPANY_RUN:'node "$AGENTNET_TEST_ROOT/scripts/world-tests.mjs"'};
+const browserEnv=browserEnvironment();
+const env={...process.env,...browserEnv,AGENTNET_UPSTREAM:up,AGENTNET_SKIN_IDS:JSON.stringify(ids),AGENTNET_COMPANY_BINARY:wrapper,AGENTNET_COMPANY_WORLD:world,AGENTNET_SKIN_WORLD:world,AGENTNET_COMPANY_GO:go,AGENTNET_COMPANY_SEED:'1',AGENTNET_TEST_ROOT:root,AGENTNET_SKINS_EVIDENCE:evidence,AGENTNET_COMPANY_RUN:'node "$AGENTNET_TEST_ROOT/scripts/world-tests.mjs"'};
 console.log('Pinned upstream: '+pin.version+' '+pin.commit);console.log('Private evidence: '+evidence);
 try{run('bash',[path.join(up,'internal/ui/testdata/company_world.sh')],{env});console.log('PASS all skin packages: '+ids.join(', '));}
 finally{

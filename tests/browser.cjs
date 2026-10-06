@@ -1,0 +1,51 @@
+// Production AgentNet loader + native provider. Disposable seeded company only.
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {chromium}=require(process.env.AGENTNET_PLAYWRIGHT||'playwright');
+const pkg=process.env.AGENTNET_SKIN_PACKAGE,m=JSON.parse(fs.readFileSync(path.join(pkg,'skin.json'))),world=process.env.AGENTNET_SKIN_WORLD,evidence=process.env.AGENTNET_SKINS_EVIDENCE;
+const urls=JSON.parse(fs.readFileSync(path.join(world,'urls.json'))),seed=JSON.parse(fs.readFileSync(path.join(world,'seed.json'))),origin=new URL(urls.sergey.page).origin;
+const result={skin:m.id,pass:false,checks:[],screenshots:[],limitations:['Viewport emulation, not physical phones or OS keyboard','No live Google account, real model or remote deployment','Scaffold-family interaction adapter, not arbitrary skin certification']};
+let browser,page;const errors=[];
+(async()=>{
+ browser=await chromium.launch({headless:true,executablePath:process.env.AGENTNET_CHROMIUM||undefined});
+ const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
+ const shot=async(name)=>{const f=path.join(evidence,'screenshots',m.id+'-'+name+'.png');await page.screenshot({path:f});result.screenshots.push(f);};
+ const mounted=()=>page.locator('.holonet-root').waitFor();
+ async function list(){if(await page.locator('#back').isVisible())await page.locator('#back').click();await page.locator('#nav-chats').click();await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().waitFor();}
+ async function thread(){await list();await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().click();await page.locator('#conv-name').filter({hasText:'Vitalii'}).waitFor();await page.locator('#composer').waitFor();}
+ await page.goto(urls.sergey.page);await page.goto(origin+'/?skin='+m.id);
+ await page.getByRole('button',{name:'Use this skin',exact:true}).waitFor();assert.equal(await page.locator('.holonet-root').count(),0,'Untrusted code must not mount');await shot('trust');await page.getByRole('button',{name:'Use this skin',exact:true}).click();await mounted();
+ result.checks.push('Installed package is listed by production catalog; exact-digest trust required before mount');
+ for(const width of [1440,390])for(const theme of ['dark','light']){
+  const tag=width+'-'+theme;await page.setViewportSize({width,height:width===390?844:1000});await page.emulateMedia({colorScheme:theme,reducedMotion:'reduce'});
+  await list();await page.locator('#profile-btn').click();await page.locator('#settings-tab-appearance').click();await page.locator('#theme-choice [data-theme="'+theme+'"]').click();await shot(tag+'-appearance');
+  const contrast=await page.locator('.holonet-root').evaluate(root=>{
+   const c=getComputedStyle(root),rgb=v=>{const x=document.createElement('span');x.style.color=v;root.append(x);const s=getComputedStyle(x).color;x.remove();return s.match(/[\d.]+/g).slice(0,3).map(Number);};
+   const lum=a=>a.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);
+   const ratio=(a,b)=>{const x=lum(rgb(c.getPropertyValue(a))),y=lum(rgb(c.getPropertyValue(b)));return(Math.max(x,y)+.05)/(Math.min(x,y)+.05);};
+   return {text:ratio('--text','--surface'),muted:ratio('--muted','--surface'),signal:ratio('--signal','--surface'),action:ratio('--accent-ink','--accent'),focus:ratio('--focus','--surface')};
+  });for(const[k,v]of Object.entries(contrast))assert(v>=(k==='focus'?3:4.5),tag+' '+k+' contrast '+v);
+  for(const section of ['profile','notifications','device','storage']){await page.locator('#settings-tab-'+section).click();await page.locator('#settings-'+section).waitFor();await shot(tag+'-settings-'+section);}
+  // Browser-native dialog stays within the owned shadow root and keeps focus.
+  for(const key of ['Tab','Tab','Shift+Tab','Shift+Tab']){await page.keyboard.press(key);assert(await page.locator('#settings').evaluate(d=>d.contains(d.getRootNode().activeElement)),'Settings focus escaped');}
+  await page.locator('#settings-close').click();await list();await shot(tag+'-chats');
+  for(const name of ['Vitalii','Anna','Bohdan'])assert(await page.locator('#conv-list').getByText(name,{exact:true}).first().evaluate(n=>n.scrollWidth<=n.clientWidth+1),name+' truncated');
+  await page.locator('#search').fill('Vitalii');await page.locator('#conv-list').getByText(/Vitalii/).first().waitFor();await page.locator('#search').fill('');
+  await page.locator('#nav-people').click();await page.getByText('Reading teams…',{exact:true}).waitFor({state:'hidden'});await shot(tag+'-people');await page.locator('#review-btn').click();await shot(tag+'-activity');await thread();await shot(tag+'-thread');
+  const text='Holonet synthetic '+tag+' '+Date.now();await page.locator('#body').fill(text);await page.locator('#composer').evaluate(f=>f.requestSubmit());await page.locator('#timeline').getByText(text,{exact:true}).waitFor();
+  const filename=m.id+'-'+tag+'.txt',bytes='Synthetic attachment '+tag;await page.locator('#file-input').setInputFiles({name:filename,mimeType:'text/plain',buffer:Buffer.from(bytes)});await page.locator('#body').fill('File '+tag);await page.locator('#composer').evaluate(f=>f.requestSubmit());
+  const message=page.locator('#timeline .msg').filter({hasText:filename});let releaseFile,startedFile;const fileGate=new Promise(r=>releaseFile=r),fileStarted=new Promise(r=>startedFile=r);const delayFile=async route=>{startedFile();await fileGate;await route.continue();};await page.route('**/api/files/**',delayFile);await message.getByRole('button',{name:'Open',exact:true}).click();await fileStarted;await page.locator('.topics-bar button[aria-pressed=true]').first().click();releaseFile();const link=message.getByRole('link',{name:'Download '+filename,exact:true});await link.waitFor();await page.unroute('**/api/files/**',delayFile);const downloaded=page.waitForEvent('download');await link.click();const file=await downloaded,save=path.join(evidence,filename);await file.saveAs(save);assert.equal(fs.readFileSync(save,'utf8'),bytes);fs.unlinkSync(save);await shot(tag+'-files');
+  const sizes=await page.locator('.holonet-root').evaluate(root=>({width:root.clientWidth,scroll:root.scrollWidth,height:root.clientHeight,overflow:document.documentElement.scrollWidth>innerWidth}));assert(!sizes.overflow&&sizes.scroll<=sizes.width+1,tag+' horizontal overflow');assert(sizes.height>300,'Root collapsed');
+  if(width===390){await page.locator('#body').fill('Keyboard draft');await page.locator('#body').focus();await page.setViewportSize({width:390,height:480});assert(await page.locator('#send').evaluate(n=>n.getBoundingClientRect().bottom<=innerHeight+1),'Composer below keyboard viewport');await shot(tag+'-keyboard');await page.setViewportSize({width:390,height:844});await page.locator('#body').fill('');}
+  await page.getByRole('button',{name:'New topic',exact:true}).click();await page.locator('#body').fill('Operations topic '+tag);await page.locator('#composer').evaluate(f=>f.requestSubmit());await page.locator('#timeline').getByText('Operations topic '+tag,{exact:true}).waitFor();await page.getByRole('button',{name:/^(Mark done|Done)$/,exact:true}).click();await page.getByRole('button',{name:'Reopen',exact:true}).waitFor();await page.getByRole('button',{name:'Reopen',exact:true}).click();await shot(tag+'-topic');
+  result.checks.push(tag+': all major navigation/settings, measured contrast, modal keyboard focus, search, send, exact downloaded bytes despite delayed-file/topic rerender, topic Done/Reopen, root fit and reduced motion');
+ }
+ // Message-notification destination through the production host, no action.
+ const overview=await page.evaluate(async()=>await window.agentnet.api('/api/overview'));
+ const dm=await page.evaluate(async id=>await window.agentnet.api('/api/dm?id='+id),seed.dm_vitalii),target=dm.messages.find(x=>x.dir==='out'&&!x.deleted);
+ await page.goto(origin+'/?skin='+m.id+'#msg='+target.id+'&conv='+seed.dm_vitalii+'&dir=out');await mounted();await page.locator('#m-'+target.id).waitFor();await shot('message-notification');result.checks.push('Production message notification opens exact message without granting or running work');
+ await page.reload();await mounted();assert.equal(await page.getByRole('button',{name:'Use this skin',exact:true}).count(),0,'Same digest keeps trust');
+ // Host switcher remains outside skin stylesheet, imports exact same package.
+ await list();await page.getByRole('button',{name:/^Skin: /}).click();await page.getByRole('menuitem',{name:/Import or remove skins/}).click();await page.getByLabel('Import skin files',{exact:true}).filter({visible:true}).setInputFiles(['skin.json',...m.files].map(n=>path.join(pkg,n)));await page.getByText('Stored '+m.name,{exact:false}).waitFor();await shot('browser-import');await page.getByRole('button',{name:'Done',exact:true}).click();await page.getByRole('button',{name:/^Skin: /}).click();await page.getByRole('menuitemradio',{name:new RegExp(m.name+'.*stored in this browser','i')}).click();await page.getByRole('button',{name:'Use this skin',exact:true}).click();await mounted();assert.equal(new URL(page.url()).searchParams.get('skin'),'local:'+m.id);await thread();await shot('browser-local');
+ await list();await page.getByRole('button',{name:'Switch to Comic',exact:true}).click();await page.waitForFunction(()=>!!document.querySelector('#skin')?.shadowRoot?.querySelector('.an-root'));result.checks.push('Browser-local exact package import/trust/mount and independent host escape to Comic');
+ assert.deepEqual(errors,[]);result.pass=true;fs.writeFileSync(path.join(evidence,m.id+'-browser.json'),JSON.stringify(result,null,2),{mode:0o600});console.log('PASS '+m.id+' production browser: '+result.checks.length+' journeys, '+result.screenshots.length+' screenshots');
+})().catch(async e=>{if(page)await page.screenshot({path:path.join(evidence,'screenshots',m.id+'-FAIL.png')}).catch(()=>{});console.error('FAIL production browser:',e.stack,'page errors:',errors);process.exitCode=1;}).finally(async()=>{await browser?.close();});

@@ -1,0 +1,19 @@
+{
+  "name": "agentnet-skins",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Portable Host API v1 skins for AgentNet",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/check.mjs && node --test tests/*.test.mjs",
+    "test": "npm run build && npm run check && node scripts/test.mjs",
+    "new-skin": "node scripts/new-skin.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.58.2"
+  }
+}

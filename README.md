@@ -22,6 +22,8 @@ Actual AgentNet rendering with a disposable fictional company; Holonet cockpit s
 | --- | --- |
 | ![Holonet dark mobile viewport showing the fictional Friday shipment topic](docs/previews/holonet/mobile-dark.png) | ![Holonet light mobile viewport showing the fictional Friday shipment topic](docs/previews/holonet/mobile-light.png) |
 
+[Watch the topic sweep and split-shutter transitions](docs/previews/holonet/transitions.mp4) — captured from the running skin, with no animation delaying interaction. Reduced-motion mode skips these effects.
+
 AgentNet itself includes [Comic](https://github.com/misunders2d/agentnet/tree/v0.8.1/internal/ui/web), [Classic](https://github.com/misunders2d/agentnet/tree/v0.8.1/internal/ui/skins/classic) and [Zoom](https://github.com/misunders2d/agentnet/tree/v0.8.1/internal/ui/skins/zoom). Those upstream references are not additional skins built by this repository.
 
 ## Build and install

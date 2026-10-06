@@ -8,6 +8,8 @@ Portable interfaces for [AgentNet](https://github.com/misunders2d/agentnet). Bui
 | --- | --- | --- |
 | [Holonet](skins/holonet) | Star Wars-inspired spacecraft comms console: graphite panels, amber commands, cyan signals, legible topics and messages. Original artwork; no franchise logos or characters. | Complete source and installable build |
 
+Gallery publication requires current screenshots of the real rendered skin, covering desktop/mobile and supported themes. Use synthetic content, label the tested revision, and refresh previews when visible behavior changes. Publishing a gallery entry without a preview is incomplete; a preview never replaces compatibility tests. See the [contribution checklist](.github/pull_request_template.md).
+
 AgentNet itself includes [Comic](https://github.com/misunders2d/agentnet/tree/v0.8.1/internal/ui/web), [Classic](https://github.com/misunders2d/agentnet/tree/v0.8.1/internal/ui/skins/classic) and [Zoom](https://github.com/misunders2d/agentnet/tree/v0.8.1/internal/ui/skins/zoom). Those upstream references are not additional skins built by this repository.
 
 ## Build and install

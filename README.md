@@ -10,6 +10,18 @@ Portable interfaces for [AgentNet](https://github.com/misunders2d/agentnet). Bui
 
 Gallery publication requires current screenshots of the real rendered skin, covering desktop/mobile and supported themes. Use synthetic content, label the tested revision, and refresh previews when visible behavior changes. Publishing a gallery entry without a preview is incomplete; a preview never replaces compatibility tests. See the [contribution checklist](.github/pull_request_template.md).
 
+### Holonet preview
+
+Actual AgentNet rendering with a disposable fictional company; Holonet skin source `3cb917c`, Host API v1 on AgentNet v0.8.1. These previews show desktop (1440 × 1000) and mobile viewport (390 × 844), with dark and light themes. Mobile screenshots use Chromium emulation.
+
+| Desktop dark | Desktop light |
+| --- | --- |
+| ![Holonet dark desktop showing the fictional Friday shipment topic](docs/previews/holonet/desktop-dark.png) | ![Holonet light desktop showing the fictional Friday shipment topic](docs/previews/holonet/desktop-light.png) |
+
+| Mobile dark | Mobile light |
+| --- | --- |
+| ![Holonet dark mobile viewport showing the fictional Friday shipment topic](docs/previews/holonet/mobile-dark.png) | ![Holonet light mobile viewport showing the fictional Friday shipment topic](docs/previews/holonet/mobile-light.png) |
+
 AgentNet itself includes [Comic](https://github.com/misunders2d/agentnet/tree/v0.8.1/internal/ui/web), [Classic](https://github.com/misunders2d/agentnet/tree/v0.8.1/internal/ui/skins/classic) and [Zoom](https://github.com/misunders2d/agentnet/tree/v0.8.1/internal/ui/skins/zoom). Those upstream references are not additional skins built by this repository.
 
 ## Build and install

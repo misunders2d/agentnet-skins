@@ -6,13 +6,13 @@ Portable interfaces for [AgentNet](https://github.com/misunders2d/agentnet). Bui
 
 | Skin | Direction | Available here |
 | --- | --- | --- |
-| [Holonet](skins/holonet) | Star Wars-inspired spacecraft comms console: graphite panels, amber commands, cyan signals, legible topics and messages. Original artwork; no franchise logos or characters. | Complete source and installable build |
+| [Holonet](skins/holonet) | Star Wars-inspired spacecraft comms console: horizontal command navigation, framed transmissions, command dock, crew console and brief instrument/split-shutter transitions. Original artwork; no franchise logos or characters. | Complete source and installable build |
 
 Gallery publication requires current screenshots of the real rendered skin, covering desktop/mobile and supported themes. Use synthetic content, label the tested revision, and refresh previews when visible behavior changes. Publishing a gallery entry without a preview is incomplete; a preview never replaces compatibility tests. See the [contribution checklist](.github/pull_request_template.md).
 
 ### Holonet preview
 
-Actual AgentNet rendering with a disposable fictional company; Holonet skin source `3cb917c`, Host API v1 on AgentNet v0.8.1. These previews show desktop (1440 × 1000) and mobile viewport (390 × 844), with dark and light themes. Mobile screenshots use Chromium emulation.
+Actual AgentNet rendering with a disposable fictional company; Holonet cockpit skin source `c11e612`, Host API v1 on AgentNet v0.8.1. These previews show desktop (1440 × 1000) and mobile viewport (390 × 844), with dark and light themes. Mobile screenshots use Chromium emulation.
 
 | Desktop dark | Desktop light |
 | --- | --- |
@@ -49,7 +49,7 @@ npm run new-skin -- orbit "Orbit"
 node scripts/build.mjs orbit
 ```
 
-`skins/orbit/` starts as a **complete independent package**, with all conversation, topic, agent, people, settings and file controls. Edit its CSS and branding, then run shared checks. No runtime import reaches another skin. The scaffold retains Holonet’s internal selectors so the reusable interaction tests work unchanged; its manifest supplies its own identity and draft namespace.
+`skins/orbit/` starts as a **complete independent package**, with all conversation, topic, agent, people, settings and file controls. Build a distinct layout or interaction experience, then run shared checks. Color and corner changes alone are theme variants. No runtime import reaches another skin. The scaffold retains Holonet’s internal selectors so the reusable interaction tests work unchanged; its manifest supplies its own identity and draft namespace.
 
 Start with [creator quickstart](docs/CREATING.md), [compatibility checklist](docs/CONFORMANCE.md) and [version policy](docs/COMPATIBILITY.md). The authoritative contract remains [AgentNet’s UI_SKINS.md](https://github.com/misunders2d/agentnet/blob/v0.8.1/docs/UI_SKINS.md).
 
@@ -73,4 +73,4 @@ Checks cover this scaffold’s interaction family. Passing tests prove named jou
 
 ## Provenance
 
-Holonet retains AgentNet v0.8.1 Classic functionality at commit `daddab38d229f695936a6d975702668b381f3135`, with original visual styling and contract fixes described in [PROVENANCE.md](PROVENANCE.md). Code is Apache-2.0; retained QR code includes its original notice. See [LICENSE](LICENSE) and [NOTICE](NOTICE). Star Wars is referenced only as inspiration; this project has no affiliation with its owners.
+Holonet retains AgentNet v0.8.1 Classic functionality at commit `daddab38d229f695936a6d975702668b381f3135`, with an original cockpit composition, action-linked motion and contract fixes described in [PROVENANCE.md](PROVENANCE.md). Code is Apache-2.0; retained QR code includes its original notice. See [LICENSE](LICENSE) and [NOTICE](NOTICE). Star Wars is referenced only as inspiration; this project has no affiliation with its owners.

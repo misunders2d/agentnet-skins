@@ -1,7 +1,7 @@
 # Create and share a skin
 
 1. Run `npm run new-skin -- orbit "Orbit"`. IDs start with a lowercase letter, contain lowercase letters/digits/hyphens and have at most 48 characters. Built-in IDs `comic`, `classic`, `zoom`, `default` and display names Comic/Classic/Zoom are reserved.
-2. Edit `skins/orbit/src/style.css` and branding in `src/template.mjs`. Keep real people, trust warnings, authority, receipt meanings and permission wording intact. Internal `holonet-root` selectors are isolated in the host’s shadow tree; rename them consistently only when deliberately replacing the interaction adapter.
+2. Create a distinct composition, interaction or playful experience in `skins/orbit/src/style.css`, `src/template.mjs` and the relevant rendering hooks. Color/corner changes alone are theme variants. Keep real people, trust warnings, authority, receipt meanings and permission wording intact. Internal `holonet-root` selectors are isolated in the host’s shadow tree; rename them consistently only when deliberately replacing the interaction adapter.
 3. Declare each asset in `skin.json`. Use relative paths; fonts need a declared document stylesheet containing `@font-face`/`@property`. No CDN, inline scripts/styles or sibling-skin runtime imports. `manifest.mjs` is generated in output, never edited manually.
 4. Run `npm run build && npm run check`. This builds every directory. For one package use `node scripts/build.mjs orbit`; run the all-skin build before shared check.
 5. Run `npm test`. Read [CONFORMANCE.md](CONFORMANCE.md) for what is covered and what needs manual/provider checks. Inspect desktop/mobile screenshots in the private path printed by the runner.

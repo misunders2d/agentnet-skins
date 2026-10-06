@@ -1,4 +1,4 @@
-import fs from 'node:fs';import path from 'node:path';import os from 'node:os';import {spawnSync} from 'node:child_process';import {createRequire} from 'node:module';import {root,listSkins} from './lib.mjs';
+import fs from 'node:fs';import path from 'node:path';import os from 'node:os';import {spawnSync} from 'node:child_process';import {createRequire} from 'node:module';import {root,listSkins,fixtureSkinId} from './lib.mjs';
 const pin=JSON.parse(fs.readFileSync(path.join(root,'upstream.json'))),cache=path.join(root,'.cache'),up=path.join(cache,'upstream');fs.mkdirSync(cache,{recursive:true,mode:0o700});
 function run(cmd,args,opts={}){const x=spawnSync(cmd,args,{cwd:root,stdio:'inherit',...opts});if(x.status!==0)throw Error(cmd+' failed ('+x.status+')');return x;}
 if(!fs.existsSync(path.join(up,'.agentnet-commit'))){
@@ -15,8 +15,9 @@ if(!fs.existsSync(path.join(up,'.agentnet-commit'))){
 if(fs.readFileSync(path.join(up,'.agentnet-commit'),'utf8').trim()!==pin.commit)throw Error('Wrong upstream pin; delete .cache/upstream and retry');
 const go=process.env.AGENTNET_GO||'go',bin=path.join(cache,'agentnet');run(go,['build','-o',bin,'./cmd/agentnet'],{cwd:up});
 const evidence=fs.mkdtempSync(path.join(os.tmpdir(),'agentnet-skins-')),world=path.join(evidence,'world');fs.chmodSync(evidence,0o700);
-const scaffold=path.join(evidence,'scaffold');fs.mkdirSync(scaffold);fs.cpSync(path.join(root,'scripts'),path.join(scaffold,'scripts'),{recursive:true});fs.mkdirSync(path.join(scaffold,'skins'));fs.cpSync(path.join(root,'skins','holonet'),path.join(scaffold,'skins','holonet'),{recursive:true});run(process.execPath,['scripts/new-skin.mjs','qa-orbit','QA Orbit'],{cwd:scaffold});fs.rmSync(path.join(scaffold,'skins','holonet'),{recursive:true});run(process.execPath,['scripts/build.mjs','qa-orbit'],{cwd:scaffold});fs.cpSync(path.join(scaffold,'dist','qa-orbit'),path.join(root,'dist','qa-orbit'),{recursive:true});
-const ids=[...listSkins(),'qa-orbit'];
+const scaffoldId=fixtureSkinId();
+const scaffold=path.join(evidence,'scaffold');fs.mkdirSync(scaffold);fs.cpSync(path.join(root,'scripts'),path.join(scaffold,'scripts'),{recursive:true});fs.mkdirSync(path.join(scaffold,'skins'));fs.cpSync(path.join(root,'skins','holonet'),path.join(scaffold,'skins','holonet'),{recursive:true});run(process.execPath,['scripts/new-skin.mjs',scaffoldId,'QA Orbit'],{cwd:scaffold});fs.rmSync(path.join(scaffold,'skins','holonet'),{recursive:true});run(process.execPath,['scripts/build.mjs',scaffoldId],{cwd:scaffold});fs.cpSync(path.join(scaffold,'dist',scaffoldId),path.join(root,'dist',scaffoldId),{recursive:true});
+const ids=[...listSkins(),scaffoldId];
 const wrapper=path.join(evidence,'agentnet-fixture');
 fs.writeFileSync(wrapper,`#!/bin/sh\nset -eu\ntarget=""\nif [ "$1" = "--home" ] && [ "$3" = "daemon" ]; then target="$2/skins"; fi\nif [ "$1" = "hub" ] && [ "$2" = "serve" ] && [ "$3" = "--data" ]; then target="$4/skins"; fi\nif [ -n "$target" ]; then\n mkdir -p "$target"\n chmod 700 "$target"\n cp -R "${path.join(root,'dist')}/." "$target/"\n rm -f "$target/"*.SHA256SUMS\n chmod -R go-rwx "$target"\nfi\nexec "${bin}" "$@"\n`,{mode:0o700});
 const require=createRequire(import.meta.url),playwright=process.env.AGENTNET_PLAYWRIGHT||require.resolve('playwright');
@@ -25,6 +26,6 @@ console.log('Pinned upstream: '+pin.version+' '+pin.commit);console.log('Private
 try{run('bash',[path.join(up,'internal/ui/testdata/company_world.sh')],{env});console.log('PASS all skin packages: '+ids.join(', '));}
 finally{
  // Dispose homes, keys, enrollment URLs, task data and harness output after checks.
- fs.rmSync(world,{recursive:true,force:true});fs.rmSync(wrapper,{force:true});fs.rmSync(scaffold,{recursive:true,force:true});fs.rmSync(path.join(root,'dist','qa-orbit'),{recursive:true,force:true});
+ fs.rmSync(world,{recursive:true,force:true});fs.rmSync(wrapper,{force:true});fs.rmSync(scaffold,{recursive:true,force:true});fs.rmSync(path.join(root,'dist',scaffoldId),{recursive:true,force:true});
  console.log('Disposable company removed. Screenshots and bounded test evidence kept privately: '+evidence);
 }

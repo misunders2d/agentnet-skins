@@ -40,3 +40,8 @@ export function validateSources(dir,m){
  if(total>16*1024*1024)throw Error('Package exceeds 16 MiB');return total;
 }
 export function sums(dir,names){return names.map(n=>crypto.createHash('sha256').update(fs.readFileSync(path.join(dir,n))).digest('hex')+'  '+n).join('\n')+'\n';}
+
+// Exact package inventories include declared nested assets.
+export function packageFiles(dir,prefix=''){return fs.readdirSync(path.join(dir,prefix),{withFileTypes:true}).flatMap(item=>{const name=prefix?prefix+'/'+item.name:item.name;return item.isDirectory()?packageFiles(dir,name):[name];}).sort();}
+// Keep disposable runtime packages separate from real source and build outputs.
+export function fixtureSkinId(project=root){let id='qa-orbit',suffix=1;while(fs.existsSync(path.join(project,'skins',id))||fs.existsSync(path.join(project,'dist',id))||fs.existsSync(path.join(project,'dist',id+'.SHA256SUMS')))id='qa-orbit-'+(++suffix);return id;}

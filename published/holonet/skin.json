@@ -2,7 +2,7 @@
   "api": 1,
   "id": "holonet",
   "name": "Holonet",
-  "agentnet": "v0.8.25",
+  "agentnet": "v0.8.26",
   "entry": "entry.mjs",
   "style": "style.css",
   "files": [
@@ -17,6 +17,7 @@
     "assistant-setup.mjs",
     "assistant-setup.css",
     "qr.mjs",
+    "link-text.mjs",
     "topics.mjs",
     "optimistic.mjs",
     "pictures.mjs",

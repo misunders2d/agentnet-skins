@@ -13,7 +13,7 @@ Comic's fixes whenever it is rebuilt.
   its own, its gold lining under the request. Allow once, Decline and the
   other actions are AgentNet's own, always shown.
 - **The cast.** Agents are AgentNet's robot in one of five costumes (curls
-  and sideburns; slick hair and a tail; a black bob; a shaved head with a
+  and sideburns; long centre-parted hair combed back to the collar; a black bob; a shaved head with a
   bandage; a crew cut and a boxing glove), chosen from the agent's key, so
   each agent always wears the same one. Moods (working, waiting, done,
   asleep) stay as in Comic.

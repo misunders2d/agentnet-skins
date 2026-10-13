@@ -7,7 +7,7 @@ Thank you for making AgentNet look and feel different. A skin here can reach eve
 1. Pick the kind (details in [docs/CREATING.md](docs/CREATING.md)):
    - **Theme-only overlay**: Comic in your colours and fonts (`brand.tsx` + `theme.css`).
    - **Overlay skin**: Comic’s interface with any of its slots replaced. Start here unless the interaction itself must change.
-   - **Standalone skin**: a different interface on the [skin contract](https://github.com/misunders2d/agentnet/blob/ccb8a7f6bd3988cbf002a460f03a525452c4ec3f/docs/UI_SKINS.md) alone.
+   - **Standalone skin**: a different interface on the [skin contract](https://github.com/misunders2d/agentnet/blob/1727eaff1aeeb5429a8f018829d8bc4e1f263d08/docs/UI_SKINS.md) alone.
 2. `npm ci`, then `npm run new-skin -- <id> "Name"` (add `--standalone` for a standalone skin). Overlays need the pinned AgentNet checkout: set `AGENTNET_SOURCE=/path/to/agentnet` or let the scripts clone it.
 3. Offer a reason to choose it: a distinct layout, interaction or coherent playful experience. A recolor alone is a theme variant; label it that way.
 

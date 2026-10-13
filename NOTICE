@@ -11,7 +11,7 @@ Includes QR code by Paul Miller, Copyright (c) 2023 Paul Miller
 (paulmillr.com), SPDX-License-Identifier: MIT OR Apache-2.0.
 This distribution uses its Apache-2.0 option.
 
-Classic and Zoom include the marked Markdown lexer, Copyright (c) 2018+,
+Classic, Zoom and Holonet include the marked Markdown lexer, Copyright (c) 2018+,
 MarkedJS, and Copyright (c) 2011-2018, Christopher Jeffrey (MIT), with
 Markdown's license, Copyright (c) 2004, John Gruber; the license texts
 are kept at the end of link-text.mjs.

@@ -1,6 +1,6 @@
 # Source provenance
 
-Holonet baseline: [misunders2d/agentnet v0.8.1](https://github.com/misunders2d/agentnet/tree/daddab38d229f695936a6d975702668b381f3135), commit `daddab38d229f695936a6d975702668b381f3135`. Classic and Zoom: commit `b9c2a6e78be1d34f38f737517a7a5b0fe53a83b6`. Test pin: the v0.8.25 candidate `ccb8a7f6bd3988cbf002a460f03a525452c4ec3f`. All Apache-2.0.
+Holonet baseline: [misunders2d/agentnet v0.8.1](https://github.com/misunders2d/agentnet/tree/daddab38d229f695936a6d975702668b381f3135), commit `daddab38d229f695936a6d975702668b381f3135`. Classic and Zoom: commit `b9c2a6e78be1d34f38f737517a7a5b0fe53a83b6`. Test pin: the v0.8.26 candidate `1727eaff1aeeb5429a8f018829d8bc4e1f263d08`. All Apache-2.0.
 
 | Local source | Pinned upstream source | Changes |
 | --- | --- | --- |
@@ -18,7 +18,7 @@ Holonet baseline: [misunders2d/agentnet v0.8.1](https://github.com/misunders2d/a
 
 Holonet cockpit layout, console styling, `signal.svg`, `skin-motion.mjs`, shared collection tools, browser journeys and documentation are original additions. Topic/conversation acquisition uses a cancellable decorative instrument sweep; dialog openings use split shutters. Controls and content remain usable immediately. Reduced motion skips both effects, and native closing/unmount cancels them. The SVG is geometric artwork, not a franchise logo. No external font/image asset is loaded. Existing Classic app-icon asset was not copied.
 
-`qr.mjs` retains Paul Miller’s 2023 copyright and `MIT OR Apache-2.0` notice. This distribution selects Apache-2.0. Classic and Zoom’s `link-text.mjs` bundles the marked Markdown lexer (MIT, Copyright (c) 2018+ MarkedJS and 2011-2018 Christopher Jeffrey) with Markdown’s licence (Copyright © 2004 John Gruber); both texts stay at the end of the file. Overlay packages are built from AgentNet’s Comic and bundle npm packages whose licences the build writes to `dist/<id>.LICENSES.txt`. Playwright is a development dependency under its upstream Apache-2.0 license, not bundled in packages.
+`qr.mjs` retains Paul Miller’s 2023 copyright and `MIT OR Apache-2.0` notice. This distribution selects Apache-2.0. Classic, Zoom and Holonet’s `link-text.mjs` (one file, copied) bundles the marked Markdown lexer (MIT, Copyright (c) 2018+ MarkedJS and 2011-2018 Christopher Jeffrey) with Markdown’s licence (Copyright © 2004 John Gruber); both texts stay at the end of the file. Overlay packages are built from AgentNet’s Comic and bundle npm packages whose licences the build writes to `dist/<id>.LICENSES.txt`. Playwright is a development dependency under its upstream Apache-2.0 license, not bundled in packages.
 
 Design references only: the official [Imperial Security Bureau control center](https://www.starwars.com/databank/imperial-security-bureau-control-center) and [Millennium Falcon cockpit experience](https://www.starwars.com/news/7-things-we-learned-inside-the-millennium-falcon-experience) informed luminous structural ribs, industrial framing and physical control proportions. Reference photographs are not copied, bundled or published.
 

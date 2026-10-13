@@ -66,12 +66,14 @@ const COSTUMES: Costume[] = [
       <path d="M-1 18h11v32q0 10 6 14h-8q-9-6-9-16zM81 18h-11v32q0 10-6 14h8q9-6 9-16z" fill={INK} />
       {antenna}
     </> },
-  { // Long hair slicked back to a small tail, black suit, thin tie.
+  { // Long hair from a centre part, combed straight back and falling behind the
+    // head to the collar, ends flicked out; black suit, thin tie. (It used to be a
+    // smooth dome with straight side strips, which read as a hat, not hair.)
     skin: "#E8BE98", mouth: INK,
-    back: <><path d="M-6 16h14v58h-14zM72 16h14v58h-14z" fill={INK} /><path d="M84 30q12 4 8 22q-6-8-10-10z" fill={INK} />{suit(CREAM, INK, true)}</>,
+    back: <><path d="M-6 14C-13 28-9 40-12 52C-14 62-9 70-17 78C-7 80 0 76 3 69L6 22ZM86 14C93 28 89 40 92 52C94 62 89 70 97 78C87 80 80 76 77 69L74 22Z" fill={INK} />{suit(CREAM, INK, true)}</>,
     front: <>
-      <path d="M-3 28C-3 4 18-7 40-7C62-7 83 4 83 28C76 16 60 13 40 13C20 13 4 16-3 28Z" fill={INK} />
-      <path d="M12 6C26-1 54-1 70 6M16 11C30 5 52 5 66 11" fill="none" stroke={HI} strokeWidth={1.8} strokeLinecap="round" />
+      <path d="M38.6-5C24-11 2-6-4 14C-6 21-5 27-3 32C1 17 15 7 37.4 8ZM41.4-5C56-11 78-6 84 14C86 21 85 27 83 32C79 17 65 7 42.6 8Z" fill={INK} />
+      <path d="M35-4C23-5 10 0 3 11M34 2C23 2 13 6 6 15M45-4C57-5 70 0 77 11M46 2C57 2 67 6 74 15" fill="none" stroke="#5E4E40" strokeWidth={1.8} strokeLinecap="round" />
       {antenna}
     </> },
   { // Blunt black bob with straight bangs, red lips, white collar.

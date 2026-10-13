@@ -1,11 +1,12 @@
 // Shared skin source, copied into each independent package at build time.
 // Host API v1 only: no provider, storage, transport or global document access.
 export const TOPIC_UI = Object.freeze({ barMax: 4, pageSize: 50, undoDelay: 6000 });
-export function topicControls(root, {api, choose, fresh, changed, announce}) {
+export function topicControls(root, {api, choose, fresh, changed, announce, isFresh = () => false}) {
  const doc=root.ownerDocument, bar=doc.createElement('nav');bar.className='topics-bar';bar.setAttribute('aria-label','Topics');
  const zoom=root.querySelector('#zoom');if(zoom)zoom.before(bar);else root.querySelector('.conv-head').after(bar);
  const node=(tag,text,props={})=>{const n=doc.createElement(tag);if(text)n.textContent=text;Object.assign(n,props);return n;};
  const button=(text,fn)=>node('button',text,{type:'button',onclick:fn});
+ const pressed=(b,on)=>{b.setAttribute('aria-pressed',String(!!on));return b;}; // a pending new topic is the pressed choice
  let scope={},topics=[],current='',all=null,timer=null,seq=0,dead=false;
  const select=async id=>{try{await choose(id);if(!dead)bar.querySelector('button[aria-pressed="true"]')?.focus();}catch(e){announce(e.message);}};
  const request=(what,ids,counts)=>api('/api/topic/'+what,{...scope,id:'',ids,counts});
@@ -45,12 +46,12 @@ export function topicControls(root, {api, choose, fresh, changed, announce}) {
  const oldClose=close;close=()=>{all?.cleanup?.();oldClose();};
  function update(nextScope,nextTopics,id) {
   if(JSON.stringify(scope)!==JSON.stringify(nextScope))close();scope=nextScope;topics=nextTopics||[];current=id||'';
-  bar.replaceChildren();bar.append(node('span','TOPIC ROUTING',{className:'topic-label'}));if(scope.conv){const main=button(root.clientWidth<700?'Main':'Main flow',()=>void select(''));main.setAttribute('aria-pressed',String(!current));bar.append(main);}
+  bar.replaceChildren();bar.append(node('span','TOPIC ROUTING',{className:'topic-label'}));if(scope.conv){const main=button(root.clientWidth<700?'Main':'Main flow',()=>void select(''));main.setAttribute('aria-pressed',String(!current&&!isFresh()));bar.append(main);}
   const picked=topics.filter(t=>t.state==='active'||t.id===current).slice(0,TOPIC_UI.barMax);
   const opened=topics.find(t=>t.id===current);if(opened&&!picked.includes(opened))picked[picked.length-1]=opened;
   for(const t of picked){const b=button((t.title||'Untitled').slice(0,40),()=>void select(t.id));b.title=t.title+' · '+t.state;b.setAttribute('aria-pressed',String(current===t.id));b.className='topic-chip';bar.append(b);}
-  bar.append(button(root.clientWidth<700?'All '+topics.length:'All topics ('+topics.length+')',()=>void list()),Object.assign(button(root.clientWidth<700?'+ New':'New topic',fresh),{ariaLabel:'New topic'}));
+  bar.append(button(root.clientWidth<700?'All '+topics.length:'All topics ('+topics.length+')',()=>void list()),pressed(Object.assign(button(root.clientWidth<700?'+ New':'New topic',fresh),{ariaLabel:'New topic'}),isFresh()));
   const t=topics.find(t=>t.id===current);if(t){bar.append(button(t.state==='active'?(root.clientWidth<700?'Done':'Mark done'):'Reopen',async()=>{try{const r=await api('/api/topic/'+(t.state==='active'?'done':'reopen'),{...scope,id:t.id,count:t.count});announce(r.note);await changed();}catch(e){announce(e.message);}}));}
  }
- return {update,show(visible){bar.hidden=!visible;},stop(){dead=true;close();bar.remove();}};
+ return {update,repaint(){update(scope,topics,current);},show(visible){bar.hidden=!visible;},stop(){dead=true;close();bar.remove();}};
 }

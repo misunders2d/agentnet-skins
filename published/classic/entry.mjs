@@ -153,7 +153,7 @@ function el(tag, attrs, ...kids) {
 
 // Every operation keeps the host it started with.
 async function api(path, body, host = currentHost) { return host.api(path, body); }
-const topicUI=topicControls(root,{api,chooseRoot:choosePersonTopic,announce:text=>announce(text),choose:id=>{state.messageOpening=null;if(state.dm){topicSelections[state.dm]=id;topicFresh[state.dm]=false;setDMReply(null);renderDMBody(false);markDMRead();}else if(id!==state.thread)void openThread(id);},fresh:()=>{state.messageOpening=null;const id=state.dm||state.thread;topicFresh[id]=true;if(state.dm){topicSelections[id]='';renderDMBody(false);markDMRead();}announce('New topic: your next message starts a separate flow.');$('body').focus();},changed:async()=>{await loadOverview();state.dm?await loadDM(false):await loadThread(false);}});
+const topicUI=topicControls(root,{api,isFresh:()=>!!topicFresh[state.dm||state.thread],chooseRoot:choosePersonTopic,announce:text=>announce(text),choose:id=>{state.messageOpening=null;if(state.dm){topicSelections[state.dm]=id;topicFresh[state.dm]=false;setDMReply(null);renderDMBody(false);markDMRead();}else if(id!==state.thread)void openThread(id);},fresh:()=>{state.messageOpening=null;const id=state.dm||state.thread;topicFresh[id]=true;if(state.dm){topicSelections[id]='';renderDMBody(false);markDMRead();}announce('New topic: your next message starts a separate flow.');topicUI.repaint();syncComposer();$('body').focus();},changed:async()=>{await loadOverview();state.dm?await loadDM(false):await loadThread(false);}});
 cleanups.push(()=>topicUI.stop());
 
 // A time is an RFC 3339 string, or unix seconds (a host's report and its
@@ -221,7 +221,7 @@ async function loadOverview() {
   $("release").hidden = !o.release;
   fill($("release"), o.release && ["Update available · " + o.release + ". ", el("a", {href: "https://github.com/misunders2d/agentnet/releases", target: "_blank", rel: "noopener noreferrer"}, "Release notes")]);
   $("profile-btn").classList.toggle("update-available", !!o.release);
-  $("profile-btn").title = o.release ? "Your profile and settings · Update available" : "Your profile and settings";
+  $("profile-btn").title = o.release ? "Your profile and devices · Update available" : "Your profile and devices";
   renderNotify(o.notify);
   renderProfile(o);
   renderReview(o.review);
@@ -2048,7 +2048,7 @@ function driveProviderFor(host) {
 function closeDrivePanel() {
   state.driveOpen = false;
   const panel = $("drive-panel");
-  if (panel) { panel.hidden = true; fill(panel); }
+  if (panel) { panel.hidden = true; fill(panel); delete panel.dataset.conv; } // reopening mounts it again
 }
 function renderDrive(t) {
   const chips = $("peer-chips");
@@ -2717,7 +2717,7 @@ function pickMention(i) {
     const input=$('body'),at=v.start??v.end,token='@'+it.name+' ';
     trackMentions();input.value=input.value.slice(0,at)+token+input.value.slice(v.end);trackMentions(at+token.length);
     state.mentions.push({start:at,name:it.name,ref:{kind:'collective',id:href.slice('agentnet:collective/'.length)}});
-    const agent=targets.find(p=>p.kind==='assistant');if(agent)setDMAgent(agentOf(agent.a.pid));
+    const agent=targets.find(p=>p.kind==='assistant');if(agent){setDMAgent(agentOf(agent.a.pid));retargetDraft();}
     input.setSelectionRange?.(at+token.length,at+token.length);grow();keepDraft();closeMentions();renderAgentTarget();input.focus();
     announce('@'+it.name+' selects '+targets.length+' exact recipients.');return;
   }
@@ -2736,7 +2736,7 @@ function pickMention(i) {
     if (it.kind === "person" || it.kind === "assistant") state.mentions = [...(state.mentions || []), { start: at, name: it.name, ref: it.kind === "assistant" ? {kind:"agent",id:it.a.pid} : it.ref, role: it.role }];
     grow();
   }
-  if (it.kind === "assistant") setDMAgent(agentOf(it.a.pid));
+  if (it.kind === "assistant") { setDMAgent(agentOf(it.a.pid)); retargetDraft(); }
   keepDraft(); closeMentions(); renderAgentTarget(); $("body").focus();
 }
 function mentionKey(e) {
@@ -2904,7 +2904,7 @@ function decideDialog(a, t, accept) {
       shared.some(m => (m.attachments || []).length) && el("p", { class: "hint" }, "Files attached to selected messages may be read by this agent when available. Missing bytes remain unavailable; unselected room history and files are excluded."),
       a.missing > 0 && el("p", { class: "hint" }, plural(a.missing, "chosen message is", "chosen messages are") + " not on this computer and cannot be shown."),
       el("p", {}, a.tasks_from.length ? "Tasks run without asking you when they come from: " + a.tasks_from.map((p) => (isMe(p) ? "you" : p.label)).join(" and ") + "."
-        : "Every task waits for you to accept it."),
+        : "Your verified human devices need no extra AgentNet approval. Other people’s tasks need your acceptance or an existing standing permission."),
       a.note && el("p", {}, "Their note: " + a.note),
       el("p", { class: "hint" }, "You accept exactly this, all or nothing. Chosen messages replay as context; no native session is copied. Either of you can dismiss it later.")]
       : [el("p", {}, "Your agent does not join. If you change your mind, they can invite it again.")],
@@ -2972,22 +2972,30 @@ function startSend(key, text, files, reply, answering, t, kind, retry, id, topic
     if ($("body").value === text) { $("body").value = ""; grow(); state.typedFor = null; state.mentions = []; state.mentionText = ""; }
     if (reply && state.dmReply === reply) setDMReply(null);
     if (answering && state.answering === answering) setAnswering(null);
+    // Asked: the composer writes to the conversation again (as Comic does);
+    // a failed ask restores its assistant with the text (failSend).
+    if (state.dm && kind !== "message" && state.dmAgent && state.dmAgent === addressedPID) setDMAgent(null);
     state.files = state.files.filter(f => !files.includes(f)); renderPending(); keepDraft(); syncComposer();
   }
 }
-function failSend(id, key, ws, text, files, reply, answering, reason, mentions) {
+function failSend(id, key, ws, text, files, reply, answering, reason, mentions, agent = null) {
   if (!sends.fail(id, reason)) return; // a pushed durable message already merged
   if (!alive) return; // the current renderer owns drafts; this failed turn keeps its Retry
   const here = alive && wsNow() === ws && state.draftKey === key;
-  const d = here ? {text: $("body").value, files: state.files} : draftsOf(ws)[key] || {text:"",files:[]};
-  if (!d.text && !(d.files || []).length) {
+  const d = here ? {text: $("body").value, files: state.files, agent: state.dm ? state.dmAgent : null} : draftsOf(ws)[key] || {text:"",files:[]};
+  // Restore only into an empty draft still aimed where this send was: a newer chosen
+  // assistant keeps its target even with no text, and an assistant that can no longer
+  // be asked is not replaced by the conversation. Otherwise this turn keeps its Retry.
+  const newerTarget = !!d.agent && d.agent !== agent, eligible = !agent || !here || !!agentOf(agent)?.can_ask;
+  const restore = !d.text && !(d.files || []).length && !newerTarget && eligible;
+  if (restore) {
     if (here) {
       $("body").value = text; state.mentions = mentions || []; state.mentionText = text; grow();
-      state.files = files; renderPending(); if (reply) setDMReply(reply); if (answering) setAnswering(answering); keepDraft(); syncComposer();
-    } else draftsOf(ws)[key] = {...d, text, files, reply, answering, mentions};
+      state.files = files; renderPending(); if (reply) setDMReply(reply); if (answering) setAnswering(answering); if (agent && !state.dmAgent && agentOf(agent)) setDMAgent(agentOf(agent)); /* never over a newer target */ keepDraft(); syncComposer();
+    } else draftsOf(ws)[key] = {...d, text, files, reply, answering, mentions, ...(agent ? {agent} : {})};
     sends.remove(id);
   }
-  if (here) $("compose-error").textContent = "Not sent: " + reason + (d.text || d.files?.length ? " Your newer draft is kept. Retry the failed message above." : " Your text and files are restored.");
+  if (here) $("compose-error").textContent = "Not sent: " + reason + (restore ? " Your text and files are restored." : d.text || d.files?.length ? " Your newer draft is kept. Retry the failed message above." : " Retry the failed message above.");
   else announce("Not sent: " + reason + ". Your draft is kept in its conversation.");
 }
 
@@ -3035,7 +3043,12 @@ async function sendDM(retry) {
     await sends.ready(id);
     let r;
     const humanAsk = !!agent && (dmHumanGuest(t) || (t.guests || []).some(g => g.state === "active")); // a request with guests present names its assistant only
-    const receiver = humanAsk ? null : await prepareReplyReceiverSelection(receiverSelection, host, ws, nativeReceiver, nativeSessions, receiverContext);
+    // An agent this device runs answers here as a local job: there is no
+    // request copy to bind a default reply receiver to (the program refuses
+    // one), and its answer comes back in this conversation anyway. An
+    // explicitly chosen receiver is still sent and checked as chosen.
+    const localJob = !!agent && !receiverSelection && !receiverContext?.host && (t.agents || []).some(a => (a.pid === agent || (a.pids || []).includes(agent)) && a.host_here);
+    const receiver = humanAsk || localJob ? null : await prepareReplyReceiverSelection(receiverSelection, host, ws, nativeReceiver, nativeSessions, receiverContext);
     const ids = await preparedFiles(files, host); // a failure here keeps what was handed over, for the retry
     try {
       r = agent ? await api("/api/dm/agent/ask", { id, send_group: group, pid: agent, kind,topic, body: signed, files: ids, ...(receiver ? { reply_receiver: receiver } : {}) }, host)
@@ -3049,7 +3062,7 @@ async function sendDM(retry) {
   } catch (e) {
     if (retry?.fanout) {
       if (sends.fail(id,e.message) && alive) announce("Not sent to " + (agentOf(agent) ? agentName(agentOf(agent)) : "selected assistant") + ": " + e.message + ". Retry only this request above.");
-    } else failSend(id, key, ws, text, files, reply, null, e.message, mentions);
+    } else failSend(id, key, ws, text, files, reply, null, e.message, mentions, agent);
   } finally {
     if (alive && wsNow() === ws) { state.sending = false; kindHint(); syncComposer(); if (state.newVersion) updated(state.newVersion); }
     else { state.sending = false; sentElsewhere(ws); }
@@ -3366,7 +3379,7 @@ function flash(id) {
   const target = m.querySelector(".agent-turn") || m;
   target.scrollIntoView({ block: target === m ? "center" : "start" });
   m.classList.add("flash");
-  (m.querySelector(".agent-turn") || m.querySelector(".acts button") || m.querySelector(".bubble")).focus();
+  (m.querySelector(".agent-turn") || m.querySelector(".acts button") || m.querySelector(".bubble"))?.focus(); // an event line (an agent invited, a member added) has none
   setTimeout(() => m.classList.remove("flash"), 1600);
 }
 
@@ -4161,7 +4174,7 @@ function renderAgentTarget() {
   if (!box) return;
   const d = state.dmData, t = state.data;
   const mentioned = state.dm ? validMentions(state.mentions, $("body").value) : []; // the exact people this draft mentions
-  box.hidden = state.dm ? !d || (dmHumanGuest(d) && !state.dmAgent || (!(d.agents || []).length && !state.dmAgent)) && !mentioned.length : !t || !!state.answering || kindValue() === "message";
+  box.hidden = state.dm ? !d || (dmHumanGuest(d) && !state.dmAgent || (!(d.agents || []).some(a => !["dismissed", "declined"].includes(a.state)) && !state.dmAgent)) && !mentioned.length : !t || !!state.answering || kindValue() === "message";
   if (box.hidden) { fill(box); return; }
   if (state.dm) {
     const a = agentOf(state.dmAgent);
@@ -4427,7 +4440,7 @@ function renderTarget() {
     if (!d) { set("", "", "Send"); return; }
     if (humanGroup(d) && !state.dmAgent) {
       const guestNames = (d.guests || []).filter(g => g.state === "active" && !g.host_here).map(g => g.host.label);
-      set(d.title, (d.frozen ? "· Last verified audience: " : "· ") + (d.members || []).map(p => p.state === "self" ? "You" : p.label).join(", ") + (guestNames.length ? " · Guests: " + joinedNames(guestNames) : "") + (dmHumanGuest(d) ? " · You are a guest, not a member" : "") + (state.dmReply ? " · reply" : ""), "Send to " + d.title); return;
+      set(d.title, (d.frozen ? "· Last verified audience: " : "· ") + (d.members || []).map(p => p.state === "self" ? "You" : p.label).join(", ") + (guestNames.length ? " · Guests: " + joinedNames(guestNames) : "") + (dmHumanGuest(d) ? " · You are a guest, not a member" : "") + (state.dmReply ? " · reply" : "") + (topicFresh[d.id] ? " · starts a new topic" : ""), "Send to " + d.title); return;
     }
     if (state.dmAgent) {
       const a = agentOf(state.dmAgent);
@@ -4440,7 +4453,7 @@ function renderTarget() {
     }
     const guestNames = dmHumanGuest(d) ? (d.guests || []).filter(g => g.state === "active" && !g.host_here).map(g => g.host.label) : (d.guests || []).filter(g => g.can_send && !g.host_here).map(g => g.host.label);
     const audience = joinedNames(dmHumanGuest(d) ? guestAudienceNames(d) : [d.peer.label, ...guestNames]);
-    set(audience, (state.dmReply ? "· replying to “" + firstLine(state.dmReply.body, 40) + "”" : "· same conversation") + (guestNames.length ? " · includes accepted guests" : dmHumanGuest(d) ? " · conversation message" : d.audience_pending ? " · private here; other devices may still be updating" : " · private between original people"), guestNames.length || dmHumanGuest(d) ? "Send" : "Send to " + d.peer.label);
+    set(audience, (state.dmReply ? "· replying to “" + firstLine(state.dmReply.body, 40) + "”" : topicFresh[d.id] ? "· starts a new topic" : "· same conversation") + (guestNames.length ? " · includes accepted guests" : dmHumanGuest(d) ? " · conversation message" : d.audience_pending ? " · private here; other devices may still be updating" : " · private between original people"), guestNames.length || dmHumanGuest(d) ? "Send" : "Send to " + d.peer.label);
     return;
   }
   const t = state.data;
@@ -4454,7 +4467,7 @@ function renderTarget() {
       (k === "task" ? "Give task to " : "Ask ") + (agent ? agent.label : "selected agent")); return;
   }
   const to = whoText(t.peer);
-  set(to, (last ? "· continues “" + lineOf(last, 40) + "”" : "· a new conversation") +
+  set(to, (topicFresh[t.id] ? "· starts a new topic" : last ? "· continues “" + lineOf(last, 40) + "”" : "· a new conversation") +
     (k === "task" ? " · as a task they accept first" : k === "question" ? " · as a question their responder may answer" : ""),
     k === "task" ? "Give task to " + to : k === "question" ? "Ask " + to : "Send to " + to);
 }
@@ -4463,6 +4476,11 @@ function renderTarget() {
 // (noteTyping). A send checks that binding first: text started for one
 // recipient is never sent to another without the person looking again.
 state.typedFor = null;
+// retargetDraft: the person chose this target in the mention list, with the
+// To line in view, so the text typed so far now belongs to it.
+function retargetDraft() {
+  if ($("body").value) state.typedFor = { key: state.draftKey, to: targetId() };
+}
 function noteTyping() {
   if (!$("body").value) { state.typedFor = null; return; }
   if (!state.typedFor) state.typedFor = { key: state.draftKey, to: targetId() };
@@ -5292,10 +5310,11 @@ function settingsTab(name) {
     if (on && b.scrollIntoView) b.scrollIntoView({ block: "nearest", inline: "nearest" }); // the tab row scrolls on a phone: the chosen tab is always in view
   }
 }
-function showSettings() {
+// tab: the settings section to open (the Settings item opens Appearance; You opens Profile).
+function showSettings(tab) {
   toggleReview(false);
   if (state.overview) renderProfile(state.overview);
-  settingsTab("profile");
+  settingsTab(typeof tab === "string" ? tab : "profile");
   $("settings").showModal();
 }
 function setTheme(theme) {
@@ -5343,11 +5362,16 @@ function start() {
       state.data.task_grant && el("button", { type: "button", class: "btn", onclick: () => revokeDialog(state.data) }, "Task permissions")) : null;
     const guests = state.dmData ? (t.guests || []).map(g => guestCard(g, t)) : [];
     const remove = el("button", { type: "button", class: "btn", onclick: () => { $("dialog").close(); deleteConversationDialog(t); } }, state.dmData ? "Delete conversation…" : "Delete this thread…");
-    dialog({ title: peer, body: [state.dmData ? deviceDisclosure(t.peer) : el("p", { class: "mono" }, state.data.key?.pinned || "Key not checked yet"), members, guests, past, actions, routing, remove], ok: "Close", run: async () => {} });
+    // The chat's Mute and Project space are here too: a phone hides the header chips.
+    const chatControls = state.dmData ? dmNotifyChips(t) : [];
+    if (state.dmData && t.peer?.person) chatControls.push(el("button", { type: "button", class: "peer-chip" + (state.driveOpen ? " on" : ""), onclick: () => toggleDrivePanel(t) }, "Project space"));
+    for (const b of chatControls) b.addEventListener("click", () => $("dialog").close());
+    dialog({ title: peer, body: [state.dmData ? deviceDisclosure(t.peer) : el("p", { class: "mono" }, state.data.key?.pinned || "Key not checked yet"), members, guests, past, actions, chatControls.length > 0 && el("div", { class: "detail-actions" }, chatControls), routing, remove], ok: "Close", run: async () => {} });
   });
   $("nav-chats").addEventListener("click", () => selectSection("chats"));
   $("nav-people").addEventListener("click", () => selectSection("people"));
   $("profile-btn").addEventListener("click", showSettings);
+  $("settings-btn").addEventListener("click", () => showSettings("appearance"));
   $("settings-tabs").addEventListener("keydown", (e) => {
     const tabs = [...root.querySelectorAll("[data-settings]")];
     const i = tabs.indexOf((root.getRootNode().activeElement || null));

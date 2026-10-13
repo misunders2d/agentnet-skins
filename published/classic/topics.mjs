@@ -2,11 +2,12 @@ import {personTopicEntries} from './person-topics.mjs';
 // Shared skin source, copied into each independent package at build time.
 // Host API v1 only: no provider, storage, transport or global document access.
 export const TOPIC_UI = Object.freeze({ barMax: 4, pageSize: 50, undoDelay: 6000 });
-export function topicControls(root, {api, choose, chooseRoot, fresh, changed, announce}) {
+export function topicControls(root, {api, choose, chooseRoot, fresh, changed, announce, isFresh = () => false}) {
  const doc=root.ownerDocument, bar=doc.createElement('nav');bar.className='topics-bar';bar.setAttribute('aria-label','Topics');
  const zoom=root.querySelector('#zoom');if(zoom)zoom.before(bar);else root.querySelector('.conv-head').after(bar);
  const node=(tag,text,props={})=>{const n=doc.createElement(tag);if(text)n.textContent=text;Object.assign(n,props);return n;};
  const button=(text,fn)=>node('button',text,{type:'button',onclick:fn});
+ const pressed=(b,on)=>{b.setAttribute('aria-pressed',String(!!on));return b;}; // a pending new topic is the pressed choice
  let scope={},topics=[],current='',all=null,timer=null,seq=0,dead=false,person=null,views={},personStamp='',personSeq=0,personReady=false,refreshList=null;
  const request=async(what,ids,counts)=>{
   if(!person)return api('/api/topic/'+what,{...scope,id:'',ids,counts});
@@ -64,15 +65,15 @@ export function topicControls(root, {api, choose, chooseRoot, fresh, changed, an
   bar.replaceChildren();
   if(person) {
    const entries=personTopicEntries(person.roots,views,person.main),selected=entries.find(t=>t.conv===scope.conv&&t.topic===current);
-   const main=button('Main',()=>chooseRoot(person.main,''));main.setAttribute('aria-pressed',String(scope.conv===person.main&&!current));bar.append(main);
+   const main=button('Main',()=>chooseRoot(person.main,''));main.setAttribute('aria-pressed',String(scope.conv===person.main&&!current&&!isFresh()));bar.append(main);
    if(selected){const b=button(selected.title.slice(0,40),()=>void list());b.className='topic-chip';b.setAttribute('aria-current','true');b.setAttribute('aria-pressed','true');bar.append(b);}
-   bar.append(button(root.clientWidth<700?'All'+(personReady?' '+entries.length:''):'All topics'+(personReady?' ('+entries.length+')':''),()=>void list()),Object.assign(button(root.clientWidth<700?'+ New':'New topic',fresh),{ariaLabel:'New topic'}));
+   bar.append(button(root.clientWidth<700?'All'+(personReady?' '+entries.length:''):'All topics'+(personReady?' ('+entries.length+')':''),()=>void list()),pressed(Object.assign(button(root.clientWidth<700?'+ New':'New topic',fresh),{ariaLabel:'New topic'}),isFresh()));
   } else {
-   if(scope.conv){const main=button(root.clientWidth<700?'Main':'Main flow',()=>choose(''));main.setAttribute('aria-pressed',String(!current));bar.append(main);}
+   if(scope.conv){const main=button(root.clientWidth<700?'Main':'Main flow',()=>choose(''));main.setAttribute('aria-pressed',String(!current&&!isFresh()));bar.append(main);}
    const picked=topics.filter(t=>t.state==='active'||t.id===current).slice(0,TOPIC_UI.barMax);
    const opened=topics.find(t=>t.id===current);if(opened&&!picked.includes(opened))picked[picked.length-1]=opened;
    for(const t of picked){const b=button((t.title||'Untitled').slice(0,40),()=>choose(t.id));b.title=t.title+' · '+t.state;b.setAttribute('aria-pressed',String(current===t.id));b.className='topic-chip';bar.append(b);}
-   bar.append(button(root.clientWidth<700?'All '+topics.length:'All topics ('+topics.length+')',()=>void list()),Object.assign(button(root.clientWidth<700?'+ New':'New topic',fresh),{ariaLabel:'New topic'}));
+   bar.append(button(root.clientWidth<700?'All '+topics.length:'All topics ('+topics.length+')',()=>void list()),pressed(Object.assign(button(root.clientWidth<700?'+ New':'New topic',fresh),{ariaLabel:'New topic'}),isFresh()));
   }
   const t=topics.find(t=>t.id===current);if(t){bar.append(button(t.state==='active'?(root.clientWidth<700?'Done':'Mark done'):'Reopen',async()=>{try{const r=await api('/api/topic/'+(t.state==='active'?'done':'reopen'),{...scope,id:t.id,count:t.count});announce(r.note);await changed();}catch(e){announce(e.message);}}));}
  }
@@ -81,5 +82,5 @@ export function topicControls(root, {api, choose, chooseRoot, fresh, changed, an
   if(person){views[scope.conv]=person.view;const stamp=JSON.stringify([person.main,person.roots.map(r=>[r.id,r.count,r.last_at,r.unread])]);if(stamp!==personStamp){personStamp=stamp;personReady=false;personSeq++;refreshList?.();}}else{personStamp='';personSeq++;personReady=false;views={};}
   paint();
  }
- return {update,show(visible){bar.hidden=!visible;},stop(){dead=true;close();bar.remove();}};
+ return {update,repaint(){paint();},show(visible){bar.hidden=!visible;},stop(){dead=true;close();bar.remove();}};
 }

@@ -586,7 +586,7 @@ input[type="datetime-local"] { font: inherit; padding: 6px 10px; border: 1px sol
 .nav-rail .review-wrap { flex: none; }
 .nav-rail .review-counts { position: absolute; top: 0; right: 0; display: flex; }
 .nav-rail .count { min-width: 16px; max-width: 35px; padding: 0 4px; font-size: 10px; }
-.profile-btn { margin-top: auto; }
+.settings-btn { margin-top: auto; }
 .profile-initial { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text); font-weight: 650; }
 .side-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 12px; gap: 12px; }
 .side-head h1 { font-size: 21px; letter-spacing: -.035em; font-weight: 650; }
@@ -630,7 +630,7 @@ input[type="datetime-local"] { font: inherit; padding: 6px 10px; border: 1px sol
   .nav-rail { width: 100%; height: calc(58px + env(safe-area-inset-bottom)); flex-direction: row; justify-content: space-around; padding: 4px 10px env(safe-area-inset-bottom); border-right: 0; border-top: 1px solid var(--line); gap: 0; }
   .rail-logo { display: none; }
   .nav-item, .nav-rail .review-btn { min-height: 48px; width: 62px; padding: 4px; }
-  .profile-btn { margin: 0; }
+  .settings-btn, .profile-btn { margin: 0; }
   .side-head { padding: 16px 20px 12px; }
   .conv-head { padding: 10px 12px; flex-wrap: nowrap; }
   .conv-head .peer-chips { display: none; }
@@ -753,8 +753,6 @@ button.reaction { cursor: pointer; }
 #local-interfaces p { overflow-wrap: anywhere; }
 
 
-/* Leave the public host escape control reachable without overlapping our controls. */
-.zoom-root { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
 
 /* Identity chips stay below the name, including a narrow desktop sidebar. */
 .person-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0; }
@@ -898,3 +896,16 @@ button.reaction { cursor: pointer; }
 .proposal-text{white-space:pre-wrap;overflow-wrap:anywhere}
 .wrap-anywhere{overflow-wrap:anywhere}
 .copy-link{display:block;overflow-wrap:anywhere;user-select:all}
+
+/* A chat's own controls (mute) in the zoom chat header; the classic header is not shown in Zoom. */
+.zoom-chips { margin: 8px 0 0; justify-content: flex-start; }
+.zoom-chips:empty { display: none; }
+
+/* Touch (v0.8.26): message actions, list-heading actions and zoom-level
+   disclosures are at least 44px to tap on a phone or any touch screen. */
+@media (max-width: 760px), (pointer: coarse) {
+  .msg .foot .text-btn, .msg .foot summary, .result-head .text-btn, .agent-node-dms .text-btn, .person-cluster details > summary, .zoom-message summary, .zoom-message .text-btn { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
+  .react-pick > summary { width: 44px; height: 44px; }
+  .settings-tabs [role=tab], .topics-bar button, .peer-chip, .zoom-write .btn, .zoom-message .act, .ladder .rung { min-height: 44px; min-width: 44px; }
+  #settings-close, #back, #conversation-details { min-width: 44px; min-height: 44px; }
+}

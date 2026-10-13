@@ -12,7 +12,7 @@ const motionFamilies=['holonet'];
 let failed=false;const summary={};
 for(const s of skins){
  summary[s.id]={};
- const suites=[['contract.cjs',[urls.sergey.page,s.package],s.package],['lifecycle.cjs',[],s.package],['browser.cjs',[],s.loader],['browser-provider.cjs',[],s.loader],['motion.cjs',[],s.loader]];
+ const suites=[['contract.cjs',[urls.sergey.page,s.package],s.package],['lifecycle.cjs',[],s.package],['browser.cjs',[],s.loader],['browser-provider.cjs',[],s.loader],['touch.cjs',[],s.loader],['motion.cjs',[],s.loader]];
  for(const [script,args,pkg]of suites){
   if(script==='motion.cjs'&&!motionFamilies.includes(s.family)){summary[s.id][script]='not applicable (no action-linked motion)';console.log('SKIP '+s.id+' motion.cjs: '+s.family+' has no action-linked motion; not counted as a pass');continue;}
   const env={...process.env,AGENTNET_SKIN_PACKAGE:pkg,AGENTNET_SKIN_FAMILY:s.family,AGENTNET_SCREENSHOTS:screenshots,AGENTNET_CLASSIC_EVIDENCE:evidence};

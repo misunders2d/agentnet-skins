@@ -1,7 +1,7 @@
 # Compatibility policy
 
 - Host API **v1** is the consumed contract. Each manifest declares `api:1`.
-- Pin: the **AgentNet v0.8.25 candidate**, exact commit `ccb8a7f6bd3988cbf002a460f03a525452c4ec3f` (branch `feat/skins-contract-gallery`) in `upstream.json`. Tests archive or fetch that revision, never `main`. When v0.8.25 is released, the pin moves to its tag commit.
+- Pin: AgentNet `main` at exact commit `1727eaff1aeeb5429a8f018829d8bc4e1f263d08`, the v0.8.26 base, in `upstream.json` (version `v0.8.25`: its interface host is unchanged since the v0.8.25 tag, so these skins stay installable there). Tests archive or fetch that revision, never a moving `main`. When v0.8.26 is tagged, the pin moves to its tag commit.
 - A skin’s optional `agentnet` field names the release whose contract the package was checked against (`"agentnet": "v0.8.25"`): an older AgentNet leaves it out of its catalog, and the skin gallery lists it as incompatible there. Every skin here names `v0.8.25`, which is what the tests against the pin prove. AgentNet v0.8.24 and older also reserve the ids `classic` and `zoom` for their built-in copies.
 - Overlay skins are built by the pinned AgentNet itself (its Comic build), so their `agentnet` must equal the pin’s version; moving the pin rebuilds them with that release’s Comic.
 - Additive host methods remain optional: feature-detect and handle rejection. `platform:"daemon"` alone does not imply native app capabilities.

@@ -12,7 +12,7 @@ const ui=family==='zoom'?{
  ready:()=>z().locator('.person-card').first().waitFor(),
  async list(){await page.locator('#nav-chats').click();await settled();await z().locator('.ladder .rung').nth(0).click();await z().locator('.person-card').filter({hasText:'Vitalii'}).waitFor();await settled();},
  // A person card opens their latest DM message; one step out is that DM.
- async thread(){await z().locator('.person-card').filter({hasText:'Vitalii'}).click();await z().locator('.zoom-message').waitFor();await settled();const rungs=z().locator('.ladder .rung');await rungs.nth(await rungs.count()-2).click();await z().locator('.mini-chat').waitFor();await settled();},
+ async thread(){await z().locator('.person-card').filter({hasText:'Vitalii'}).click();await z().locator('.mini-chat').waitFor();await settled();assert.equal(await z().locator('.zoom-message').count(),0,'A person card opens their DM as a chat, not its latest message');},
  async send(text,file){await z().getByRole('button',{name:'Write in this DM…',exact:true}).click();await page.locator('#write-body').fill(text);if(file)await page.locator('#write-files').setInputFiles(file);await page.locator('#dialog-ok').click();await page.locator('#dialog').waitFor({state:'hidden'});},
  sent:text=>z().locator('.mini-chat').getByText(text,{exact:true}),
  async fileView(name){await settled();await z().locator('button.mc-bubble').filter({hasText:name}).click();await z().locator('.zoom-message').waitFor();await settled();return z().locator('.zoom-message');},

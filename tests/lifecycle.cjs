@@ -58,7 +58,7 @@ let server,browser,page;const errors=[];
   // Zoom adapter: the same checks through Zoom's ladder and write dialog
   // (its hidden composer keeps the draft the dialog edits).
   const z=page.locator('#zoom'),write=()=>z.getByRole('button',{name:'Write in this DM…',exact:true}),value=id=>page.evaluate(id=>document.querySelector('#surface').shadowRoot.querySelector('#'+id)?.value,id);
-  const vitalii=async()=>{await z.locator('.ladder .rung').nth(0).click();await z.locator('.person-card').filter({hasText:'Vitalii'}).click();await z.locator('.zoom-message').waitFor();const rungs=z.locator('.ladder .rung');await rungs.nth(await rungs.count()-2).click();await z.locator('.mini-chat').waitFor();}; // a person card opens their latest DM message; one step out is that DM
+  const vitalii=async()=>{await z.locator('.ladder .rung').nth(0).click();await z.locator('.person-card').filter({hasText:'Vitalii'}).click();await z.locator('.mini-chat').waitFor();assert.equal(await z.locator('.zoom-message').count(),0,'A person card opens their DM as a chat, not its latest message');}; // a person card opens their DM as a chat (v0.8.26: it no longer zooms to the latest message)
   const draft=async(text,file)=>{await write().click();await page.locator('#write-body').fill(text);if(file)await page.locator('#write-files').setInputFiles(file);await page.locator('#dialog-cancel').click();};
   const shows=async text=>{await write().click();await page.waitForFunction(text=>document.querySelector('#surface').shadowRoot.querySelector('#write-body')?.value===text,text);await page.locator('#dialog-cancel').click();};
   await vitalii();await draft('Saved contract-only draft');

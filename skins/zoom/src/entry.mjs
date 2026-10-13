@@ -149,7 +149,7 @@ function el(tag, attrs, ...kids) {
 
 // Every operation keeps the host it started with.
 async function api(path, body, host = currentHost) { return host.api(path, body); }
-const topicUI=topicControls(root,{api,chooseRoot:choosePersonTopic,announce:text=>announce(text),choose:id=>{state.messageOpening=null;if(state.dm){topicSelections[state.dm]=id;topicFresh[state.dm]=false;setDMReply(null);renderDMBody(false);markDMRead();if(Zoom.level===3)void Zoom.go(2,{});}else if(id!==state.thread)void openThread(id);},fresh:()=>{state.messageOpening=null;const id=state.dm||state.thread;topicFresh[id]=true;if(state.dm){topicSelections[id]='';renderDMBody(false);markDMRead();}announce('New topic: your next message starts a separate flow.');if(state.dm)dmWriteDialog(state.dmData);else writeDialog(state.data,null);},changed:async()=>{await loadOverview();state.dm?await loadDM(false):await loadThread(false);}});
+const topicUI=topicControls(root,{api,isFresh:()=>!!topicFresh[state.dm||state.thread],chooseRoot:choosePersonTopic,announce:text=>announce(text),choose:id=>{state.messageOpening=null;if(state.dm){topicSelections[state.dm]=id;topicFresh[state.dm]=false;setDMReply(null);renderDMBody(false);markDMRead();if(Zoom.level===3)void Zoom.go(2,{});}else if(id!==state.thread)void openThread(id);},fresh:()=>{state.messageOpening=null;const id=state.dm||state.thread;topicFresh[id]=true;if(state.dm){topicSelections[id]='';renderDMBody(false);markDMRead();}announce('New topic: your next message starts a separate flow.');topicUI.repaint();syncComposer();if(state.dm)dmWriteDialog(state.dmData);else writeDialog(state.data,null);},changed:async()=>{await loadOverview();state.dm?await loadDM(false):await loadThread(false);}});
 cleanups.push(()=>topicUI.stop());
 
 // A time is an RFC 3339 string, or unix seconds (a host's report and its
@@ -217,7 +217,7 @@ async function loadOverview() {
   $("release").hidden = !o.release;
   fill($("release"), o.release && ["Update available · " + o.release + ". ", el("a", {href: "https://github.com/misunders2d/agentnet/releases", target: "_blank", rel: "noopener noreferrer"}, "Release notes")]);
   $("profile-btn").classList.toggle("update-available", !!o.release);
-  $("profile-btn").title = o.release ? "Your profile and settings · Update available" : "Your profile and settings";
+  $("profile-btn").title = o.release ? "Your profile and devices · Update available" : "Your profile and devices";
   renderNotify(o.notify);
   renderProfile(o);
   renderReview(o.review);
@@ -1513,7 +1513,7 @@ function dmRow(d, open) {
     d.count > 1 && el("span", { class: "thread-count", title: plural(d.count, "message", "messages") }, String(d.count)),
     dmFlags(d),
     el("span", { class: "conv-time", title: "Started " + new Date(d.created).toLocaleString() + (d.mine ? " by you" : " by them") }, when(d.last_at)));
-  b.addEventListener("click", () => d.last_id ? void openMessage({id:d.last_id,conv:d.id}) : open(d.id, b));
+  b.addEventListener("click", () => d.last_id ? void openMessage({id:d.last_id,conv:d.id}, true) : open(d.id, b));
   return el("li", {}, b);
 }
 
@@ -2007,7 +2007,19 @@ function driveProviderFor(host) {
 function closeDrivePanel() {
   state.driveOpen = false;
   const panel = $("drive-panel");
-  if (panel) { panel.hidden = true; fill(panel); }
+  if (panel) { panel.hidden = true; fill(panel); delete panel.dataset.conv; } // reopening mounts it again
+}
+// Zoom never shows the classic conversation area: while the Project space
+// is open, its one panel (and its mounted state) sits in the chat level; every
+// redraw takes it back home first, so no discarded layer keeps it.
+let driveHome = null;
+function placeDrivePanel(show) {
+  const panel = $("drive-panel");
+  if (!panel) return null;
+  driveHome ||= panel.parentNode;
+  if (show) return panel;
+  if (panel.parentNode !== driveHome) driveHome.append(panel);
+  return null;
 }
 function renderDrive(t) {
   const chips = $("peer-chips");
@@ -2617,7 +2629,7 @@ function pickMention(i) {
     const input=$('body'),at=v.start??v.end,token='@'+it.name+' ';
     trackMentions();input.value=input.value.slice(0,at)+token+input.value.slice(v.end);trackMentions(at+token.length);
     state.mentions.push({start:at,name:it.name,ref:{kind:'collective',id:href.slice('agentnet:collective/'.length)}});
-    const agent=targets.find(p=>p.kind==='assistant');if(agent)setDMAgent(agentOf(agent.a.pid));
+    const agent=targets.find(p=>p.kind==='assistant');if(agent){setDMAgent(agentOf(agent.a.pid));retargetDraft();}
     input.setSelectionRange?.(at+token.length,at+token.length);grow();keepDraft();closeMentions();renderAgentTarget();input.focus();
     announce('@'+it.name+' selects '+targets.length+' exact recipients.');return;
   }
@@ -2637,7 +2649,7 @@ function pickMention(i) {
     if (it.kind === "person" || it.kind === "assistant") state.mentions = [...(state.mentions || []), { start: at, name: it.name, ref: it.kind === "assistant" ? {kind:"agent",id:it.a.pid} : it.ref, role: it.role }];
     grow();
   }
-  if (it.kind === "assistant") setDMAgent(agentOf(it.a.pid));
+  if (it.kind === "assistant") { setDMAgent(agentOf(it.a.pid)); retargetDraft(); }
   keepDraft(); closeMentions(); renderAgentTarget(); mentionInput().focus();
 }
 function mentionKey(e) {
@@ -2805,7 +2817,7 @@ function decideDialog(a, t, accept) {
       shared.some(m => (m.attachments || []).length) && el("p", { class: "hint" }, "Files attached to selected messages may be read by this agent when available. Missing bytes remain unavailable; unselected room history and files are excluded."),
       a.missing > 0 && el("p", { class: "hint" }, plural(a.missing, "chosen message is", "chosen messages are") + " not on this computer and cannot be shown."),
       el("p", {}, a.tasks_from.length ? "Tasks run without asking you when they come from: " + a.tasks_from.map((p) => (isMe(p) ? "you" : p.label)).join(" and ") + "."
-        : "Every task waits for you to accept it."),
+        : "Your verified human devices need no extra AgentNet approval. Other people’s tasks need your acceptance or an existing standing permission."),
       a.note && el("p", {}, "Their note: " + a.note),
       el("p", { class: "hint" }, "You accept exactly this, all or nothing. Chosen messages replay as context; no native session is copied. Either of you can dismiss it later.")]
       : [el("p", {}, "Your agent does not join. If you change your mind, they can invite it again.")],
@@ -2872,22 +2884,30 @@ function startSend(key, text, files, reply, answering, t, kind, retry, id, topic
     if ($("body").value === text) { $("body").value = ""; grow(); state.typedFor = null; state.mentions = []; state.mentionText = ""; }
     if (reply && state.dmReply === reply) setDMReply(null);
     if (answering && state.answering === answering) setAnswering(null);
+    // Asked: the composer writes to the conversation again (as Comic does);
+    // a failed ask restores its assistant with the text (failSend).
+    if (state.dm && kind !== "message" && state.dmAgent && state.dmAgent === addressedPID) setDMAgent(null);
     state.files = state.files.filter(f => !files.includes(f)); renderPending(); keepDraft(); syncComposer();
   }
 }
-function failSend(id, key, ws, text, files, reply, answering, reason, mentions) {
+function failSend(id, key, ws, text, files, reply, answering, reason, mentions, agent = null) {
   if (!sends.fail(id, reason)) return; // a pushed durable message already merged
   if (!alive) return; // the current renderer owns drafts; this failed turn keeps its Retry
   const here = alive && wsNow() === ws && state.draftKey === key;
-  const d = here ? {text: $("body").value, files: state.files} : draftsOf(ws)[key] || {text:"",files:[]};
-  if (!d.text && !(d.files || []).length) {
+  const d = here ? {text: $("body").value, files: state.files, agent: state.dm ? state.dmAgent : null} : draftsOf(ws)[key] || {text:"",files:[]};
+  // Restore only into an empty draft still aimed where this send was: a newer chosen
+  // assistant keeps its target even with no text, and an assistant that can no longer
+  // be asked is not replaced by the conversation. Otherwise this turn keeps its Retry.
+  const newerTarget = !!d.agent && d.agent !== agent, eligible = !agent || !here || !!agentOf(agent)?.can_ask;
+  const restore = !d.text && !(d.files || []).length && !newerTarget && eligible;
+  if (restore) {
     if (here) {
       $("body").value = text; state.mentions = mentions || []; state.mentionText = text; grow();
-      state.files = files; renderPending(); if (reply) setDMReply(reply); if (answering) setAnswering(answering); keepDraft(); syncComposer();
-    } else draftsOf(ws)[key] = {...d, text, files, reply, answering, mentions};
+      state.files = files; renderPending(); if (reply) setDMReply(reply); if (answering) setAnswering(answering); if (agent && !state.dmAgent && agentOf(agent)) setDMAgent(agentOf(agent)); /* never over a newer target */ keepDraft(); syncComposer();
+    } else draftsOf(ws)[key] = {...d, text, files, reply, answering, mentions, ...(agent ? {agent} : {})};
     sends.remove(id);
   }
-  if (here) $("compose-error").textContent = "Not sent: " + reason + (d.text || d.files?.length ? " Your newer draft is kept. Retry the failed message above." : " Your text and files are restored.");
+  if (here) $("compose-error").textContent = "Not sent: " + reason + (restore ? " Your text and files are restored." : d.text || d.files?.length ? " Your newer draft is kept. Retry the failed message above." : " Retry the failed message above.");
   else announce("Not sent: " + reason + ". Your draft is kept in its conversation.");
   if (alive) Zoom.refresh();
 }
@@ -2936,7 +2956,12 @@ async function sendDM(retry) {
     await sends.ready(id);
     let r;
     const humanAsk = !!agent && (dmHumanGuest(t) || (t.guests || []).some(g => g.state === "active")); // a request with guests present names its assistant only
-    const receiver = humanAsk ? null : await prepareReplyReceiverSelection(receiverSelection, host, ws, nativeReceiver, nativeSessions, receiverContext);
+    // An agent this device runs answers here as a local job: there is no
+    // request copy to bind a default reply receiver to (the program refuses
+    // one), and its answer comes back in this conversation anyway. An
+    // explicitly chosen receiver is still sent and checked as chosen.
+    const localJob = !!agent && !receiverSelection && !receiverContext?.host && (t.agents || []).some(a => (a.pid === agent || (a.pids || []).includes(agent)) && a.host_here);
+    const receiver = humanAsk || localJob ? null : await prepareReplyReceiverSelection(receiverSelection, host, ws, nativeReceiver, nativeSessions, receiverContext);
     const ids = await preparedFiles(files, host); // a failure here keeps what was handed over, for the retry
     try {
       r = agent ? await api("/api/dm/agent/ask", { id, send_group: group, pid: agent, kind,topic, body: signed, files: ids, ...(receiver ? { reply_receiver: receiver } : {}) }, host)
@@ -2950,7 +2975,7 @@ async function sendDM(retry) {
   } catch (e) {
     if (retry?.fanout) {
       if (sends.fail(id,e.message) && alive) announce("Not sent to " + (agentOf(agent) ? agentName(agentOf(agent)) : "selected assistant") + ": " + e.message + ". Retry only this request above.");
-    } else failSend(id, key, ws, text, files, reply, null, e.message, mentions);
+    } else failSend(id, key, ws, text, files, reply, null, e.message, mentions, agent);
   } finally {
     if (alive && wsNow() === ws) { state.sending = false; kindHint(); syncComposer(); if (state.newVersion) updated(state.newVersion); }
     else { state.sending = false; sentElsewhere(ws); }
@@ -3628,10 +3653,12 @@ function resumeMessageFocus(t) {
   state.messageOpening = null;
   topicSelections[t.id] = message.topic || "";
   topicFresh[t.id] = false;
-  return message.id;
+  return pending.chat ? "" : message.id; // a list row stays in the chat: no message level
 }
-async function openDMMessage(conv, ref) {
-  const pending = {conv, ref, waiting:false, own:true}; state.messageOpening = pending;
+// chat: open the conversation at that message's topic and stay on the chat
+// level (a list row), instead of zooming to the message (a notification).
+async function openDMMessage(conv, ref, chat = false) {
+  const pending = {conv, ref, waiting:false, own:true, chat}; state.messageOpening = pending;
   try {
     const opening = openDM(conv), gen = state.gen, host = currentHost;
     const selected = topicSelections[conv]; const generation = Zoom.generation;
@@ -3641,16 +3668,17 @@ async function openDMMessage(conv, ref) {
     if (!message) { pending.waiting = true; announce("That message is not on this device yet. It will open when its history arrives."); return; }
     topicSelections[conv] = message.topic || "";
     topicFresh[conv] = false;
+    if (chat) Zoom.revealEnd = true;
     renderDMBody(false);
-    flash(message.id);
+    if (!chat) flash(message.id);
     if (state.messageOpening === pending) { state.messageOpening = null; void markDMRead(); }
   } finally {
     if (state.messageOpening === pending && !pending.waiting) state.messageOpening = null;
   }
 }
-async function openMessage(ref) {
+async function openMessage(ref, chat = false) {
   if (!ref || !ref.id) return;
-  if (ref.conv && (state.overview.dms || []).some(d => d.id === ref.conv)) return openDMMessage(ref.conv, ref);
+  if (ref.conv && (state.overview.dms || []).some(d => d.id === ref.conv)) return openDMMessage(ref.conv, ref, chat);
   if (!ref.conv) {
     try { await openThread(ref.id, ref.id); if (state.data && state.data.messages.some(m => m.id === ref.id)) return; } catch (e) { /* not a device thread here */ }
   }
@@ -3659,7 +3687,7 @@ async function openMessage(ref) {
     try {
       const v = await api("/api/dm?id=" + encodeURIComponent(d.id));
       if (!alive || gen !== state.gen || host !== currentHost) return;
-      if (messageTarget(v.messages, ref)) return openDMMessage(d.id, ref);
+      if (messageTarget(v.messages, ref)) return openDMMessage(d.id, ref, chat);
     } catch (e) { /* next */ }
   }
   if (alive && gen === state.gen && host === currentHost) showList("That message is not on this device.");
@@ -3958,7 +3986,7 @@ function renderAgentTarget() {
   if (!box) return;
   const d = state.dmData, t = state.data;
   const mentioned = state.dm ? validMentions(state.mentions, $("body").value) : []; // the exact people this draft mentions
-  box.hidden = state.dm ? !d || (dmHumanGuest(d) && !state.dmAgent || (!(d.agents || []).length && !state.dmAgent)) && !mentioned.length : !t || !!state.answering || kindValue() === "message";
+  box.hidden = state.dm ? !d || (dmHumanGuest(d) && !state.dmAgent || (!(d.agents || []).some(a => !["dismissed", "declined"].includes(a.state)) && !state.dmAgent)) && !mentioned.length : !t || !!state.answering || kindValue() === "message";
   if (box.hidden) { fill(box); return; }
   if (state.dm) {
     const a = agentOf(state.dmAgent);
@@ -4224,7 +4252,7 @@ function renderTarget() {
     if (!d) { set("", "", "Send"); return; }
     if (humanGroup(d) && !state.dmAgent) {
       const guestNames = (d.guests || []).filter(g => g.state === "active" && !g.host_here).map(g => g.host.label);
-      set(d.title, (d.frozen ? "· Last verified audience: " : "· ") + (d.members || []).map(p => p.state === "self" ? "You" : p.label).join(", ") + (guestNames.length ? " · Guests: " + joinedNames(guestNames) : "") + (dmHumanGuest(d) ? " · You are a guest, not a member" : "") + (state.dmReply ? " · reply" : ""), "Send to " + d.title); return;
+      set(d.title, (d.frozen ? "· Last verified audience: " : "· ") + (d.members || []).map(p => p.state === "self" ? "You" : p.label).join(", ") + (guestNames.length ? " · Guests: " + joinedNames(guestNames) : "") + (dmHumanGuest(d) ? " · You are a guest, not a member" : "") + (state.dmReply ? " · reply" : "") + (topicFresh[d.id] ? " · starts a new topic" : ""), "Send to " + d.title); return;
     }
     if (state.dmAgent) {
       const a = agentOf(state.dmAgent);
@@ -4237,7 +4265,7 @@ function renderTarget() {
     }
     const guestNames = dmHumanGuest(d) ? (d.guests || []).filter(g => g.state === "active" && !g.host_here).map(g => g.host.label) : (d.guests || []).filter(g => g.can_send && !g.host_here).map(g => g.host.label);
     const audience = joinedNames(dmHumanGuest(d) ? guestAudienceNames(d) : [d.peer.label, ...guestNames]);
-    set(audience, (state.dmReply ? "· replying to “" + firstLine(state.dmReply.body, 40) + "”" : "· same conversation") + (guestNames.length ? " · includes accepted guests" : dmHumanGuest(d) ? " · conversation message" : d.audience_pending ? " · private here; other devices may still be updating" : " · private between original people"), guestNames.length || dmHumanGuest(d) ? "Send" : "Send to " + d.peer.label);
+    set(audience, (state.dmReply ? "· replying to “" + firstLine(state.dmReply.body, 40) + "”" : topicFresh[d.id] ? "· starts a new topic" : "· same conversation") + (guestNames.length ? " · includes accepted guests" : dmHumanGuest(d) ? " · conversation message" : d.audience_pending ? " · private here; other devices may still be updating" : " · private between original people"), guestNames.length || dmHumanGuest(d) ? "Send" : "Send to " + d.peer.label);
     return;
   }
   const t = state.data;
@@ -4251,7 +4279,7 @@ function renderTarget() {
       (k === "task" ? "Give task to " : "Ask ") + (agent ? agent.label : "selected agent")); return;
   }
   const to = whoText(t.peer);
-  set(to, (last ? "· continues “" + lineOf(last, 40) + "”" : "· a new conversation") +
+  set(to, (topicFresh[t.id] ? "· starts a new topic" : last ? "· continues “" + lineOf(last, 40) + "”" : "· a new conversation") +
     (k === "task" ? " · as a task they accept first" : k === "question" ? " · as a question their responder may answer" : ""),
     k === "task" ? "Give task to " + to : k === "question" ? "Ask " + to : "Send to " + to);
 }
@@ -4260,6 +4288,11 @@ function renderTarget() {
 // (noteTyping). A send checks that binding first: text started for one
 // recipient is never sent to another without the person looking again.
 state.typedFor = null;
+// retargetDraft: the person chose this target in the mention list, with the
+// To line in view, so the text typed so far now belongs to it.
+function retargetDraft() {
+  if ($("body").value) state.typedFor = { key: state.draftKey, to: targetId() };
+}
 function noteTyping() {
   if (!$("body").value) { state.typedFor = null; return; }
   if (!state.typedFor) state.typedFor = { key: state.draftKey, to: targetId() };
@@ -4749,7 +4782,7 @@ function selectSection(section) {
   }
   toggleReview(false);
   root.classList.remove("show-conv");
-  void Zoom.go(0, {});
+  if (state.overview) void Zoom.go(0, {}); // before the first overview, that first draw shows the chosen section
   rerender();
 }
 
@@ -5093,10 +5126,11 @@ function settingsTab(name) {
     if (on && b.scrollIntoView) b.scrollIntoView({ block: "nearest", inline: "nearest" }); // the tab row scrolls on a phone: the chosen tab is always in view
   }
 }
-function showSettings() {
+// tab: the settings section to open (the Settings item opens Appearance; You opens Profile).
+function showSettings(tab) {
   toggleReview(false);
   if (state.overview) renderProfile(state.overview);
-  settingsTab("profile");
+  settingsTab(typeof tab === "string" ? tab : "profile");
   $("settings").showModal();
 }
 function setTheme(theme) {
@@ -5144,11 +5178,15 @@ function start() {
       state.data.task_grant && el("button", { type: "button", class: "btn", onclick: () => revokeDialog(state.data) }, "Task permissions")) : null;
     const guests = state.dmData ? (t.guests || []).map(g => guestCard(g, t)) : [];
     const remove = el("button", { type: "button", class: "btn", onclick: () => { $("dialog").close(); deleteConversationDialog(t); } }, state.dmData ? "Delete conversation…" : "Delete this thread…");
-    dialog({ title: peer, body: [state.dmData ? deviceDisclosure(t.peer) : el("p", { class: "mono" }, state.data.key?.pinned || "Key not checked yet"), members, guests, past, actions, routing, remove], ok: "Close", run: async () => {} });
+    // The chat's Mute and Project space are here too: a phone hides the header chips.
+    const chatControls = state.dmData ? dmNotifyChips(t) : [];
+    for (const b of chatControls) b.addEventListener("click", () => $("dialog").close());
+    dialog({ title: peer, body: [state.dmData ? deviceDisclosure(t.peer) : el("p", { class: "mono" }, state.data.key?.pinned || "Key not checked yet"), members, guests, past, actions, chatControls.length > 0 && el("div", { class: "detail-actions" }, chatControls), routing, remove], ok: "Close", run: async () => {} });
   });
   $("nav-chats").addEventListener("click", () => selectSection("chats"));
   $("nav-people").addEventListener("click", () => selectSection("people"));
   $("profile-btn").addEventListener("click", showSettings);
+  $("settings-btn").addEventListener("click", () => showSettings("appearance"));
   $("settings-tabs").addEventListener("keydown", (e) => {
     const tabs = [...root.querySelectorAll("[data-settings]")];
     const i = tabs.indexOf((root.getRootNode().activeElement || null));
@@ -5302,7 +5340,7 @@ function writeDialog(t, m) {
   const kind = el("select", { id: "write-kind" }, ["message", "question", "task"].map((k) => el("option", { value: k }, k[0].toUpperCase() + k.slice(1))));
   const last = t.messages[t.messages.length - 1];
   dialog({
-    title: m ? "Answer " + m.from : "Write to " + t.peer,
+    title: m ? "Answer " + m.from : (topicFresh[t.id] ? "New topic with " : "Write to ") + t.peer,
     body: [m && el("div", { class: "quote" }, m.body),
       el("label", { for: "write-body", class: "field-label" }, m ? "Your answer" : "Message"), body,
       !m && [el("label", { for: "write-kind", class: "field-label" }, "Send as"), kind],
@@ -5336,9 +5374,11 @@ function dmWriteDialog(d) {
   const mentions = el("div", {id:"write-mentions",hidden:true});
   const targets = el("div", {id:"write-agent-target"});
   const canFiles = filesAllowed();
+  const quote = state.dmReply && el("div", { class: "quote" }, "Replying to: " + firstLine(state.dmReply.body, 80) + " ",
+    el("button", { type: "button", class: "text-btn", "aria-label": "Do not reply to that message", onclick: () => { setDMReply(null); quote.remove(); } }, "×"));
   dialog({
-    title: "Write to " + (humanGroup(d) ? d.title : d.peer.label),
-    body: [el("label", { for: "write-body", class: "field-label" }, "Message"), body, targets, mentions,
+    title: (topicFresh[d.id] ? "New topic with " : "Write to ") + (humanGroup(d) ? d.title : d.peer.label),
+    body: [quote, el("label", { for: "write-body", class: "field-label" }, "Message"), body, targets, mentions,
       canFiles && dialogFiles(body),
       el("p", { class: "hint" }, humanGroup(d) ? "Messages go to current members and accepted guests. Each selected assistant receives its own request, subject to its owner’s permissions." : "Messages stay in this DM. Each selected assistant receives its own request, subject to its owner’s permissions.")],
     ok: "Send", focus: body,
@@ -5364,7 +5404,8 @@ function zoomReminders() {
 // agentNodes are a person's agents, each joined to them by a line: the
 // device that runs it and the DMs it was invited into here (open picks one).
 function agentNodes(p, open) {
-  const agents = p.agents || [];
+  // Ended or declined participations stay in their DMs' history, not here.
+  const agents = (p.agents || []).map((a) => ({ ...a, dms: (a.dms || []).filter((d) => !["dismissed", "declined"].includes(d.state)) }));
   if (!agents.length) return null;
   const dmTitle = (conv) => { const d = ((state.overview && state.overview.dms) || []).find((x) => x.id === conv); return d ? firstLine(d.title || "DM", 40) : "a DM"; };
   return el("ul", { class: "agent-nodes", "aria-label": (isMe(p) ? "Your" : p.label + "'s") + " agents" }, agents.map((a) =>
@@ -5442,13 +5483,13 @@ const Zoom = {
     const oldContent = surface.querySelector(".zoom-layer:last-child .zoom-content");
     const scroll = oldContent?.scrollTop || 0;
     const atEnd = oldContent && oldContent.scrollHeight - scroll - oldContent.clientHeight < 60;
-    const expanded = [...surface.querySelectorAll(".zoom-layer:last-child details[open]")].map(d => d.dataset.person).filter(Boolean);
+    const expanded = [...surface.querySelectorAll(".zoom-layer:last-child details[open]")].map(d => d.dataset.person || d.dataset.keep).filter(Boolean);
     const focusText = ownedFocus && focused.tagName === "BUTTON" ? focused.textContent : null;
     const typing = focused?.classList.contains("zoom-search");
     const selection = typing ? [focused.selectionStart, focused.selectionEnd] : null;
     fill(surface, this.layer());
     const content = surface.querySelector(".zoom-content");
-    for (const d of surface.querySelectorAll("details[data-person]")) d.open = expanded.includes(d.dataset.person);
+    for (const d of surface.querySelectorAll("details[data-person], details[data-keep]")) d.open = expanded.includes(d.dataset.person || d.dataset.keep);
     content.scrollTop = this.level === 2 && (atEnd || this.revealEnd) ? content.scrollHeight : scroll;
     this.revealEnd = false;
     if (typing) {
@@ -5478,6 +5519,7 @@ const Zoom = {
   },
 
   layer() {
+    placeDrivePanel(false);
     const views = this.person ? [() => this.everyone(), () => this.personLevel(), () => this.dmLevel(), () => this.dmMessage()]
       : [() => this.everyone(), () => this.person_(), () => this.thread(), () => this.message()];
     topicUI.show(this.level>=2);
@@ -5591,7 +5633,7 @@ const Zoom = {
           held && held + " held", unread && unread + " new"].filter(Boolean).join(" · ");
         const b = el("button", { type: "button", class: "person-card" + (p.state === "conflict" ? " danger" : ""), "aria-label": p.label + ", " + status },
           avatar(p.label || p.address, "node-face"), el("span", { class: "node-name" }, p.label), el("span", { class: "node-status" }, status));
-        b.addEventListener("click", () => theirs[0]?.last_id ? void openMessage({id:theirs[0].last_id,conv:theirs[0].id}) : this.go(1, { person: personKey(p), peer: null }, b));
+        b.addEventListener("click", () => theirs[0]?.last_id ? void openMessage({id:theirs[0].last_id,conv:theirs[0].id}, true) : this.go(1, { person: personKey(p), peer: null }, b));
         return el("li", { class: "person-cluster" }, b, devices(p),
           agentNodes(p, (conv) => this.go(2, { person: personKey(p), dm: conv, peer: null })));
       })),
@@ -5652,20 +5694,22 @@ const Zoom = {
     return el("div", { class: "zoom-scene" },
       el("header", { class: "zoom-head" }, el("div", {},
         el("p", { class: "hint" }, humanGroup(d) ? (dmHumanGuest(d) ? "Guest in group: " : "Group: ") + d.title + " · " + groupMemberCount(d) : "DM with " + d.peer.label + " (the name they give) · " + devicesText(d.peer)),
-        el("h2", {}, title))),
+        el("h2", {}, title), el("div", { class: "peer-chips zoom-chips" }, dmNotifyChips(d),
+          d.peer?.person && el("button", { type: "button", class: "peer-chip" + (state.driveOpen ? " on" : ""), title: "This DM's shared Google Drive folder, if the workspace has Drive on; files there are outside AgentNet's encryption", onclick: () => toggleDrivePanel(state.dmData) }, "Project space")))),
+      state.driveOpen && d.peer?.person && placeDrivePanel(true),
       d.frozen && el("p", { class: "notice" }, d.frozen),
       humanGroup(d) && pendingGroupPeople(d).length > 0 && el("section", {"aria-label":"Invited people", class:"participant-list"},
         pendingGroupPeople(d).map(i => el("span", {class:"participant invited-person"},
           avatar(personLabelOf(i.target), "sm"), personLabelOf(i.target),
           el("span", {class:"tag"}, i.status === "accepted" ? "Accepted · waiting to join" : "Invited · waiting for them to accept"), groupInvitationActions(i)))),
-      humanGroup(d) && el("details", {class:"zoom-agents", "aria-label":"People in this group"},
+      humanGroup(d) && el("details", {class:"zoom-agents", "aria-label":"People in this group", "data-keep":"members"},
         el("summary", {}, "Current members and human guests"),
         el("ul", {}, (d.members || []).map(p=>el("li", {}, p.label + (p.admin ? " · Administrator" : " · Member")))),
         dmHumanGuest(d) && el("p", {class:"hint"}, "You are a guest, not a group member. Guests cannot invite or manage members."),
         (d.guests || []).map(g=>guestCard(g,d)),
         inviteRights(d).people && el("button", {type:"button",class:"text-btn",onclick:()=>participantsDialog(d)}, "+ Add participants")),
-      humanGroup(d) && el("details", {class:"zoom-agents", "aria-label":"Agents in this group"},
-        el("summary", {}, d.agents.filter(a=>!["dismissed","declined"].includes(a.state)).length + " agents in this group"),
+      humanGroup(d) && el("details", {class:"zoom-agents", "aria-label":"Agents in this group", "data-keep":"agents"},
+        el("summary", {}, plural(d.agents.filter(a=>!["dismissed","declined"].includes(a.state)).length, "agent", "agents") + " in this group"),
         d.agents.filter(a=>!["dismissed","declined"].includes(a.state)).map(a=>agentCard(a,d)),
         inviteRights(d).assistants && el("button",{type:"button",class:"text-btn",onclick:()=>inviteDialog(d)},"Add agent or share more…")),
       $("compose-error").textContent && el("p",{class:"error",role:"alert"},$("compose-error").textContent),
@@ -5711,6 +5755,8 @@ const Zoom = {
       !m.deleted && reminderLine(m),
       !m.deleted && fileChips(m, m.attachments),
       reactionsRow(m, d.id), messageMenu(m, d.id, { querySelector: () => null }),
+      !m.deleted && !m.event && !m.excerpt_pid && !dmVisitor(d) && !(dmHumanGuest(d) && !guestAuthor(d)) && !d.frozen &&
+        el("div", { class: "acts" }, el("button", { type: "button", class: "act", onclick: async () => { await this.go(2, {}); if (state.dm !== d.id) return; setDMReply(m); dmWriteDialog(state.dmData); } }, "Reply")),
       m.state_text && el("p", { class: "hint" }, m.state_text),
       ["question", "task"].includes(m.kind) && (m.actions || []).some(a => a !== "do_it") &&
         !(agentDetailFor(m, d) && ((m.actions || []).includes("resolve") || m.exec?.state === "needs_human")) &&

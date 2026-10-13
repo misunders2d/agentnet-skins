@@ -1,7 +1,7 @@
 {
   "repository": "https://github.com/misunders2d/agentnet.git",
-  "version": "v0.8.25",
-  "commit": "ccb8a7f6bd3988cbf002a460f03a525452c4ec3f",
-  "candidate": "feat/skins-contract-gallery",
+  "version": "v0.8.26",
+  "commit": "1727eaff1aeeb5429a8f018829d8bc4e1f263d08",
+  "candidate": "v0.8.26",
   "hostApi": 1
 }

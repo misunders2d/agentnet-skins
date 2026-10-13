@@ -36,7 +36,8 @@ export const markup = `
           </button>
 
         </div>
-  <button id="profile-btn" class="nav-item profile-btn" type="button" aria-label="Your profile and settings"><span id="profile-initial" class="profile-initial">A</span><span class="nav-label">You</span></button>
+  <button id="settings-btn" class="nav-item settings-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/><circle cx="12" cy="12" r="6.5"/></svg><span class="nav-label">Settings</span></button>
+  <button id="profile-btn" class="nav-item profile-btn" type="button" aria-label="You: your profile and devices"><span id="profile-initial" class="profile-initial">A</span><span class="nav-label">You</span></button>
 </nav>
 <div class="view-stack">
 <div id="draft-state" class="zoom-state" hidden>

@@ -21,7 +21,7 @@
   .classic-root:not([data-theme="light"]) {
     --canvas: #0f1115; --surface: #161920; --sunken: #1d212a; --hover: #1b1f27; --line: #272b35;
     --text: #e8eaef; --muted: #a2a8b4;
-    --accent: #329e92; --accent-ink: #ffffff; --accent-soft: #173831; --accent-text: #8bddca;
+    --accent: #1f7a71; --accent-ink: #ffffff; --accent-soft: #173831; --accent-text: #8bddca;
     --theirs: #20242d;
     --attn: #f4b35e; --attn-soft: #2e2211; --attn-line: #6b4a1c;
     --danger: #f4978e; --danger-soft: #361a18;
@@ -409,7 +409,7 @@ dialog .check input { margin-top: 4px; width: 16px; height: 16px; accent-color: 
   .compose-box { padding: 8px 8px 6px 12px; }
   /* The Send button keeps its target-naming label on a phone: the action
      and its recipient stay legible beside each other. */
-  .send { padding: 8px 12px; font-size: 13px; max-width: 100%; }
+  .send { padding: 8px 12px; font-size: 13px; max-width: 100%; min-height: 44px; }
   .send span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .target { padding: 0 2px 6px; }
   .to-how { white-space: normal; }
@@ -562,7 +562,7 @@ input[type="datetime-local"] { font: inherit; padding: 6px 10px; border: 1px sol
 .classic-root[data-theme="dark"] {
     --canvas: #0f1115; --surface: #161920; --sunken: #1d212a; --hover: #1b1f27; --line: #272b35;
     --text: #e8eaef; --muted: #a2a8b4;
-    --accent: #329e92; --accent-ink: #ffffff; --accent-soft: #173831; --accent-text: #8bddca;
+    --accent: #1f7a71; --accent-ink: #ffffff; --accent-soft: #173831; --accent-text: #8bddca;
     --theirs: #20242d;
     --attn: #f4b35e; --attn-soft: #2e2211; --attn-line: #6b4a1c;
     --danger: #f4978e; --danger-soft: #361a18;

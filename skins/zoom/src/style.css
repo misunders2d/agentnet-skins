@@ -21,7 +21,7 @@
   .zoom-root:not([data-theme="light"]) {
     --canvas: #0f1115; --surface: #161920; --sunken: #1d212a; --hover: #1b1f27; --line: #272b35;
     --text: #e8eaef; --muted: #a2a8b4;
-    --accent: #329e92; --accent-ink: #ffffff; --accent-soft: #173831; --accent-text: #8bddca;
+    --accent: #1f7a71; --accent-ink: #ffffff; --accent-soft: #173831; --accent-text: #8bddca;
     --theirs: #20242d;
     --attn: #f4b35e; --attn-soft: #2e2211; --attn-line: #6b4a1c;
     --danger: #f4978e; --danger-soft: #361a18;
@@ -461,6 +461,8 @@ dialog .check input { margin-top: 4px; width: 16px; height: 16px; accent-color: 
 .join-more summary { cursor: pointer; color: var(--accent-text); font-weight: 550; }
 .join-more p { margin: 8px 0 0; }
 @media (max-width: 480px) { .join { padding: 16px; } .join-card { padding: 22px 16px; } }
+/* Dialog actions (Send in the write dialog) keep a 44px touch target on a phone. */
+@media (max-width: 760px) { .dialog-actions .btn { min-height: 44px; } }
 
 /* People and human DMs. */
 .kind-tag { flex: none; font-size: 11px; font-weight: 650; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text); }
@@ -562,7 +564,7 @@ input[type="datetime-local"] { font: inherit; padding: 6px 10px; border: 1px sol
 .zoom-root[data-theme="dark"] {
     --canvas: #0f1115; --surface: #161920; --sunken: #1d212a; --hover: #1b1f27; --line: #272b35;
     --text: #e8eaef; --muted: #a2a8b4;
-    --accent: #329e92; --accent-ink: #ffffff; --accent-soft: #173831; --accent-text: #8bddca;
+    --accent: #1f7a71; --accent-ink: #ffffff; --accent-soft: #173831; --accent-text: #8bddca;
     --theirs: #20242d;
     --attn: #f4b35e; --attn-soft: #2e2211; --attn-line: #6b4a1c;
     --danger: #f4978e; --danger-soft: #361a18;

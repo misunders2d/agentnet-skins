@@ -8,7 +8,7 @@ const cli=(...args)=>execFileSync(bin,['--home',path.join(world,'sergey'),...arg
 // The skin's interaction family: Classic family (Holonet, Classic) or Zoom.
 const family=process.env.AGENTNET_SKIN_FAMILY||m.id,z=()=>page.locator('#zoom'),settled=()=>page.waitForFunction(()=>document.querySelector('#skin')?.shadowRoot?.querySelectorAll('#zoom .zoom-layer').length===1);
 const ui=family==='zoom'?{
- // Zoom draws Everyone once its first overview arrives. (Choosing Chats before that throws in Zoom: a known gap.)
+ // Zoom draws Everyone once its first overview arrives.
  ready:()=>z().locator('.person-card').first().waitFor(),
  async list(){await page.locator('#nav-chats').click();await settled();await z().locator('.ladder .rung').nth(0).click();await z().locator('.person-card').filter({hasText:'Vitalii'}).waitFor();await settled();},
  // A person card opens their latest DM message; one step out is that DM.

@@ -97,7 +97,7 @@ const sends = pendingSends(host, () => { if (alive) Zoom.refresh(); });
 const state = { thread: null, data: null, seq: -1, answering: null, lastSeen: {}, presence: {},
   drafts: {}, draftKey: null, replyReceiver: null, replyReceiverHost: null, receiverCatalog: null, receiverCatalogSeq: 0, receiverBindings: [], sending: false, hub: null, hubUp: null, query: "", singlesOpen: {}, directoryOpen: false,
   dm: null, dmData: null, dmReply: null, dmAgent: null, seenReported: {}, pendingOpen: null, clickedAtStart: null,
-  files: [], opened: [], contactView: "recent", contactLimit: 20,
+  files: [], opened: [], downloads: {}, contactView: "recent", contactLimit: 20,
   version: "", updating: false, newVersion: "", dialogRestore: null, dialogBusy: false, gen: 0, switching: null, capturedFor: null };
 
 
@@ -391,8 +391,10 @@ function fileChips(m, files) {
   const from = m.synced_from ? m.synced_from.split("/")[1] : "";
   return el("div", { class: "files" }, files.map((f, i) => {
     const idx = f.index === undefined ? i : f.index;
-    const slot = el("span", { class: "file-open" });
-    const open = el("button", { type: "button", class: "text-btn", "data-file-open": m.id + ":" + idx, onclick: (e) => openFile(m.id, idx, f.name, e.currentTarget, slot, m.dir) }, "Open");
+    // An opened file keeps its Download link when the view is drawn again.
+    const savedDownload = state.downloads[m.dir + ":" + m.id + ":" + idx];
+    const slot = el("span", { class: "file-open" }, savedDownload && el("a", { href: savedDownload.url, download: f.name, class: "text-btn file-download" }, "Download " + f.name));
+    const open = el("button", { type: "button", class: "text-btn", "data-file-open": m.id + ":" + idx, "data-file-dir": m.dir, hidden: !!savedDownload, onclick: (e) => openFile(m.id, idx, f.name, e.currentTarget, slot, m.dir) }, "Open");
     // A file sent from here opens only when the backend says a kept copy
     // is openable; without that word it is with the recipient only. A
     // received one opens unless the backend says it is not openable.
@@ -470,9 +472,11 @@ async function openFile(id, i, name, button, slot, dir) {
       // Not a picture: a link the person clicks to save it, where their
       // browser puts downloads. Nothing is claimed about where it went.
       const a = el("a", { href: url, download: name, class: "text-btn file-download" }, "Download " + name);
-      fill(slot, a);
-      button.hidden = true;
-      a.focus();
+      state.downloads[dir + ":" + id + ":" + i] = {url};
+      // A pushed view can replace the original opener while decryption awaits.
+      const currentButton = button.isConnected ? button : [...root.querySelectorAll("[data-file-open]")].find(b => b.dataset.fileOpen === id + ":" + i && b.dataset.fileDir === dir);
+      const currentSlot = currentButton?.closest(".file")?.querySelector(".file-open");
+      if (currentSlot) { fill(currentSlot, a); currentButton.hidden = true; a.focus(); }
     }
   } catch (e) {
     button.textContent = "Open";
@@ -488,6 +492,7 @@ function releaseOpened() {
   for (const viewer of root.querySelectorAll(".file-viewer")) { viewer.close(); viewer.remove(); }
   state.opened.forEach((u) => URL.revokeObjectURL(u));
   state.opened = [];
+  state.downloads = {};
 }
 
 // ---- reminders ("remind me later") ---------------------------------------------------------
@@ -1956,7 +1961,11 @@ function newDMDialog(p) {
 // ---- a DM ---------------------------------------------------------------------------
 
 function beginDM(id) {
-  if (state.messageOpening?.conv !== id) state.messageOpening = null;
+  // A pending jump to a message survives only the open it started itself:
+  // opening the conversation again (by hand) cancels it, so the view never
+  // moves to another topic later, under what the person is doing.
+  const pending = state.messageOpening;
+  if (pending?.conv === id && pending.own) pending.own = false; else state.messageOpening = null;
   const changed = state.dm !== id;
   if (changed) {
     clearTyping();
@@ -2887,6 +2896,9 @@ async function sendDM(retry) {
   const t = retry?.t || state.dmData;
   if ((!retry && state.sending) || !t || t.frozen || (dmHumanGuest(t) && !guestAuthor(t)) || (!retry && dmVisitor(t) && !selectedAgentPIDs().some(pid => agentOf(pid)?.can_ask))) return;
   if (!retry) {
+    // Writing here settles where the person is: a jump to a message still
+    // loading (a list row opens at its latest message) no longer moves the view.
+    if (state.messageOpening?.conv === t.id) state.messageOpening = null;
     trackMentions();
     const text=$("body").value, mentions=(state.mentions || []).slice(), agents=selectedAgentPIDs(text,mentions);
     if (agents.length > 1) {
@@ -2947,6 +2959,7 @@ async function sendDM(retry) {
 
 let rerenderContacts = () => {};
 function rerender() {
+  if (!state.overview) return; // drawn once the first overview arrives
   renderThreads(state.overview.threads);
   Zoom.refresh();
 }
@@ -3618,7 +3631,7 @@ function resumeMessageFocus(t) {
   return message.id;
 }
 async function openDMMessage(conv, ref) {
-  const pending = {conv, ref, waiting:false}; state.messageOpening = pending;
+  const pending = {conv, ref, waiting:false, own:true}; state.messageOpening = pending;
   try {
     const opening = openDM(conv), gen = state.gen, host = currentHost;
     const selected = topicSelections[conv]; const generation = Zoom.generation;

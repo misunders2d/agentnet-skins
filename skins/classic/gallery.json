@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "description": "AgentNet's original interface: your chats in a list on the left and the open conversation on the right, with topics, people, agents, activity and every setting one click away. Plain, familiar and quick on a desktop or a phone, in light and dark.",
+  "previews": [
+    {
+      "file": "desktop-light.png",
+      "alt": "Classic on a desktop, light: the chat list beside the open conversation, in a conversation with the fictional Tomasz Reyes"
+    },
+    {
+      "file": "desktop-dark.png",
+      "alt": "Classic on a desktop, dark: the chat list beside the open conversation, in a conversation with the fictional Tomasz Reyes"
+    },
+    {
+      "file": "mobile-light.png",
+      "alt": "Classic on a phone, light: a conversation with the fictional Tomasz Reyes about a glaze test"
+    },
+    {
+      "file": "mobile-dark.png",
+      "alt": "Classic on a phone, dark: a conversation with the fictional Tomasz Reyes about a glaze test"
+    }
+  ]
+}

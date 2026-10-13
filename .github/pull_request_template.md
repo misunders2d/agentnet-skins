@@ -5,5 +5,8 @@
 - [ ] Previews cover desktop and mobile, plus light/dark where supported, using synthetic content only.
 - [ ] Images inspected for private data/URLs, permissions for depicted content checked, and gallery inclusion reviewed by maintainers; captions record the tested revision.
 - [ ] Visible changes refresh previews. Screenshots supplement tests; logs, keys and fixture data remain private.
+- [ ] Previews use invented people and companies only; no trademarks, real people or private data.
+- [ ] `gallery.json` filled and `npm run publish` re-run; `published/` committed and `npm run check` passes.
+- [ ] `npm test` suite summary attached: which suites ran for this skin, and any failure explained.
 
-Describe the concrete change and validation. Link rendered previews and identify any unverified provider/platform behavior.
+See [CONTRIBUTING.md](../CONTRIBUTING.md). Describe the concrete change and validation. Link rendered previews and identify any unverified provider/platform behavior.

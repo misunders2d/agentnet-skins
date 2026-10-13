@@ -11,7 +11,9 @@
     "build": "node scripts/build.mjs",
     "check": "node scripts/check.mjs && node --test tests/*.test.mjs",
     "test": "npm run build && npm run check && node scripts/test.mjs",
-    "new-skin": "node scripts/new-skin.mjs"
+    "new-skin": "node scripts/new-skin.mjs",
+    "previews": "node scripts/previews.mjs",
+    "publish": "node scripts/publish.mjs"
   },
   "devDependencies": {
     "playwright": "1.58.2"

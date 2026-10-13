@@ -3,7 +3,26 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const {execFileSync}=require('node:child_process'),{X509Certificate,createHash}=require('node:crypto');
 const {chromium}=require(process.env.AGENTNET_PLAYWRIGHT||'playwright');
 const world=process.env.AGENTNET_SKIN_WORLD,evidence=process.env.AGENTNET_SKINS_EVIDENCE,bin=process.env.AGENTNET_COMPANY_BINARY,pkg=process.env.AGENTNET_SKIN_PACKAGE,m=JSON.parse(fs.readFileSync(path.join(pkg,'skin.json')));
+const rootClass='.'+(process.env.AGENTNET_SKIN_FAMILY||m.id)+'-root';
 const cli=(...args)=>execFileSync(bin,['--home',path.join(world,'sergey'),...args],{encoding:'utf8'});
+// The skin's interaction family: Classic family (Holonet, Classic) or Zoom.
+const family=process.env.AGENTNET_SKIN_FAMILY||m.id,z=()=>page.locator('#zoom'),settled=()=>page.waitForFunction(()=>document.querySelector('#skin')?.shadowRoot?.querySelectorAll('#zoom .zoom-layer').length===1);
+const ui=family==='zoom'?{
+ // Zoom draws Everyone once its first overview arrives. (Choosing Chats before that throws in Zoom: a known gap.)
+ ready:()=>z().locator('.person-card').first().waitFor(),
+ async list(){await page.locator('#nav-chats').click();await settled();await z().locator('.ladder .rung').nth(0).click();await z().locator('.person-card').filter({hasText:'Vitalii'}).waitFor();await settled();},
+ // A person card opens their latest DM message; one step out is that DM.
+ async thread(){await z().locator('.person-card').filter({hasText:'Vitalii'}).click();await z().locator('.zoom-message').waitFor();await settled();const rungs=z().locator('.ladder .rung');await rungs.nth(await rungs.count()-2).click();await z().locator('.mini-chat').waitFor();await settled();},
+ async send(text,file){await z().getByRole('button',{name:'Write in this DM…',exact:true}).click();await page.locator('#write-body').fill(text);if(file)await page.locator('#write-files').setInputFiles(file);await page.locator('#dialog-ok').click();await page.locator('#dialog').waitFor({state:'hidden'});},
+ sent:text=>z().locator('.mini-chat').getByText(text,{exact:true}),
+ async fileView(name){await settled();await z().locator('button.mc-bubble').filter({hasText:name}).click();await z().locator('.zoom-message').waitFor();await settled();return z().locator('.zoom-message');},
+}:{
+ async list(){if(await page.locator('#back').isVisible())await page.locator('#back').click();await page.locator('#nav-chats').click();await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().waitFor();},
+ async thread(){await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().click();await page.locator('#composer').waitFor();},
+ async send(text,file){if(file)await page.locator('#file-input').setInputFiles(file);if(text)await page.locator('#body').fill(text);await page.locator('#composer').evaluate(f=>f.requestSubmit());},
+ sent:text=>page.locator('#timeline').getByText(text,{exact:true}),
+ async fileView(name){return page.locator('#timeline .msg').filter({hasText:name});},
+};
 let browser,page;const errors=[];
 (async()=>{
  const cert=new X509Certificate(fs.readFileSync(path.join(world,'cert.pem'))),spki=createHash('sha256').update(cert.publicKey.export({type:'spki',format:'der'})).digest('base64');
@@ -18,11 +37,11 @@ let browser,page;const errors=[];
  await page.goto(origin+'/?skin='+m.id+'#agentnet-link-v2:'+Buffer.from(JSON.stringify(offer)).toString('base64url'));
  await page.locator('.join-go').click();
  let id;const deadline=Date.now()+20000;while(Date.now()<deadline){id=cli('person','links').match(/^([a-f0-9]{32})\s+pending\s/m)?.[1];if(id)break;await new Promise(r=>setTimeout(r,100));}assert(id,'Browser requested own-device approval');cli('person','approve',id);
- await page.getByRole('button',{name:'Use this skin',exact:true}).waitFor();await page.getByRole('button',{name:'Use this skin',exact:true}).click();await page.locator('.holonet-root').waitFor();await page.waitForFunction(()=>window.agentnet?.platform==='browser');
- await page.locator('#nav-chats').click();await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().waitFor();await page.screenshot({path:path.join(evidence,'screenshots',m.id+'-engine-chats.png')});
- await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().click();await page.locator('#composer').waitFor();
- const text='Browser-provider synthetic '+Date.now();await page.locator('#body').fill(text);await page.locator('#composer').evaluate(f=>f.requestSubmit());await page.locator('#timeline').getByText(text,{exact:true}).waitFor();
- const name='browser-provider.txt';await page.locator('#file-input').setInputFiles({name,mimeType:'text/plain',buffer:Buffer.from('Encrypted browser-provider fixture bytes')});await page.locator('#composer').evaluate(f=>f.requestSubmit());const row=page.locator('#timeline .msg').filter({hasText:name});await row.getByRole('button',{name:'Open',exact:true}).click();const link=row.getByRole('link',{name:'Download '+name,exact:true});await link.waitFor();
- await page.screenshot({path:path.join(evidence,'screenshots',m.id+'-engine-thread-files.png')});await page.reload();await page.locator('.holonet-root').waitFor();assert.equal(await page.getByRole('button',{name:'Use this skin',exact:true}).count(),0);if(await page.locator('#back').isVisible())await page.locator('#back').click();await page.locator('#nav-chats').click();await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().click();await page.locator('#timeline').getByText(text,{exact:true}).waitFor();assert.deepEqual(errors,[]);
+ await page.getByRole('button',{name:'Use this skin',exact:true}).waitFor();await page.getByRole('button',{name:'Use this skin',exact:true}).click();await page.locator(rootClass).waitFor();await page.waitForFunction(()=>window.agentnet?.platform==='browser');await ui.ready?.();
+ await ui.list();await page.screenshot({path:path.join(evidence,'screenshots',m.id+'-engine-chats.png')});
+ await ui.thread();
+ const text='Browser-provider synthetic '+Date.now();await ui.send(text);await ui.sent(text).waitFor();
+ const name=m.id+'-browser-provider-'+Date.now().toString(36)+'.txt';await ui.send('',{name,mimeType:'text/plain',buffer:Buffer.from('Encrypted browser-provider fixture bytes')});const row=await ui.fileView(name);await row.getByRole('button',{name:'Open',exact:true}).click();const link=row.getByRole('link',{name:'Download '+name,exact:true});await link.waitFor();
+ await page.screenshot({path:path.join(evidence,'screenshots',m.id+'-engine-thread-files.png')});await page.reload();await page.locator(rootClass).waitFor();assert.equal(await page.getByRole('button',{name:'Use this skin',exact:true}).count(),0);await ui.ready?.();await ui.list();await ui.thread();await ui.sent(text).waitFor();assert.deepEqual(errors,[]);
  fs.writeFileSync(path.join(evidence,m.id+'-browser-provider.json'),JSON.stringify({pass:true,skin:m.id,host_version:1,provider:'Actual browser Engine/IndexedDB against disposable TLS Hub',checks:['Own device enrollment approved in synthetic native home','Installed relay package trust and mount','History/people present in browser provider','Browser send/file stage/file open via captured host','IndexedDB history and trust survive reload'],limits:['Chromium Android viewport/UA, not physical Android OS','Test certificate pinned by SPKI; no public/live relay or Google account']},null,2),{mode:0o600});console.log('PASS '+m.id+' actual browser provider: enrollment, host API, sends/files, IndexedDB reload');
 })().catch(async e=>{await page?.screenshot({path:path.join(evidence,'screenshots',m.id+'-engine-FAIL.png')}).catch(()=>{});console.error('FAIL browser provider:',e.stack,'page errors:',errors);process.exitCode=1;}).finally(async()=>{await browser?.close();});

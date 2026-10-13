@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "description": "A starship comms console for AgentNet: command navigation across the top, a framed transmission display, a crew panel and a command dock for writing. A brief scanner sweep and split shutters mark what you open, and both stay still when your device asks for less motion. Every chat, topic, agent and setting is still there.",
+  "previews": [
+    {
+      "file": "desktop-light.png",
+      "alt": "Holonet on a desktop, light: the framed transmission display, in a conversation with the fictional Tomasz Reyes"
+    },
+    {
+      "file": "desktop-dark.png",
+      "alt": "Holonet on a desktop, dark: the framed transmission display, in a conversation with the fictional Tomasz Reyes"
+    },
+    {
+      "file": "mobile-light.png",
+      "alt": "Holonet on a phone, light: a conversation with the fictional Tomasz Reyes about a glaze test"
+    },
+    {
+      "file": "mobile-dark.png",
+      "alt": "Holonet on a phone, dark: a conversation with the fictional Tomasz Reyes about a glaze test"
+    }
+  ]
+}

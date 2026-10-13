@@ -1,12 +1,20 @@
 AgentNet Skins
 
-Includes source from AgentNet (https://github.com/misunders2d/agentnet),
-version v0.8.1, commit daddab38d229f695936a6d975702668b381f3135.
+Includes source from AgentNet (https://github.com/misunders2d/agentnet):
+v0.8.1, commit daddab38d229f695936a6d975702668b381f3135 (Holonet), and
+commit b9c2a6e78be1d34f38f737517a7a5b0fe53a83b6 (the Classic and Zoom skins).
 AgentNet is licensed under Apache License 2.0. Original notices are retained.
+Overlay skin packages are built from AgentNet's Comic; their bundled
+packages' licenses are written beside each build (dist/<id>.LICENSES.txt).
 
 Includes QR code by Paul Miller, Copyright (c) 2023 Paul Miller
 (paulmillr.com), SPDX-License-Identifier: MIT OR Apache-2.0.
 This distribution uses its Apache-2.0 option.
+
+Classic and Zoom include the marked Markdown lexer, Copyright (c) 2018+,
+MarkedJS, and Copyright (c) 2011-2018, Christopher Jeffrey (MIT), with
+Markdown's license, Copyright (c) 2004, John Gruber; the license texts
+are kept at the end of link-text.mjs.
 
 Holonet styling, branding, signal artwork and collection tooling are new.
 Star Wars is inspiration only. No affiliation or endorsement is claimed.

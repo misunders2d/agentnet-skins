@@ -208,11 +208,22 @@ async function staysModal(page, role, what) {
   }
 }
 let sent = 0;
+// Every package runs in the same company world: sent texts stay unique per run.
+const runTag = crypto.randomBytes(4).toString('hex');
 
-const messageShot = async (page, skin) => {
-  const times=await page.locator('time[datetime]').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('datetime')));
-  assert.ok(times.length>0,skin+': rendered sent time exists');
-  assert.ok(times.every(t=>Date.parse(t)>0),skin+': no year-one sent time');
+const messageShot = async (page, skin, {chat = false} = {}) => {
+  if (chat) {
+    // Zoom's conversation level writes each sent time into the bubble's author
+    // line instead of a <time> element. Every fixture message was sent today,
+    // so each must show today's clock time (a year-one time shows a date).
+    const who=await page.locator('#zoom .mini-chat .mc-bubble > .mc-who:first-child').allTextContents();
+    assert.ok(who.length>0,skin+': rendered sent time exists');
+    assert.ok(who.every(t=>/· \d{1,2}:\d{2}(?:\s?[AP]M)?$/i.test(t.trim())),skin+': no year-one sent time '+JSON.stringify(who));
+  } else {
+    const times=await page.locator('time[datetime]').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('datetime')));
+    assert.ok(times.length>0,skin+': rendered sent time exists');
+    assert.ok(times.every(t=>Date.parse(t)>0),skin+': no year-one sent time');
+  }
   await page.waitForTimeout(300); // capture the settled message view after its transition
   if (process.env.AGENTNET_SCREENSHOTS) await page.screenshot({path:path.join(process.env.AGENTNET_SCREENSHOTS, 'contract-'+skin+'-'+page.viewportSize().width+'-message.png')});
 };
@@ -267,7 +278,7 @@ const journeys = {
     await page.evaluate(()=>window.__openDevice());
     await page.locator('#timeline .msg').first().waitFor();
     await messageShot(page,'classic');
-    const text='Classic contract send '+(++sent);
+    const text='Classic contract send '+runTag+' '+(++sent);
     await page.locator('#body').fill(text);await page.locator('#composer').evaluate(form=>form.requestSubmit());
     await page.locator('#timeline').getByText(text,{exact:true}).waitFor();
   },
@@ -276,15 +287,20 @@ const journeys = {
     await page.evaluate(()=>window.__openDevice());await page.locator('#zoom .zoom-message').waitFor();
     await messageShot(page,'zoom');
     await page.keyboard.press('Escape');await page.locator('#zoom .mini-chat').waitFor();
-    const text='Zoom contract send '+(++sent);
-    await page.locator('#zoom').getByRole('button',{name:'Write in this conversation…',exact:true}).click();
+    const text='Zoom contract send '+runTag+' '+(++sent);
+    await page.locator('#zoom').getByRole('button',{name:/^Write in this (DM|group|conversation)…$/}).click(); // the opened company-world conversation
     await page.locator('#write-body').fill(text);await page.locator('#dialog-ok').click();
     await page.locator('#zoom .mini-chat').getByText(text,{exact:true}).waitFor();
-    await messageShot(page,'zoom-chat');
+    await messageShot(page,'zoom-chat',{chat:true});
     await page.locator('#zoom .mc-bubble').filter({hasText:text}).click();
     await page.waitForFunction(()=>document.querySelector('#skin').shadowRoot.querySelectorAll('#zoom .zoom-layer').length===1);
     await page.locator('#zoom .zoom-message').focus();
-    for(const level of [2,1,0]){
+    // The ladder's depth follows the opened conversation (a group adds its
+    // group step; a DM opened from a notification has none): each Escape
+    // zooms out exactly one step until Everyone.
+    const rungs=await page.locator('#zoom .rung').count();assert.ok(rungs>=3,'Zoom ladder has Everyone, conversation and message');
+    assert.equal(await page.locator('#zoom .rung').nth(rungs-1).getAttribute('aria-current'),'step','Zoom opens the message level');
+    for(const level of Array.from({length:rungs-1},(_,i)=>rungs-2-i)){
       await page.keyboard.press('Escape');
       await page.waitForFunction(()=>document.querySelector('#skin').shadowRoot.querySelectorAll('#zoom .zoom-layer').length===1);
       assert.equal(await page.locator('#zoom .rung').nth(level).getAttribute('aria-current'),'step','Zoom Escape level '+level);

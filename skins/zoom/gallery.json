@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "description": "Move through your workspace by zooming in: everyone, then one person, then a conversation, then a single message with everything known about it. Esc steps back out. You write in a focused dialog, and every chat, topic, agent and setting is still there.",
+  "previews": [
+    {
+      "file": "desktop-light.png",
+      "alt": "Zoom on a desktop, light: the conversation level with its zoom ladder, in a conversation with the fictional Tomasz Reyes"
+    },
+    {
+      "file": "desktop-dark.png",
+      "alt": "Zoom on a desktop, dark: the conversation level with its zoom ladder, in a conversation with the fictional Tomasz Reyes"
+    },
+    {
+      "file": "mobile-light.png",
+      "alt": "Zoom on a phone, light: a conversation with the fictional Tomasz Reyes about a glaze test"
+    },
+    {
+      "file": "mobile-dark.png",
+      "alt": "Zoom on a phone, dark: a conversation with the fictional Tomasz Reyes about a glaze test"
+    }
+  ]
+}

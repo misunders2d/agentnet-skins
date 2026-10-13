@@ -2,6 +2,7 @@
   "api": 1,
   "id": "holonet",
   "name": "Holonet",
+  "agentnet": "v0.8.25",
   "entry": "entry.mjs",
   "style": "style.css",
   "files": [

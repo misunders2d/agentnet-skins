@@ -1,6 +1,6 @@
 # Host API v1 conformance
 
-Authoritative: [pinned UI_SKINS.md](https://github.com/misunders2d/agentnet/blob/daddab38d229f695936a6d975702668b381f3135/docs/UI_SKINS.md). This guide records the rules; it does not define a new API.
+Authoritative: [pinned UI_SKINS.md](https://github.com/misunders2d/agentnet/blob/658f3bf53ab17438ed283bf1d4a8dda0bf366a34/docs/UI_SKINS.md) (AgentNet v0.8.25 candidate). This guide records the rules; it does not define a new API.
 
 | Requirement | Implementation / shared evidence |
 | --- | --- |
@@ -14,6 +14,8 @@ Authoritative: [pinned UI_SKINS.md](https://github.com/misunders2d/agentnet/blob
 | Features/capabilities | Complete reference implementation; real sends/files, topics Done/Reopen, people/agents/activity/settings; core returns available actions |
 | Responsive/accessibility | 1440/390, light/dark, keyboard-sized viewport with visible messages, readable composer and 44px send target, reduced motion, measured semantic contrast, settings focus containment, wrapping/root overflow, screenshots per major view |
 | Action-linked motion | Actual production-loader assertions: repeat selection cancels its prior sweep; dialog close/reopen preserves new shutters; reduced motion skips effects; drafts/topic focus survive; crew closes/restores across resize; unmount while open cancels live animations |
+| AgentNet’s own contract check | `internal/ui/testdata/skin_contract_check.cjs` of the pin, for every package against the pinned demo daemon (`agentnet ui --demo`): private globals, direct `/api`/`/events`, undeclared files, DOM writes outside the root, listeners left after unmount, errors, A/B/A; AgentNet’s Classic and Zoom journeys for those ids, its Comic journey for overlays |
+| Gallery | `published/` recomputed in `npm run check`; the pinned AgentNet’s `skin-gallery.mjs` and `local-skins.mjs` read it as the latest release, verify every file and preview and install each package whose id the pin does not reserve |
 | Trusted escape | Production host switcher outside skin; browser-local import/trust; Switch to Comic |
 | File safety | Reference magic-byte picture checks, direction-aware `host.file`; never inline-execute HTML/SVG; actual download bytes verified during delayed host.file + topic rerender |
 
@@ -25,7 +27,7 @@ Receipts prove custody/delivery/quarantine/expiry, never task completion. Execut
 
 ## Evidence limits
 
-Tests use captured Host API v1 adapters, a real pinned native provider/loader and an actual enrolled browser Engine/IndexedDB provider in a disposable local company. The scaffold-family selectors test concrete interactions; a different layout needs its own adapter rather than a superficial pass. Chromium viewport emulation is not a physical Android/iOS keyboard test. No live Google account/consent, real model, remote relay deployment or macOS/Windows runtime is claimed. Full-trust skins are never certified safe merely because tests pass.
+Tests use captured Host API v1 adapters, a real pinned native provider/loader and an actual enrolled browser Engine/IndexedDB provider in a disposable local company. Interaction adapters exist for the Classic family (Holonet, Classic, standalone scaffolds) and Zoom; overlays keep Comic’s interface and run AgentNet’s Comic journey. A different layout needs its own adapter rather than a superficial pass; action-linked motion checks apply to Holonet’s motion only and are reported as not applicable elsewhere. Chromium viewport emulation is not a physical Android/iOS keyboard test. No live Google account/consent, real model, remote relay deployment or macOS/Windows runtime is claimed. Full-trust skins are never certified safe merely because tests pass.
 
 Tests keep screenshots/results private; CI intentionally uploads none. Gallery publication additionally requires current screenshots of the real rendered implementation, with desktop/mobile and supported-theme coverage using synthetic content. Inspect images for private data, URLs and readability; record the tested revision and refresh after visible changes. Mockups are not implementation evidence, and a preview does not replace passing tests. Authors review privacy and permissions for depicted content; maintainers review gallery inclusion. Logs, keys and fixture data stay private. See the [PR checklist](../.github/pull_request_template.md).
 

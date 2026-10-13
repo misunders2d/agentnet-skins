@@ -23,12 +23,27 @@ async function tap(loc,label){
   }catch(e){if(attempt<3&&/not attached|detached/i.test(e.message)){await page.waitForTimeout(300);continue;}throw e;}
  }
 }
+// inReach: with no scrolling at all, the control is wholly inside the window
+// and its chat's visible area, 44px or more, and on top at its centre (the point returned).
+async function inReach(loc,label){
+ const r=await loc.evaluate(n=>{const root=n.getRootNode(),b=n.getBoundingClientRect(),v=n.closest('.zoom-content').getBoundingClientRect(),x=b.left+b.width/2,y=b.top+b.height/2,top=root.elementFromPoint(x,y);return {x,y,w:Math.round(b.width),h:Math.round(b.height),inside:b.top>=Math.max(0,v.top)&&b.bottom<=Math.min(innerHeight,v.bottom)&&b.left>=0&&b.right<=innerWidth,hit:!!top&&(top===n||n.contains(top))};});
+ check(r.inside,label+' is not in view');check(r.hit,label+' is covered where it is tapped');check(r.w>=44&&r.h>=44,label+' is '+r.w+'x'+r.h+', under 44px');
+ result.checks.push(label+' in reach ('+r.w+'x'+r.h+')');return r;
+}
 const z=()=>page.locator('#zoom'),settled=()=>page.waitForFunction(()=>document.querySelector('#skin')?.shadowRoot?.querySelectorAll('#zoom .zoom-layer').length===1);
 (async()=>{
  browser=await chromium.launch({headless:true,executablePath:process.env.AGENTNET_CHROMIUM||undefined});
  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
  const shot=name=>page.screenshot({path:path.join(evidence,'screenshots',m.id+'-touch-'+name+'.png')});
  await page.goto(urls.sergey.page);await page.goto(origin+'/?skin='+m.id);await page.getByRole('button',{name:'Use this skin',exact:true}).tap();await page.locator(rootClass).waitFor();
+ /* Long histories for the Zoom check below: real messages in this disposable world, only in Anna's chats (no other journey reads them), topped up to 200 and never repeated; a device conversation is one reply chain. */
+ const seed=JSON.parse(fs.readFileSync(path.join(world,'seed.json'))),runTag=Date.now().toString(36);
+ await page.waitForFunction(()=>!!window.agentnet?.api);const history=family!=='zoom'?null:await page.evaluate(async({conv,to,count})=>{const api=window.agentnet.api,pad=i=>String(i).padStart(3,'0'),mine=(v,re)=>v.messages.filter(x=>re.test(x.body));
+  for(let i=mine(await api('/api/dm?id='+conv),/^Long history \d{3}$/).length+1;i<=count;i++)await api('/api/dm/send',{conv,body:'Long history '+pad(i)});
+  const o=await api('/api/overview');let thread=(o.threads||[]).find(t=>t.peer===to&&t.title==='Device history 001')?.id;if(!thread)thread=(await api('/api/send',{to,kind:'message',body:'Device history 001'})).id;
+  const t=await api('/api/thread?id='+thread);let last=t.messages.at(-1).id;for(let i=mine(t,/^Device history \d{3}$/).length+1;i<=count;i++)last=(await api('/api/send',{to,kind:'message',body:'Device history '+pad(i),reply_to:last})).id;
+  for(let i=0;i<60;i++){const v=[await api('/api/dm?id='+conv),await api('/api/thread?id='+thread)];if(!v.some(x=>x.messages.some(y=>y.state==='queued')))break;await new Promise(r=>setTimeout(r,1000));} /* bounded: their delivery has settled before the views open */
+  return {thread};},{conv:seed.dm_anna,to:urls.anna.address,count:200});
  // Settings and You, from the main list.
  if(family==='zoom')await z().locator('.person-card').first().waitFor();
  await tap(page.getByRole('button',{name:'Settings',exact:true}),'Settings');await page.locator('#settings-appearance').waitFor();
@@ -53,6 +68,39 @@ const z=()=>page.locator('#zoom'),settled=()=>page.waitForFunction(()=>document.
   await tap(z().locator('.zoom-message details.tech > summary'),'Details');
   const menu=z().locator('.zoom-message .msg-menu > summary');if(await menu.count()){await tap(menu,'Message actions');await z().getByRole('button',{name:'Edit',exact:true}).waitFor();await menu.tap();}
   const rungs=z().locator('.ladder .rung');await tap(rungs.nth((await rungs.count())-2),'Ladder: back to the chat');await z().locator('.mini-chat').waitFor();await settled();
+  /* Long history (v0.8.26 Android report): Write is in reach the moment a long chat opens and anywhere while its history scrolls, in a DM and in a device conversation, never scrolled to; tapped where it is, it writes to that chat (and a Reply still quotes its message). */
+  const longChat=async(name,label)=>{const content=z().locator('.zoom-layer:last-child .zoom-content'),write=z().getByRole('button',{name,exact:true});
+   const span=await content.evaluate(c=>({h:c.scrollHeight,v:c.clientHeight}));check(span.h>=10*span.v,label+' history is too short to prove reach: '+span.h+'px in a '+span.v+'px view');result.checks.push(label+': '+span.h+'px of history in a '+span.v+'px view');
+   await inReach(write,label+': Write on arrival');
+   for(const [where,f] of [['at the oldest',0],['at the newest',1],['mid-history',.5]]){await content.evaluate((c,f)=>{c.scrollTop=f*(c.scrollHeight-c.clientHeight);},f);await page.waitForTimeout(150);await inReach(write,label+': Write '+where);}
+   return inReach(write,label+': Write where it is tapped');};
+  await tap(z().locator('.ladder .rung').first(),'Ladder: Everyone');await z().locator('.person-card').first().waitFor();await settled();
+  await tap(z().locator('.person-card').filter({hasText:'Anna'}),'Anna');await z().locator('.mini-chat').waitFor();await settled();
+  // Clearing search recreates the chat header; its observer must follow it on resize.
+  const search=z().locator('.zoom-search');await search.fill('Long history');await search.press('Escape');await z().locator('.mini-chat').waitFor();
+  for(const viewport of [{width:1280,height:800},{width:390,height:844}]){
+   await page.setViewportSize(viewport);
+   await page.waitForFunction(()=>{const root=document.querySelector('#skin').shadowRoot,head=root.querySelector('.zoom-chat-head'),content=head?.closest('.zoom-content'),padding=content&&parseFloat(getComputedStyle(content).scrollPaddingTop);return !!head&&Number.isFinite(padding)&&Math.abs(padding-head.offsetHeight)<=2;});
+  }
+  result.checks.push('Cleared search keeps sticky-header focus padding current after resize');
+  let at=await longChat('Write in this DM…','Long DM');await shot('long-dm');
+  await page.touchscreen.tap(at.x,at.y);await page.locator('#write-body').waitFor();check(await page.locator('#dialog-title').textContent()==='Write to Anna','The long DM\'s Write writes to Anna');
+  const dmText='Long history write '+runTag;await page.locator('#write-body').fill(dmText);await page.locator('#dialog-ok').tap();await z().locator('.mini-chat').getByText(dmText,{exact:true}).waitFor();
+  await tap(z().locator('.mini-chat button.mc-bubble').filter({hasText:'Long history 100'}),'Mid-history message');await z().locator('.zoom-message').waitFor();await settled();
+  await tap(z().getByRole('button',{name:'Reply',exact:true}),'Reply (long DM)');await page.locator('#dialog').getByText(/^Replying to: Long history 100/).waitFor();
+  const replyText='Long history reply '+runTag;await page.locator('#write-body').fill(replyText);await page.locator('#dialog-ok').tap();await z().locator('.mini-chat').getByText(replyText,{exact:true}).waitFor();
+  const dmNow=await page.evaluate(id=>window.agentnet.api('/api/dm?id='+id),seed.dm_anna),parent=dmNow.messages.find(x=>x.body==='Long history 100'),reply=dmNow.messages.find(x=>x.body===replyText);
+  check(dmNow.messages.some(x=>x.body===dmText),'The long DM\'s Write was sent in that DM');check(!!reply&&!!parent&&[parent.id,parent.lid].includes(reply.quote),'A Reply from a long DM quotes its message');
+  await tap(z().locator('.ladder .rung').first(),'Ladder: Everyone');await z().locator('.person-card').first().waitFor();await settled();
+  const anna=()=>z().locator('.person-cluster').filter({hasText:'Anna'});
+  await tap(anna().locator('details.person-devices > summary'),'Anna\'s devices');await tap(anna().getByRole('button',{name:/device conversations?$/}),'Device conversations');
+  await tap(z().locator('.thread-row').filter({hasText:'Device history 001'}),'Long device conversation');await z().locator('.mini-chat').waitFor();await settled();
+  at=await longChat('Write in this conversation…','Long device conversation');await shot('long-device');
+  await page.touchscreen.tap(at.x,at.y);await page.locator('#write-body').waitFor();
+  check(await page.locator('#dialog-title').textContent()==='Write to '+urls.anna.address,'The device conversation\'s Write writes to its device');check(await page.locator('#write-kind').inputValue()==='message','It still sends as a message by default');
+  const devText='Device history write '+runTag;await page.locator('#write-body').fill(devText);await page.locator('#dialog-ok').tap();await z().locator('.mini-chat').getByText(devText,{exact:true}).waitFor();
+  check((await page.evaluate(id=>window.agentnet.api('/api/thread?id='+id),history.thread)).messages.some(x=>x.body===devText),'It joined that same device conversation');
+  await page.setViewportSize({width:1280,height:800});await page.waitForTimeout(300);await longChat('Write in this conversation…','Desktop long device conversation');await page.setViewportSize({width:390,height:844});
  }else{
   await tap(page.locator('#conv-list button').filter({hasText:'Bohdan'}).first(),'Chat row');await page.locator('#composer').waitFor();await page.waitForTimeout(800); // the chat's own refresh redraws it once
   const theirs=page.locator('#timeline .msg.in').last();

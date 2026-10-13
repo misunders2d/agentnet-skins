@@ -803,7 +803,12 @@ button.reaction { cursor: pointer; }
 .mc.mine .narr { text-align: right; }
 .narr.running::after { content: " ●"; color: var(--accent); }
 .mc > .decide { margin-left: 42px; width: auto; }
-.zoom-write { margin-top: 18px; display: flex; justify-content: center; }
+/* A chat's header (its title and Write) stays at the top while a long
+   history scrolls under it, so writing is in reach on arrival and anywhere. */
+.zoom-chat-head { position: sticky; top: -22px; z-index: 2; flex-wrap: wrap; justify-content: space-between; gap: 8px 14px; margin: -22px 0 12px; padding: 30px 0 10px; background: var(--canvas); border-bottom: 1px solid var(--line); } /* it covers the scroller's top padding too: no history shows above it */
+.zoom-chat-title { flex: 1 1 9em; min-width: 0; }
+.zoom-write { display: flex; flex: 0 1 auto; justify-content: flex-end; max-width: 100%; }
+.zoom-write .btn { text-align: center; }
 .zoom-message { width: min(720px, 100%); display: grid; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 20px 22px; box-shadow: var(--shadow); }
 .zoom-message .meta { padding: 0; align-items: center; }
 .zoom-message details.tech summary { color: var(--muted); }
@@ -813,6 +818,9 @@ button.reaction { cursor: pointer; }
 .zoom-state .conv { display: none; }
 .zoom-state .side { width: 100%; }
 @media (max-width: 760px) {
+  .zoom-chat-head { top: -12px; margin-top: -12px; padding-top: 20px; }
+  .zoom-chat-head h2 { font-size: 18px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .zoom-chat-head .hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .zoom-layer { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
   .zoom-side { padding: 10px 12px 0; gap: 8px; }
   .ladder { flex-direction: row; gap: 0; }
@@ -897,15 +905,15 @@ button.reaction { cursor: pointer; }
 .wrap-anywhere{overflow-wrap:anywhere}
 .copy-link{display:block;overflow-wrap:anywhere;user-select:all}
 
-/* A chat's own controls (mute) in the zoom chat header; the classic header is not shown in Zoom. */
-.zoom-chips { margin: 8px 0 0; justify-content: flex-start; }
+/* A chat's own controls (mute, Project space) below the zoom chat header; the classic header is not shown in Zoom. */
+.zoom-chips { margin: 0 0 12px; justify-content: flex-start; }
 .zoom-chips:empty { display: none; }
 
 /* Touch (v0.8.26): message actions, list-heading actions and zoom-level
    disclosures are at least 44px to tap on a phone or any touch screen. */
 @media (max-width: 760px), (pointer: coarse) {
-  .msg .foot .text-btn, .msg .foot summary, .result-head .text-btn, .agent-node-dms .text-btn, .person-cluster details > summary, .zoom-message summary, .zoom-message .text-btn { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
+  .msg .foot .text-btn, .msg .foot summary, .result-head .text-btn, .agent-node-dms .text-btn, .device-row .text-btn, .person-cluster details > summary, .zoom-message summary, .zoom-message .text-btn { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
   .react-pick > summary { width: 44px; height: 44px; }
-  .settings-tabs [role=tab], .topics-bar button, .peer-chip, .zoom-write .btn, .zoom-message .act, .ladder .rung { min-height: 44px; min-width: 44px; }
+  .settings-tabs [role=tab], .topics-bar button, .peer-chip, .zoom-write .btn, .zoom-message .act, .ladder .rung, .thread-row { min-height: 44px; min-width: 44px; }
   #settings-close, #back, #conversation-details { min-width: 44px; min-height: 44px; }
 }

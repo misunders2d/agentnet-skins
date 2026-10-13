@@ -5436,6 +5436,20 @@ function focusZoomLayer(layer) {
   }
 }
 
+// A chat's header stays at the top of its scrolling history (sticky):
+// keyboard focus and scrolling into view stop below it, never under it.
+const chatHeads = new ResizeObserver((entries) => {
+  for (const e of entries) { const content = e.target.closest(".zoom-content"); if (content) content.style.scrollPaddingTop = e.target.offsetHeight + "px"; }
+});
+cleanups.push(() => chatHeads.disconnect());
+function watchChatHead(content) {
+  chatHeads.disconnect();
+  content.style.scrollPaddingTop = "";
+  const head = content.querySelector(".zoom-chat-head");
+  if (head) chatHeads.observe(head);
+}
+
+
 const Zoom = {
   team: null,
   generation: 0, navigating: null, dirty: false, finish: null, revealEnd: false, level: 0, peer: null, person: null, dm: null, msg: null, origins: [], query: "",
@@ -5524,10 +5538,11 @@ const Zoom = {
       : [() => this.everyone(), () => this.person_(), () => this.thread(), () => this.message()];
     topicUI.show(this.level>=2);
     const content = el("div", { class: "zoom-content" }, this.content(views));
+    watchChatHead(content);
     const search = el("input", { type: "search", class: "zoom-search", placeholder: "Search…",
       "aria-label": "Search people, agents and conversations", autocomplete: "off", spellcheck: "false", value: this.query,
-      oninput: (e) => { this.query = e.target.value; fill(content, this.content(views)); revealZoomContent(content); },
-      onkeydown: (e) => { if (e.key === "Escape" && this.query) { e.stopPropagation(); e.target.value = ""; this.query = ""; fill(content, this.content(views)); } } });
+      oninput: (e) => { this.query = e.target.value; fill(content, this.content(views)); watchChatHead(content); revealZoomContent(content); },
+      onkeydown: (e) => { if (e.key === "Escape" && this.query) { e.stopPropagation(); e.target.value = ""; this.query = ""; fill(content, this.content(views)); watchChatHead(content); } } });
     return el("div", { class: "zoom-layer" },
       el("div", { class: "zoom-side" }, search, el("nav", { class: "ladder", "aria-label": "Zoom level" },
         this.names().map((n, i) => i===1&&this.person&&flatTopicScope(state.dmData)?null:el("button", {
@@ -5691,11 +5706,16 @@ const Zoom = {
     const messages=d.messages.filter(m=>(m.topic||'')===(topicSelections[d.id]||''));
     const title=d.topics?.find(t=>t.id===topicSelections[d.id])?.title || (messages[0] ? firstLine(messages[0].body,80) : "No messages yet");
     const me = state.overview && state.overview.person ? state.overview.person.label : "You";
+    // Write sits in the chat's header, which stays at the top while a long
+    // history scrolls under it: reachable on arrival and anywhere in the chat.
     return el("div", { class: "zoom-scene" },
-      el("header", { class: "zoom-head" }, el("div", {},
+      el("header", { class: "zoom-head zoom-chat-head" }, el("div", { class: "zoom-chat-title" },
         el("p", { class: "hint" }, humanGroup(d) ? (dmHumanGuest(d) ? "Guest in group: " : "Group: ") + d.title + " · " + groupMemberCount(d) : "DM with " + d.peer.label + " (the name they give) · " + devicesText(d.peer)),
-        el("h2", {}, title), el("div", { class: "peer-chips zoom-chips" }, dmNotifyChips(d),
-          d.peer?.person && el("button", { type: "button", class: "peer-chip" + (state.driveOpen ? " on" : ""), title: "This DM's shared Google Drive folder, if the workspace has Drive on; files there are outside AgentNet's encryption", onclick: () => toggleDrivePanel(state.dmData) }, "Project space")))),
+        el("h2", {}, title)),
+        el("div", { class: "zoom-write" }, el("button", { type: "button", class: "btn primary", disabled: !!d.frozen || state.sending || dmHumanGuest(d) && !guestAuthor(d), onclick: () => dmWriteDialog(d) },
+          d.frozen ? "Nothing more can be sent in this conversation" : dmHumanGuest(d) && !guestAuthor(d) ? "Join before writing in this group" : humanGroup(d) ? "Write in this group…" : "Write in this DM…"))),
+      el("div", { class: "peer-chips zoom-chips" }, dmNotifyChips(d),
+        d.peer?.person && el("button", { type: "button", class: "peer-chip" + (state.driveOpen ? " on" : ""), title: "This DM's shared Google Drive folder, if the workspace has Drive on; files there are outside AgentNet's encryption", onclick: () => toggleDrivePanel(state.dmData) }, "Project space")),
       state.driveOpen && d.peer?.person && placeDrivePanel(true),
       d.frozen && el("p", { class: "notice" }, d.frozen),
       humanGroup(d) && pendingGroupPeople(d).length > 0 && el("section", {"aria-label":"Invited people", class:"participant-list"},
@@ -5735,9 +5755,7 @@ const Zoom = {
           execution && el("p", {class:"narr", "data-agent-execution":""}, execution),
           m.exec?.state === "not_run" && m.job_detail && el("p", {class:"hint"}, m.job_detail),
           m.exec?.state !== "not_run" && (m.delivery || m.state_text) && el("p", { class: m.exec?.state ? "hint" : "narr" }, m.dir === "out" && m.delivery ? deliveryText(m) : m.state_text));
-      })),
-      el("div", { class: "zoom-write" }, el("button", { type: "button", class: "btn", disabled: !!d.frozen || state.sending || dmHumanGuest(d) && !guestAuthor(d), onclick: () => dmWriteDialog(d) },
-        d.frozen ? "Nothing more can be sent in this conversation" : dmHumanGuest(d) && !guestAuthor(d) ? "Join before writing in this group" : humanGroup(d) ? "Write in this group…" : "Write in this DM…")));
+      })));
   },
 
   // Level 3 for a person: one DM message with everything known about it.
@@ -5783,7 +5801,9 @@ const Zoom = {
     const base = state.data;
     const t = base && {...base,messages:sends.merge(state.draftKey || state.thread,base.messages)};
     return el("div", { class: "zoom-scene" },
-      el("header", { class: "zoom-head" }, el("div", {}, el("p", { class: "hint" }, who(t.peer)), el("h2", {}, firstLine(t.messages[0].body, 80)))),
+      el("header", { class: "zoom-head zoom-chat-head" }, el("div", { class: "zoom-chat-title" }, el("p", { class: "hint" }, who(t.peer)), el("h2", {}, firstLine(t.messages[0].body, 80))),
+        el("div", { class: "zoom-write" }, el("button", { type: "button", class: "btn primary", disabled: !!t.key.pending || state.sending,
+          onclick: () => writeDialog(t, null) }, t.key.pending ? "Sending is blocked until you trust the new key" : "Write in this conversation…"))),
       $("compose-error").textContent && el("p",{class:"error",role:"alert"},$("compose-error").textContent),
       el("ol", { class: "mini-chat" }, t.messages.map((m) => {
         if (m._local) return el("li", {class:"mc mine",id:"m-"+m.id}, el("div", {class:"mc-stack"}, el("div",{class:"mc-bubble"},el("span",{class:"mc-text"},[m.body,...(m.attachments || m.files || []).map(f=>f.name)].filter(Boolean).join("\n"))),el("p",{class:"narr",role:"status"},m.state_text), m._failed && el("button",{type:"button",onclick:m._retry},"Retry")));
@@ -5805,9 +5825,7 @@ const Zoom = {
             el("div", { class: "acts" }, m.actions.map((a, i) => actionButton(a, m, t, i === 0)))),
           working(m) && el("div", { class: "acts" }, actionButton("cancel", m, t, false)),
           isReport(m) && (m.actions || []).length > 0 && el("div", { class: "acts" }, m.actions.map((a) => actionButton(a, m, t, false))));
-      })),
-      el("div", { class: "zoom-write" }, el("button", { type: "button", class: "btn", disabled: !!t.key.pending || state.sending,
-        onclick: () => writeDialog(t, null) }, t.key.pending ? "Sending is blocked until you trust the new key" : "Write in this conversation…")));
+      })));
   },
 
   // Level 3: one message with everything known about it.

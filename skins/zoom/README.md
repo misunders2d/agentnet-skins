@@ -38,6 +38,7 @@ From the owner's review ("can't reach settings", "can't even enter the message m
 - Closing the Project space and opening it again in the same chat shows it again (it stayed empty).
 - On a phone or any touch screen, message actions, list-heading actions, settings tabs and close, topic buttons and Back are at least 44px to tap.
 - The blank 56px band under the interface is gone: it was kept free for a host control that now sits above every skin.
+- Write is in the chat's header, in a DM, a group and a device conversation, and the header stays at the top while the history scrolls: with hundreds of messages it is in reach the moment the chat opens and anywhere in it (it used to sit after the last message). Keyboard focus and scrolling into view stop below the header. On a phone, a person's device-conversation button and conversation rows are 44px to tap.
 
 ## Provenance
 

@@ -419,7 +419,7 @@
       "version": "1.1.0",
       "api": 1,
       "agentnet": "v0.8.26",
-      "digest": "4d90edeeb3285800d66e4ad998b3540e518b69d000bb48ba7727c0494aaca548",
+      "digest": "45ad7534a8fd4f44d5172ceb2cc9935372fcd2451752ba2a253c30772c81c019",
       "files": [
         {
           "path": "skin.json",
@@ -428,8 +428,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "b18befe68b4ca2605ecc0d91b0e08d7acfb12e6dcb52ebbd47c3d66b43b636fa",
-          "size": 406731
+          "sha256": "4217c8d0a497c0600681bbfbe4a4e4adea57de92d1a49a2b0fb0cee925c6e644",
+          "size": 407673
         },
         {
           "path": "manifest.mjs",
@@ -438,8 +438,8 @@
         },
         {
           "path": "style.css",
-          "sha256": "b2e3bda0018619f907a71802152f53931f162276902af81886e661093a0dae17",
-          "size": 61736
+          "sha256": "2594f6ec92a5a4249133fbf894e5750961184f5f2b1a06e026c38391065596ad",
+          "size": 62658
         },
         {
           "path": "template.mjs",
@@ -525,26 +525,26 @@
       "previews": [
         {
           "path": "previews/desktop-light.png",
-          "sha256": "f5260eca770ca865e13a7a1ad1ff00eb7279c6fb66ce525aa80da31af256444b",
-          "size": 86980,
+          "sha256": "1622e1f41b5b62be69fd2528f60882662f9b5d272fe0e5b78ef95e491075c248",
+          "size": 88826,
           "alt": "Zoom on a desktop, light: the conversation level with its zoom ladder, in a conversation with the fictional Tomasz Reyes"
         },
         {
           "path": "previews/desktop-dark.png",
-          "sha256": "9ea0f9a72d0f1ee15fb92b7d293b2c043c1f99b734aabbfbf92d839730a8d581",
-          "size": 88440,
+          "sha256": "9f785e675d77389a28c591ae1cc64319d2939f813706256baaca60abb8673b37",
+          "size": 90017,
           "alt": "Zoom on a desktop, dark: the conversation level with its zoom ladder, in a conversation with the fictional Tomasz Reyes"
         },
         {
           "path": "previews/mobile-light.png",
-          "sha256": "11f79375325b123a04414aac5a0810acd2f0b72da666a484a6618174ba20fff0",
-          "size": 58567,
+          "sha256": "121ed0dbf077c7b057ced00531747af8461cb6fb18323e4cd51f8a127ae64cdd",
+          "size": 61308,
           "alt": "Zoom on a phone, light: a conversation with the fictional Tomasz Reyes about a glaze test"
         },
         {
           "path": "previews/mobile-dark.png",
-          "sha256": "c869c3c59353360100303dd8b3fcac827dae46e01aad18426e3ba440d6c9a434",
-          "size": 59869,
+          "sha256": "36a22920939356ad166efdba493d4bc5ddf67ee92fc28d0dabf6ca39310c8cb5",
+          "size": 62306,
           "alt": "Zoom on a phone, dark: a conversation with the fictional Tomasz Reyes about a glaze test"
         }
       ]

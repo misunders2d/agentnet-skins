@@ -1,0 +1,192 @@
+/* Pulp's theme (Comic kit slot, skin/README.md): a 1970s paperback by day,
+   a roadside diner's neon by night. Paper and press-black ink, pulp red,
+   cover mustard and booth teal. Every token Comic defines keeps its name;
+   only values change. Text keeps at least 4.5:1 on its surface in both
+   themes. Movement happens only without prefers-reduced-motion. */
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+.an-root {
+  --an-canvas: #F2E6C9;      /* pulp paper */
+  --an-surface: #FBF4E2;     /* a fresh slip */
+  --an-sunken: #E9DAB6;
+  --an-ink: #1C1814;         /* press black */
+  --an-outline: #1C1814;
+  --an-hairline: #CDBB93;
+  --an-text-2: #43382B;
+  --an-muted: #5E513F;
+  --an-mine: #E8B53C;        /* cover mustard */
+  --an-mine-ink: #1C1814;
+  --an-theirs: #FBF4E2;
+  --an-agent: #F6E3CF;
+  --an-agent-ink: #9A1F18;   /* pulp red, readable on paper */
+  --an-agent-fill: #B3261E;
+  --an-act: #B3261E;         /* the stamp: what you can act on */
+  --an-act-ink: #FFF7E8;
+  --an-approval-ink: #7A4A00;
+  --an-guest: #2C6E6A;       /* booth teal */
+  --an-guest-ink: #1D5552;
+  --an-guest-bg: #D6E8E2;
+  --an-ok-ink: #2D5F1E;
+  --an-ok-bg: #DCE8C8;
+  --an-online: #2E7D32;
+  --an-danger: #9B1C1C;
+  --an-danger-bg: #F4D6CC;
+  --an-dots: rgb(28 24 20 / 0.05);
+  --an-shadow: #1C1814;
+  --an-on-fill: #1C1814;
+  --an-scrim: #1C1814;
+  --an-rail: #1C1814;
+  --an-rail-ink: #F2E6C9;
+  /* Pulp's own */
+  --pulp-print: #B3261E;     /* the offset print under agent replies */
+  --pulp-gold: #F6C445;      /* the case's lining */
+  --pulp-leather: #5A3A22;   /* the case */
+  --pulp-leather-ink: #F7EFD9;
+  --pulp-card: #0F0C0A;      /* chapter title cards stay black */
+  --pulp-card-ink: #F7EFD9;
+  --pulp-mark: #E8B53C;      /* the rail's wordmark */
+  color-scheme: light;
+}
+.an-root[data-theme=dark] {
+  --an-canvas: #15110F; --an-surface: #221B17; --an-sunken: #1A1411; --an-ink: #F2E6C9; --an-outline: #8C7861; --an-hairline: #3A2F27;
+  --an-text-2: #DCCDB2; --an-muted: #BDAE90; --an-mine: #E3A82B; --an-mine-ink: #1C1814; --an-theirs: #221B17; --an-agent: #2C1D19;
+  --an-agent-ink: #FF8A7E; --an-agent-fill: #FF6A5C; --an-act: #FF6A5C; --an-act-ink: #1C0E0B; --an-approval-ink: #F2C46B;
+  --an-guest: #57CFC3; --an-guest-ink: #7FE0D6; --an-guest-bg: #12302D; --an-ok-ink: #9ED98A; --an-ok-bg: #1C2E16; --an-online: #6CCB5F;
+  --an-danger: #FF8A80; --an-danger-bg: #3A1614; --an-dots: rgb(242 230 201 / 0.04); --an-shadow: #000000;
+  --an-on-fill: #1C1814; --an-scrim: #000000; --an-rail: #0B0908; --an-rail-ink: #F2E6C9;
+  --pulp-print: #FF6A5C; --pulp-gold: #F6C445; --pulp-leather: #4A2F1B; --pulp-leather-ink: #F7EFD9; --pulp-card: #000000; --pulp-card-ink: #F7EFD9;
+  --pulp-mark: #FF6A5C;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: "PT Sans Narrow", "Arial Narrow", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bitter", "Rockwell", Georgia, ui-serif, serif;
+  --radius-xs: 2px; --radius-sm: 2px; --radius-md: 3px; --radius-lg: 3px; --radius-xl: 3px; --radius-2xl: 4px; --radius-3xl: 4px;
+  --color-canvas: var(--an-canvas);
+  --color-surface: var(--an-surface);
+  --color-sunken: var(--an-sunken);
+  --color-ink: var(--an-ink);
+  --color-outline: var(--an-outline);
+  --color-hairline: var(--an-hairline);
+  --color-text-2: var(--an-text-2);
+  --color-muted: var(--an-muted);
+  --color-mine: var(--an-mine);
+  --color-mine-ink: var(--an-mine-ink);
+  --color-theirs: var(--an-theirs);
+  --color-agent: var(--an-agent);
+  --color-agent-ink: var(--an-agent-ink);
+  --color-agent-fill: var(--an-agent-fill);
+  --color-act: var(--an-act);
+  --color-act-ink: var(--an-act-ink);
+  --color-approval-ink: var(--an-approval-ink);
+  --color-guest: var(--an-guest);
+  --color-guest-ink: var(--an-guest-ink);
+  --color-guest-bg: var(--an-guest-bg);
+  --color-ok-ink: var(--an-ok-ink);
+  --color-ok-bg: var(--an-ok-bg);
+  --color-online: var(--an-online);
+  --color-danger: var(--an-danger);
+  --color-danger-bg: var(--an-danger-bg);
+  --color-on-fill: var(--an-on-fill);
+  --color-scrim: var(--an-scrim);
+  --color-rail: var(--an-rail);
+  --color-rail-ink: var(--an-rail-ink);
+  --shadow-pop: 3px 3px 0 0 var(--an-shadow);
+  --shadow-pop-sm: 2px 2px 0 0 var(--an-shadow);
+  --ease-out-soft: cubic-bezier(.2, .8, .2, 1);
+  --ease-pop: cubic-bezier(.34, 1.56, .64, 1);
+}
+
+/* ---- parts (skin/README.md, Parts) ----------------------------------------
+   Unlayered on purpose: unlayered rules win over Comic's Tailwind layers, so
+   these restyle the parts without !important. */
+  /* Press-black rules everywhere: 2px, like ink on cheap paper. */
+  .an-root .stroke { border-width: 2px; }
+  /* Square-cut buttons and tabs, like stamped cardboard; avatars stay round. */
+  .an-root button.rounded-full, .an-root a.rounded-full, .an-root [data-part=topic-bar] .rounded-full, .an-root label.rounded-full,
+  .an-root [data-part=composer-field] { border-radius: 3px; }
+
+  /* The rail carries the wordmark, set on its side like a paperback's spine. */
+  [data-part=rail]::before {
+    content: "AgentNet"; writing-mode: vertical-rl; transform: rotate(180deg);
+    font: 900 22px/1 "Bitter", Georgia, serif; letter-spacing: .04em; color: var(--pulp-mark); margin: 2px 0 10px;
+  }
+
+  /* The chat list is a table of contents: dotted leaders, counts like page numbers. */
+  [data-part=list-title] { font-family: "Bitter", Georgia, serif; font-weight: 900; color: var(--pulp-print); letter-spacing: 0; }
+  [data-part=list-title]::after { display: none; }   /* Comic's highlighter stripe */
+  [data-part=chat-title-line] > [data-part=chat-time] { order: 2; margin-left: 0; }
+  [data-part=chat-title-line]::after { content: ""; order: 1; flex: 1 1 12px; min-width: 12px; align-self: center; border-bottom: 2px dotted var(--an-hairline); transform: translateY(3px); }
+  [data-part=unread] { background: transparent; color: var(--pulp-print); font: 900 20px/1 "Bitter", Georgia, serif; min-width: 0; padding: 0; }
+
+  /* Messages are typed slips; an agent's reply sits on a red offset print. */
+  [data-part=bubble] { font-family: "PT Mono", ui-monospace, "Courier New", monospace; font-size: .95em; }
+  [data-part=message][data-from=agent] [data-part=bubble] { box-shadow: 4px 4px 0 0 var(--pulp-print); }
+  /* Your own slip is mustard in both themes, so its small print stays dark. */
+  [data-part=message][data-from=me] [data-part=bubble] { box-shadow: -4px 4px 0 0 var(--an-shadow); --an-muted: #4A3D2C; --an-text-2: #3A2F24; --an-ink: #1C1814; }
+  [data-part=conversation-head] h1, [data-part=conversation-head] h2 { font-family: "Bitter", Georgia, serif; font-weight: 900; }
+
+  /* Typing: two small feet doing the twist instead of three dots. */
+  [data-part=typing] .working-dot { width: 7px; height: 10px; border-radius: 50% 50% 40% 40%; background: currentColor; animation: none; }
+  [data-part=typing] .working-dot:nth-child(3) { display: none; }
+
+/* ---- Pulp's own pieces (overlay slots) --------------------------------------- */
+  /* The send stamp. */
+  .pulp-stamp {
+    min-width: 84px; min-height: 46px; padding: 0 12px; display: grid; place-items: center;
+    border: 3px solid var(--pulp-print); color: var(--pulp-print); background: transparent;
+    font: 900 18px/1 "Bitter", Georgia, serif; letter-spacing: .06em; text-transform: uppercase; transform: rotate(-3deg);
+    transition: transform 120ms var(--ease-out-soft);
+  }
+  .pulp-stamp:active { transform: rotate(-3deg) translate(1px, 1px) scale(.97); }
+  .pulp-stamp-off { border-color: var(--an-hairline); color: var(--an-muted); }
+
+  /* Two feet (typing, busy send, running requests). */
+  .pulp-feet { display: inline-flex; gap: 4px; align-items: flex-end; }
+  .pulp-feet i { display: block; width: 7px; height: 10px; border-radius: 50% 50% 40% 40%; background: currentColor; transform-origin: 50% 80%; }
+
+  /* Chapter title cards. */
+  .pulp-chapter {
+    margin: 4px 12px 14px; padding: 16px 18px 14px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;
+    background: var(--pulp-card); color: var(--pulp-card-ink); border: 2px solid var(--an-outline);
+  }
+  .pulp-chapter-no { font: 700 12px/1 "PT Sans Narrow", sans-serif; letter-spacing: .3em; text-transform: uppercase; color: #E8B53C; }
+  .pulp-chapter-title { font: 900 26px/1.15 "Bitter", Georgia, serif; text-wrap: balance; overflow-wrap: anywhere; }
+  .pulp-chapter-by { font: 13px/1.3 "PT Mono", monospace; color: #CBBE9F; }
+
+  /* The case. */
+  .pulp-case { position: relative; width: 100%; margin-top: 14px; border: 3px solid var(--an-outline); background: var(--pulp-leather); color: var(--pulp-leather-ink); box-shadow: 5px 5px 0 0 var(--an-shadow); }
+  .pulp-case::before { content: ""; position: absolute; left: 50%; top: -14px; width: 110px; height: 12px; transform: translateX(-50%); border: 3px solid var(--an-outline); border-bottom: 0; border-radius: 10px 10px 0 0; background: var(--pulp-leather); }
+  .pulp-case-lid { display: flex; align-items: center; gap: 10px; padding: 9px 12px 8px; }
+  .pulp-latch { width: 24px; height: 11px; flex: none; background: #C9A34A; border: 2px solid var(--an-outline); }
+  .pulp-case-label { flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: 700 12px/1.2 "PT Sans Narrow", sans-serif; letter-spacing: .18em; text-transform: uppercase; color: #E9C77A; text-align: center; }
+  .pulp-case-time { font: 700 13px/1 "PT Sans Narrow", sans-serif; color: #E9C77A; }
+  .pulp-case-lining { margin: 0 10px 10px; border: 2px solid var(--an-outline); background: var(--an-surface); color: var(--an-ink); }
+  /* The gold lining is daylight in both themes: everything inside reads
+     with the day palette (text stays at least 4.5:1 on the gold). */
+  .pulp-case-act .pulp-case-lining {
+    background: radial-gradient(ellipse at 50% 0%, #FFF3C4, var(--pulp-gold) 60%, #E2A92C); color: #1C1814; box-shadow: 0 0 22px rgb(246 196 69 / .5);
+    --an-ink: #1C1814; --an-outline: #1C1814; --an-text-2: #3A2F24; --an-muted: #4A3D2C; --an-hairline: #A8873E;
+    --an-surface: #FBF4E2; --an-sunken: #F3E3BE; --an-canvas: #FBF4E2; --an-agent: #F6E3CF; --an-agent-ink: #7E1A14; --an-agent-fill: #B3261E;
+    --an-act: #B3261E; --an-act-ink: #FFF7E8; --an-approval-ink: #5E3A00; --an-danger: #8B1A1A; --an-danger-bg: #F4D6CC;
+    --an-ok-ink: #2D5F1E; --an-ok-bg: #DCE8C8; --an-guest-ink: #1D5552; --an-guest-bg: #D6E8E2; --an-shadow: #1C1814; --an-on-fill: #1C1814;
+    color-scheme: light;
+  }
+  .pulp-case-quiet { background: var(--an-surface); color: var(--an-ink); box-shadow: none; }
+  .pulp-case-quiet::before { display: none; }
+  .pulp-case-quiet .pulp-case-label, .pulp-case-quiet .pulp-case-time { color: var(--an-muted); }
+  .pulp-case-quiet .pulp-case-lining { margin: 0; border-width: 2px 0 0; }
+
+/* Motion: the case opens (lining lifts in with its glow), a chapter cuts in,
+   feet twist. All short, none delays content, none runs with reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .pulp-case-act .pulp-case-lining { animation: pulp-glow 260ms ease-out both; transform-origin: 50% 0; }
+  .pulp-chapter { animation: pulp-cut 240ms steps(1, end) both; }
+  .pulp-feet i, [data-part=typing] .working-dot { animation: pulp-twist 640ms ease-in-out infinite alternate; transform-origin: 50% 80%; }
+  .pulp-feet i:last-child, [data-part=typing] .working-dot:nth-child(2) { animation-delay: 320ms; }
+}
+@keyframes pulp-glow { from { opacity: 0; transform: scaleY(.7); filter: brightness(1.5); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes pulp-cut { 0% { opacity: 0; } 35% { opacity: 1; filter: brightness(2); } 100% { opacity: 1; filter: none; } }
+@keyframes pulp-twist { from { transform: rotate(-22deg); } to { transform: rotate(22deg); } }

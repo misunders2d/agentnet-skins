@@ -25,8 +25,9 @@ Comic's fixes whenever it is rebuilt.
 
 ## Previews
 
-Rendered with AgentNet's demo data (invented people and agents), Pulp built
-from this overlay on the AgentNet v0.8.25 candidate.
+Rendered with AgentNet's demo data (invented people and agents; the demo's
+person names are replaced with invented ones), Pulp built from this overlay
+on the AgentNet v0.8.25 candidate.
 
 | Desktop, day | Desktop, night |
 | --- | --- |

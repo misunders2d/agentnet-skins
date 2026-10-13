@@ -1,0 +1,548 @@
+{
+  "catalog": 1,
+  "skins": [
+    {
+      "id": "classic",
+      "name": "Classic",
+      "description": "AgentNet's original interface: your chats in a list on the left and the open conversation on the right, with topics, people, agents, activity and every setting one click away. Plain, familiar and quick on a desktop or a phone, in light and dark.",
+      "version": "1.0.0",
+      "api": 1,
+      "agentnet": "v0.8.25",
+      "digest": "29a40674e0d582e39e972679930127ce58cb5541e0e8431ecef2c8241fabbf2b",
+      "files": [
+        {
+          "path": "skin.json",
+          "sha256": "5cd68a4304fbd8a1c878e036e39cf302a2f30e66b849b8963cb9da7610433efa",
+          "size": 562
+        },
+        {
+          "path": "entry.mjs",
+          "sha256": "151b4e8bccd9e579aa649b19bcd56b484af195f869dd6dd5a9fa4d9d0994a840",
+          "size": 377911
+        },
+        {
+          "path": "manifest.mjs",
+          "sha256": "85ec30cdc1c0c4d5005e5a7479f6207c155a036fa1b838b6fe9b582aa4b6b0e9",
+          "size": 578
+        },
+        {
+          "path": "style.css",
+          "sha256": "37be5d22e662054f61777c87d077e36096a7e8d49aaa3f664d93a9425fa02727",
+          "size": 53924
+        },
+        {
+          "path": "template.mjs",
+          "sha256": "7c3a04499216e3bf6ada91fb1f2c9f772595992a9ff81e7d43055e9ec261fcea",
+          "size": 13823
+        },
+        {
+          "path": "typing.mjs",
+          "sha256": "6eeaa65e5e5fc09aea71a7cb95d6f0b2a30ff3267a740644af2d2140e52f7c1c",
+          "size": 6610
+        },
+        {
+          "path": "drivespace.mjs",
+          "sha256": "cde9e2281372466bb1f0d35ff9bd7ad1b6dafa5c207a2cf2ab7a32b0043e6212",
+          "size": 9529
+        },
+        {
+          "path": "drivespace.css",
+          "sha256": "cb535337a73f092e56ddcbea4a286ac81cbee8d6756b4ec11ece5742678c4e21",
+          "size": 1280
+        },
+        {
+          "path": "drivespace-setup.mjs",
+          "sha256": "afe7ce702b93faa3bb71ad7ca8de01037b17816329014cc32f56fd88a9a3372d",
+          "size": 5537
+        },
+        {
+          "path": "assistant-setup.mjs",
+          "sha256": "2d46fcbdceeef74f94611be71db6cdb2c5d64281c453aac3ceefb1c3d99671c4",
+          "size": 21662
+        },
+        {
+          "path": "assistant-setup.css",
+          "sha256": "b792aadf2a755f396dc6aea5f30cf1e8560fd09afaac30087d1c9125ca9cda39",
+          "size": 5559
+        },
+        {
+          "path": "qr.mjs",
+          "sha256": "330b78264ed701c8c8c0da68028016473fa8cbdc2e719cbfee21b6791ea41557",
+          "size": 29712
+        },
+        {
+          "path": "icon.png",
+          "sha256": "2c136c811e762fdfb6410c52ac2774b1fa870813babfbed1d855de9a4bc4ce4a",
+          "size": 12651
+        },
+        {
+          "path": "topics.mjs",
+          "sha256": "461aee01c672e29c1af34756045a77005dce1bf81425da8d49ed72c1d85526b3",
+          "size": 10149
+        },
+        {
+          "path": "person-topics.mjs",
+          "sha256": "1d80432b0355a36e1da70373ea48011ff040ded2eb10c07cde9631f9aeaf189a",
+          "size": 2922
+        },
+        {
+          "path": "collective-mentions.mjs",
+          "sha256": "bd6123134866212683eb81bc644ba8e130fe13ccf2f7385aa53e709b36780eba",
+          "size": 2860
+        },
+        {
+          "path": "optimistic.mjs",
+          "sha256": "afdf4bfc7b009197f78041a2f6e8dbc18cba07feec7c3049232ee9f75097975c",
+          "size": 4403
+        },
+        {
+          "path": "pictures.mjs",
+          "sha256": "6af9fe3af1ff7aba1b3826a5b59a458346819b2f78efb9ff6d762603ccb14eeb",
+          "size": 11919
+        },
+        {
+          "path": "link-text.mjs",
+          "sha256": "0286b79755d2e14f4552c18bd03678d87dd90878187d34145964dc69c1b7f347",
+          "size": 49194
+        },
+        {
+          "path": "reaction-preferences.mjs",
+          "sha256": "e5601c862b65f754b4880fae50371e1d4ce5188c53d91a8d8a037a1ae6d8c197",
+          "size": 1927
+        }
+      ],
+      "previews": [
+        {
+          "path": "previews/desktop-light.png",
+          "sha256": "7a21d1375b04bb8713e4a4366f78bc87da9510e9d1fed360a471a64744b0f70d",
+          "size": 141662,
+          "alt": "Classic on a desktop, light: the chat list beside the open conversation, in a conversation with the fictional Tomasz Reyes"
+        },
+        {
+          "path": "previews/desktop-dark.png",
+          "sha256": "e5bcdcd20d4bbfba04a8da9856ff6da8b17f65cf56f9454dbfae94e635e741ac",
+          "size": 144848,
+          "alt": "Classic on a desktop, dark: the chat list beside the open conversation, in a conversation with the fictional Tomasz Reyes"
+        },
+        {
+          "path": "previews/mobile-light.png",
+          "sha256": "f41d09e58a0cd578afbad7b8017e6d2ec043e77c34105d5a6c30d559cab6e224",
+          "size": 57565,
+          "alt": "Classic on a phone, light: a conversation with the fictional Tomasz Reyes about a glaze test"
+        },
+        {
+          "path": "previews/mobile-dark.png",
+          "sha256": "84403fb5e63f2edaa9fdd47bd800fc2b1a5d1a369b18e36e1436c15206bf26e7",
+          "size": 59174,
+          "alt": "Classic on a phone, dark: a conversation with the fictional Tomasz Reyes about a glaze test"
+        }
+      ]
+    },
+    {
+      "id": "holonet",
+      "name": "Holonet",
+      "description": "A starship comms console for AgentNet: command navigation across the top, a framed transmission display, a crew panel and a command dock for writing. A brief scanner sweep and split shutters mark what you open, and both stay still when your device asks for less motion. Every chat, topic, agent and setting is still there.",
+      "version": "1.0.0",
+      "api": 1,
+      "agentnet": "v0.8.25",
+      "digest": "ff7880ab9c86db6913f9c1e64d55a5943dbc9c3decc0e9397ce8b3e4e5ded751",
+      "files": [
+        {
+          "path": "skin.json",
+          "sha256": "9afe227eb6ed8d3182342ad8b08f1767505bae851c23c5d69954f071dfdf496e",
+          "size": 478
+        },
+        {
+          "path": "entry.mjs",
+          "sha256": "af303b0ae17b73e2f8e9a3391f03cc27ac78aed90cd72e6a9cde8983878bd3ca",
+          "size": 343745
+        },
+        {
+          "path": "manifest.mjs",
+          "sha256": "9bc44820f9960da4a7afdfc11c1e605e8863f1a72a50bf5d5eb560480053becb",
+          "size": 494
+        },
+        {
+          "path": "style.css",
+          "sha256": "c245b71325bd601918d66d73ff440117dc8be93b026afda6e9da2bbc1bdc6919",
+          "size": 67896
+        },
+        {
+          "path": "template.mjs",
+          "sha256": "fe0ad3c25b95661b74762c037481cdc484ff2bdbb136b55365a4677bc557ad6b",
+          "size": 15483
+        },
+        {
+          "path": "typing.mjs",
+          "sha256": "6eeaa65e5e5fc09aea71a7cb95d6f0b2a30ff3267a740644af2d2140e52f7c1c",
+          "size": 6610
+        },
+        {
+          "path": "drivespace.mjs",
+          "sha256": "cde9e2281372466bb1f0d35ff9bd7ad1b6dafa5c207a2cf2ab7a32b0043e6212",
+          "size": 9529
+        },
+        {
+          "path": "drivespace.css",
+          "sha256": "cb535337a73f092e56ddcbea4a286ac81cbee8d6756b4ec11ece5742678c4e21",
+          "size": 1280
+        },
+        {
+          "path": "drivespace-setup.mjs",
+          "sha256": "afe7ce702b93faa3bb71ad7ca8de01037b17816329014cc32f56fd88a9a3372d",
+          "size": 5537
+        },
+        {
+          "path": "assistant-setup.mjs",
+          "sha256": "6dc94820288d2eaf084993bb82be2bc341a88825e806319ce6b3fccefe19f7c8",
+          "size": 20360
+        },
+        {
+          "path": "assistant-setup.css",
+          "sha256": "b792aadf2a755f396dc6aea5f30cf1e8560fd09afaac30087d1c9125ca9cda39",
+          "size": 5559
+        },
+        {
+          "path": "qr.mjs",
+          "sha256": "330b78264ed701c8c8c0da68028016473fa8cbdc2e719cbfee21b6791ea41557",
+          "size": 29712
+        },
+        {
+          "path": "topics.mjs",
+          "sha256": "8efa16dfc31592ab68c0b02b356268fb4fc26493e24926ab73aa0f953e0d5d30",
+          "size": 7436
+        },
+        {
+          "path": "optimistic.mjs",
+          "sha256": "b7f977e20f4560d42d95eda9e0617d6e5d60ae068fc510af95fcb344348e260e",
+          "size": 2693
+        },
+        {
+          "path": "pictures.mjs",
+          "sha256": "6af9fe3af1ff7aba1b3826a5b59a458346819b2f78efb9ff6d762603ccb14eeb",
+          "size": 11919
+        },
+        {
+          "path": "signal.svg",
+          "sha256": "aed4a7ca226f42eb3d0bc6220db9c92ec9e9c5ff2da2d6b1510be308d3122ed4",
+          "size": 393
+        },
+        {
+          "path": "skin-motion.mjs",
+          "sha256": "c0c03e2e2c2c7788d7fa280414c0584ecf93454c9bcccb850baf63e21e392a47",
+          "size": 2959
+        }
+      ],
+      "previews": [
+        {
+          "path": "previews/desktop-light.png",
+          "sha256": "47b5f34a090d023817838cc9b12eb0e8f6dc1db4837fd86e48564dfda290b5ae",
+          "size": 141863,
+          "alt": "Holonet on a desktop, light: the framed transmission display, in a conversation with the fictional Tomasz Reyes"
+        },
+        {
+          "path": "previews/desktop-dark.png",
+          "sha256": "bbafa8673abcabc911e5889fef60243d7c9e6ddfa420af721d28421e87e103a6",
+          "size": 143418,
+          "alt": "Holonet on a desktop, dark: the framed transmission display, in a conversation with the fictional Tomasz Reyes"
+        },
+        {
+          "path": "previews/mobile-light.png",
+          "sha256": "e93f0ebcaf21c04a0c8a244d1e4678a6b779eb97410197c467dc7860ab1933b1",
+          "size": 53333,
+          "alt": "Holonet on a phone, light: a conversation with the fictional Tomasz Reyes about a glaze test"
+        },
+        {
+          "path": "previews/mobile-dark.png",
+          "sha256": "50057342ce5acce5350342d8dc3171b51c8e1a3bf130f3ef4abd209e77884b46",
+          "size": 53219,
+          "alt": "Holonet on a phone, dark: a conversation with the fictional Tomasz Reyes about a glaze test"
+        }
+      ]
+    },
+    {
+      "id": "pulp",
+      "name": "Pulp",
+      "description": "A 1970s paperback by day and a roadside diner by night. Chats read like a table of contents, every topic opens with a chapter card, requests for your OK arrive as a glowing case, and your agents wear costumes. Everything Comic does, in a new look.",
+      "version": "1.0.0",
+      "api": 1,
+      "agentnet": "v0.8.25",
+      "digest": "9b7e746f20d54df29cea6b12bb0dababead03af1d36da78e7fc57163a2980954",
+      "files": [
+        {
+          "path": "skin.json",
+          "sha256": "cc71180b2beb6b6a263d8b5d173ff5da25fc6435882f3b2839351fc256e753b4",
+          "size": 1131
+        },
+        {
+          "path": "entry.mjs",
+          "sha256": "ecc16aaad0ef6d95a951726bfdf26339542526ec993c1f40d282dd4b5dbe9d42",
+          "size": 1187511
+        },
+        {
+          "path": "style.css",
+          "sha256": "8aa0a0aea4d5d0d5dcd98a4557ff69720b6353f57c982a1423f6d41edd41ab96",
+          "size": 86933
+        },
+        {
+          "path": "document.css",
+          "sha256": "e07ec8b17a3539c0574f1a3cf37e06e85ea9b46b8489cb1b3626cf44e63a040c",
+          "size": 8581
+        },
+        {
+          "path": "m/emoji/en/data.json",
+          "sha256": "ed014f1049bd370c5794f815850156196ac382850f51c3e9f6a9e83553fb3f01",
+          "size": 775157
+        },
+        {
+          "path": "m/emoji/en/messages.json",
+          "sha256": "6bffab078a0d90c4cca03bd3ff1045fdba33a77d31b1408b1cf1c414d7f1ab3c",
+          "size": 6499
+        },
+        {
+          "path": "m/fonts/bitter-cyrillic-ext-wght-normal.woff2",
+          "sha256": "c69d2bda962f308bc4c8d02844aa09b56bc40a70d643f24cf372889a925e76d4",
+          "size": 23704
+        },
+        {
+          "path": "m/fonts/bitter-cyrillic-wght-normal.woff2",
+          "sha256": "7dc895ee73b3edc380c4406a0422db3a8d00ae676bc2bb5939d40e8986c85c14",
+          "size": 21160
+        },
+        {
+          "path": "m/fonts/bitter-latin-ext-wght-normal.woff2",
+          "sha256": "8c1f1559771de47e1f30a87c2bf501d46f42fabc4d93361f4401de05d8e6efa6",
+          "size": 32716
+        },
+        {
+          "path": "m/fonts/bitter-latin-wght-normal.woff2",
+          "sha256": "0efe0fbe6068354f3fad5a88bf31384051206652468eaa22232119354e7ea423",
+          "size": 34072
+        },
+        {
+          "path": "m/fonts/pt-mono-cyrillic-400-normal.woff2",
+          "sha256": "798d60261c091fa0735d73a9c10c819d27b27cbbcfdcdf6b8ba94e0d41a7d99f",
+          "size": 15356
+        },
+        {
+          "path": "m/fonts/pt-mono-cyrillic-ext-400-normal.woff2",
+          "sha256": "f3456b336d48304e974118f3d45d1ea8cb19e9eb3c8b2770304eaeadc4be9066",
+          "size": 22028
+        },
+        {
+          "path": "m/fonts/pt-mono-latin-400-normal.woff2",
+          "sha256": "b4e2aee32a6162b66a40f6fc7ac09962b0385e467ca8b143d92a091b16eaff6d",
+          "size": 27436
+        },
+        {
+          "path": "m/fonts/pt-mono-latin-ext-400-normal.woff2",
+          "sha256": "b5e539036e0fedbb1bc408355993f36d264132b96008a5152f05b1f858d9120e",
+          "size": 16072
+        },
+        {
+          "path": "m/fonts/pt-sans-narrow-cyrillic-400-normal.woff2",
+          "sha256": "ff565657aca50b0d3ad4dd38ae9121543149796ea8db25b6a0b6ad78d11e3bcc",
+          "size": 22208
+        },
+        {
+          "path": "m/fonts/pt-sans-narrow-cyrillic-700-normal.woff2",
+          "sha256": "74592280f2f8c4fd1c5b4d0d3a0d98532c1b0a81f5e8f5b9605c32c461ca89ab",
+          "size": 32640
+        },
+        {
+          "path": "m/fonts/pt-sans-narrow-cyrillic-ext-400-normal.woff2",
+          "sha256": "9ff324bbc631c3378279ca2071301bff7d8380eff47ba3ce3516dc088124fd78",
+          "size": 30632
+        },
+        {
+          "path": "m/fonts/pt-sans-narrow-cyrillic-ext-700-normal.woff2",
+          "sha256": "55c96eaa4ec07eb4b053d365e995acd7fcf4c0ab3c97c414e1921277351fabfd",
+          "size": 44960
+        },
+        {
+          "path": "m/fonts/pt-sans-narrow-latin-400-normal.woff2",
+          "sha256": "4b6275c7977f0cd7698d38c7726149bbb2a9902d33e7dd48a192a889c19f5ab6",
+          "size": 36344
+        },
+        {
+          "path": "m/fonts/pt-sans-narrow-latin-700-normal.woff2",
+          "sha256": "c9881931311b77f935225d7eeb7ebd0395480a7737a56d427778c98534ade38a",
+          "size": 51384
+        },
+        {
+          "path": "m/fonts/pt-sans-narrow-latin-ext-400-normal.woff2",
+          "sha256": "6ee1f5416e595c4c712c31f60f40d16d46f651b8ae77354ca53cd1381552b6cd",
+          "size": 22764
+        },
+        {
+          "path": "m/fonts/pt-sans-narrow-latin-ext-700-normal.woff2",
+          "sha256": "95a6a85e22dd80ba187d6b0d853dd922ca51074915c6e811d20c2a06be730e5e",
+          "size": 30964
+        }
+      ],
+      "previews": [
+        {
+          "path": "previews/desktop-light.png",
+          "sha256": "9758d1be903a9e311ba94ba0f8d65f5364f14dc6619a8d8d6dca10b9630f14c8",
+          "size": 156733,
+          "alt": "Pulp on a desktop, day: the contents list, a chapter card and a typed message"
+        },
+        {
+          "path": "previews/desktop-dark.png",
+          "sha256": "017c92c8742a80b64169babc75e0a65fd57702bc5eeaebd024e15ab83715d3a2",
+          "size": 156599,
+          "alt": "Pulp on a desktop, night: the same chat in diner neon"
+        },
+        {
+          "path": "previews/phone-light.png",
+          "sha256": "a30d3aa0c84c2d678789ce56c1f3d521aed262f14daa5b77c43dfd30b46c135c",
+          "size": 50171,
+          "alt": "Pulp on a phone, day: a chapter card above the messages"
+        },
+        {
+          "path": "previews/phone-dark.png",
+          "sha256": "a4c1b1c224ada42a64db6298acdd5db6dc652ee0709b2d7788c4e73dddac9910",
+          "size": 49399,
+          "alt": "Pulp on a phone, night"
+        }
+      ]
+    },
+    {
+      "id": "zoom",
+      "name": "Zoom",
+      "description": "Move through your workspace by zooming in: everyone, then one person, then a conversation, then a single message with everything known about it. Esc steps back out. You write in a focused dialog, and every chat, topic, agent and setting is still there.",
+      "version": "1.0.0",
+      "api": 1,
+      "agentnet": "v0.8.25",
+      "digest": "157ea1d5f999f090c190693fe61d13083ff0013f1c967c7130b306d4a93cf676",
+      "files": [
+        {
+          "path": "skin.json",
+          "sha256": "7de482d13f4a79e6975d66cd535f66336a6e3a8c38554b0db4f424fc3404c8c4",
+          "size": 556
+        },
+        {
+          "path": "entry.mjs",
+          "sha256": "790b3b0c2eb0f64b384d96614f25832a4f3725805701381594231518cad50796",
+          "size": 401699
+        },
+        {
+          "path": "manifest.mjs",
+          "sha256": "f525f1798e3cfec665772574c7b3a16faf3d84da357392f819354951781f2dd0",
+          "size": 572
+        },
+        {
+          "path": "style.css",
+          "sha256": "01dc64510c05d2ddddf3112eea062817ed88d96e2ff97d4fe7d8cc6512c13beb",
+          "size": 60903
+        },
+        {
+          "path": "template.mjs",
+          "sha256": "8f2c62dc738e352ee8cad87f93712d8698d0470ee67dd7e96c968ce173d3a573",
+          "size": 13954
+        },
+        {
+          "path": "typing.mjs",
+          "sha256": "6eeaa65e5e5fc09aea71a7cb95d6f0b2a30ff3267a740644af2d2140e52f7c1c",
+          "size": 6610
+        },
+        {
+          "path": "drivespace.mjs",
+          "sha256": "cde9e2281372466bb1f0d35ff9bd7ad1b6dafa5c207a2cf2ab7a32b0043e6212",
+          "size": 9529
+        },
+        {
+          "path": "drivespace.css",
+          "sha256": "cb535337a73f092e56ddcbea4a286ac81cbee8d6756b4ec11ece5742678c4e21",
+          "size": 1280
+        },
+        {
+          "path": "drivespace-setup.mjs",
+          "sha256": "afe7ce702b93faa3bb71ad7ca8de01037b17816329014cc32f56fd88a9a3372d",
+          "size": 5537
+        },
+        {
+          "path": "assistant-setup.mjs",
+          "sha256": "2d46fcbdceeef74f94611be71db6cdb2c5d64281c453aac3ceefb1c3d99671c4",
+          "size": 21662
+        },
+        {
+          "path": "assistant-setup.css",
+          "sha256": "b792aadf2a755f396dc6aea5f30cf1e8560fd09afaac30087d1c9125ca9cda39",
+          "size": 5559
+        },
+        {
+          "path": "qr.mjs",
+          "sha256": "330b78264ed701c8c8c0da68028016473fa8cbdc2e719cbfee21b6791ea41557",
+          "size": 29712
+        },
+        {
+          "path": "icon.png",
+          "sha256": "2c136c811e762fdfb6410c52ac2774b1fa870813babfbed1d855de9a4bc4ce4a",
+          "size": 12651
+        },
+        {
+          "path": "topics.mjs",
+          "sha256": "461aee01c672e29c1af34756045a77005dce1bf81425da8d49ed72c1d85526b3",
+          "size": 10149
+        },
+        {
+          "path": "person-topics.mjs",
+          "sha256": "1d80432b0355a36e1da70373ea48011ff040ded2eb10c07cde9631f9aeaf189a",
+          "size": 2922
+        },
+        {
+          "path": "collective-mentions.mjs",
+          "sha256": "bd6123134866212683eb81bc644ba8e130fe13ccf2f7385aa53e709b36780eba",
+          "size": 2860
+        },
+        {
+          "path": "optimistic.mjs",
+          "sha256": "afdf4bfc7b009197f78041a2f6e8dbc18cba07feec7c3049232ee9f75097975c",
+          "size": 4403
+        },
+        {
+          "path": "pictures.mjs",
+          "sha256": "6af9fe3af1ff7aba1b3826a5b59a458346819b2f78efb9ff6d762603ccb14eeb",
+          "size": 11919
+        },
+        {
+          "path": "link-text.mjs",
+          "sha256": "0286b79755d2e14f4552c18bd03678d87dd90878187d34145964dc69c1b7f347",
+          "size": 49194
+        },
+        {
+          "path": "reaction-preferences.mjs",
+          "sha256": "e5601c862b65f754b4880fae50371e1d4ce5188c53d91a8d8a037a1ae6d8c197",
+          "size": 1927
+        }
+      ],
+      "previews": [
+        {
+          "path": "previews/desktop-light.png",
+          "sha256": "2316a8976f138221970d892331e9416f45ba330c44dd2e25c973289949c9e730",
+          "size": 83622,
+          "alt": "Zoom on a desktop, light: the conversation level with its zoom ladder, in a conversation with the fictional Tomasz Reyes"
+        },
+        {
+          "path": "previews/desktop-dark.png",
+          "sha256": "2ce189134a1d9060fd0f02eb776c7d3312baca93d6d3e072951a950facde39cf",
+          "size": 84928,
+          "alt": "Zoom on a desktop, dark: the conversation level with its zoom ladder, in a conversation with the fictional Tomasz Reyes"
+        },
+        {
+          "path": "previews/mobile-light.png",
+          "sha256": "f71f8b2a21970394f9926c6d51d05f48a0be81a7058a69a434bb5a0ea70999cc",
+          "size": 60686,
+          "alt": "Zoom on a phone, light: a conversation with the fictional Tomasz Reyes about a glaze test"
+        },
+        {
+          "path": "previews/mobile-dark.png",
+          "sha256": "651e72bcfab10c7a7891ef68bc96854b000ab822a58811680921a11e961cdbd9",
+          "size": 62035,
+          "alt": "Zoom on a phone, dark: a conversation with the fictional Tomasz Reyes about a glaze test"
+        }
+      ]
+    }
+  ]
+}

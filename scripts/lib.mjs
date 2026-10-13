@@ -114,7 +114,7 @@ export function validateOverlay(id,project=root){
  for(const name of files){
   const file=path.join(dir,name),stat=fs.lstatSync(file);
   if(!stat.isFile()||stat.size>4*1024*1024)throw Error('Invalid or oversized overlay file: '+name);
-  if(name.startsWith('fonts/')?!/^fonts\/[^/]+\.woff2$/.test(name):!/\.(tsx?|m?js|css|svg|png|webp|json)$/.test(name))throw Error('Unsupported overlay file: '+name);
+  if(name.startsWith('fonts/')?!/^fonts\/(?:[^/]+\.woff2|LICENSE[^/]*\.txt)$/.test(name):!/\.(tsx?|m?js|css|svg|png|webp|json)$/.test(name))throw Error('Unsupported overlay file: '+name);
   if(/\.(tsx?|m?js)$/.test(name)){const s=fs.readFileSync(file,'utf8');lintCode('overlay/'+name,s);if(/\bfrom\s*["'](?:[a-z]+:|\/\/)|\bimport\s*\(\s*["'](?:[a-z]+:|\/\/)|["']\.\.\/\.\.\//.test(s))throw Error('Overlay imports stay in AgentNet\'s web source: overlay/'+name);}
  }
  const brand=path.join(dir,'brand.tsx');if(!fs.existsSync(brand))throw Error(id+': overlay/brand.tsx names the skin (id, name, storage, themeKey)');

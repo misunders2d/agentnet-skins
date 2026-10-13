@@ -1,0 +1,32 @@
+{
+  "api": 1,
+  "id": "pulp",
+  "name": "Pulp",
+  "agentnet": "v0.8.25",
+  "entry": "entry.mjs",
+  "style": "style.css",
+  "document": "document.css",
+  "files": [
+    "entry.mjs",
+    "style.css",
+    "document.css",
+    "m/emoji/en/data.json",
+    "m/emoji/en/messages.json",
+    "m/fonts/bitter-cyrillic-ext-wght-normal.woff2",
+    "m/fonts/bitter-cyrillic-wght-normal.woff2",
+    "m/fonts/bitter-latin-ext-wght-normal.woff2",
+    "m/fonts/bitter-latin-wght-normal.woff2",
+    "m/fonts/pt-mono-cyrillic-400-normal.woff2",
+    "m/fonts/pt-mono-cyrillic-ext-400-normal.woff2",
+    "m/fonts/pt-mono-latin-400-normal.woff2",
+    "m/fonts/pt-mono-latin-ext-400-normal.woff2",
+    "m/fonts/pt-sans-narrow-cyrillic-400-normal.woff2",
+    "m/fonts/pt-sans-narrow-cyrillic-700-normal.woff2",
+    "m/fonts/pt-sans-narrow-cyrillic-ext-400-normal.woff2",
+    "m/fonts/pt-sans-narrow-cyrillic-ext-700-normal.woff2",
+    "m/fonts/pt-sans-narrow-latin-400-normal.woff2",
+    "m/fonts/pt-sans-narrow-latin-700-normal.woff2",
+    "m/fonts/pt-sans-narrow-latin-ext-400-normal.woff2",
+    "m/fonts/pt-sans-narrow-latin-ext-700-normal.woff2"
+  ]
+}

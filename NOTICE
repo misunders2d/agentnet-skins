@@ -16,5 +16,12 @@ MarkedJS, and Copyright (c) 2011-2018, Christopher Jeffrey (MIT), with
 Markdown's license, Copyright (c) 2004, John Gruber; the license texts
 are kept at the end of link-text.mjs.
 
+Pulp bundles the Bitter font, Copyright 2011 The Bitter Project Authors,
+and the PT Sans Narrow and PT Mono fonts, Copyright 2009-2010 ParaType Ltd.,
+under the SIL Open Font License 1.1 (skins/pulp/overlay/fonts/LICENSE-*.txt).
+
 Holonet styling, branding, signal artwork and collection tooling are new.
 Star Wars is inspiration only. No affiliation or endorsement is claimed.
+Pulp's styling, costumes and pieces are new; it is inspired by pulp-era
+paperbacks, diners and 1990s crime films in general. No affiliation or
+endorsement is claimed.

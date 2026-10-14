@@ -823,3 +823,6 @@ button.reaction { cursor: pointer; }
 .native-request .acts { display: flex; flex-wrap: wrap; gap: 8px; }
 .native-request .act { min-height: 44px; }
 .native-request .act.go { background: var(--text); color: var(--surface); }
+
+/* Private runtime observations fit the existing picker and chat target. */
+[data-agent-model], .selected-agent-model { min-width:0; max-width:100%; overflow-wrap:anywhere; }

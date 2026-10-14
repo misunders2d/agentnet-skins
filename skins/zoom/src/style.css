@@ -924,3 +924,18 @@ button.reaction { cursor: pointer; }
 .native-request .acts { display: flex; flex-wrap: wrap; gap: 8px; }
 .native-request .act { min-height: 44px; }
 .native-request .act.go { background: var(--text); color: var(--surface); }
+
+/* Private runtime observations fit the existing picker and chat target. */
+[data-agent-model], .selected-agent-model { min-width:0; max-width:100%; overflow-wrap:anywhere; }
+.body-markdown { white-space:normal; }
+.body-markdown > * + * { margin-top:.6em; }
+.body-markdown ul, .body-markdown ol { padding-left:1.5em; }
+.body-markdown ul { list-style:disc; }
+.body-markdown ol { list-style:decimal; }
+.body-markdown li > p { margin:0; }
+.body-markdown pre { white-space:pre; overflow:auto; max-width:100%; padding:.6em; }
+.body-markdown code, .mc-text code { font-family:monospace; }
+.body-markdown blockquote { border-left:2px solid currentColor; padding-left:.7em; }
+.markdown-table { max-width:100%; overflow:auto; }
+.markdown-table table { border-collapse:collapse; }
+.markdown-table th, .markdown-table td { border:1px solid currentColor; padding:.25em .5em; }

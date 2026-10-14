@@ -51,6 +51,12 @@ const demoHome=path.join(evidence,'demo-home');fs.mkdirSync(demoHome,{mode:0o700
 const demo=spawn(bin,['--home',demoHome,'ui','--demo','--listen','127.0.0.1:0'],{stdio:['ignore','pipe','ignore'],env:{...process.env,HOME:demoHome,AGENTNET_NOTIFY:'off'}});
 try{
  const demoURL=await new Promise((resolve,reject)=>{let out='';const timer=setTimeout(()=>reject(Error('demo daemon did not print its page')),20000);demo.stdout.on('data',d=>{out+=d;const m=out.match(/Open: (http:\/\/127\.0\.0\.1:\d+\/\?t=[0-9a-f]+)/);if(m){clearTimeout(timer);resolve(m[1]);}});demo.on('exit',code=>{clearTimeout(timer);reject(Error('demo daemon exited '+code));});});
+ const nativePackages=skins.filter(s=>manifestAt(s.package).files.includes('native-request.mjs')).map(s=>s.package);
+ if(nativePackages.length){
+  const x=spawnSync(process.execPath,[path.join(root,'tests/native-requests.cjs'),demoURL,...nativePackages],{env:{...process.env,...browserEnv,AGENTNET_UPSTREAM:up,AGENTNET_SCREENSHOTS:path.join(evidence,'screenshots')},encoding:'utf8',timeout:180000});
+  fs.writeFileSync(path.join(evidence,'native-requests.txt'),(x.stdout||'')+'\n'+(x.stderr||''),{mode:0o600});
+  if(x.status!==0){failed=true;console.error('FAIL native request presentation\n'+x.stdout+'\n'+x.stderr);}else console.log(x.stdout.trim());
+ }
  for(const s of skins){
   contractCheck('agentnet skin_contract_check',s.package,s.id,demoURL);
   if(s.overlay){

@@ -804,3 +804,10 @@ button.reaction { cursor: pointer; }
 @media (max-width: 760px) {
   #agent-target:not(:has(.addressed-assistant)) { display: none; }
 }
+
+.native-operation { max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.native-field { display: grid; gap: 4px; margin: 8px 0; }
+.native-field input, .native-field select { width: 100%; min-height: 44px; box-sizing: border-box; }
+.native-request .acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.native-request .act { min-height: 44px; }
+.native-request .act.go { background: var(--text); color: var(--surface); }

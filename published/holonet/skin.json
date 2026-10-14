@@ -2,7 +2,7 @@
   "api": 1,
   "id": "holonet",
   "name": "Holonet",
-  "agentnet": "v0.8.26",
+  "agentnet": "v0.8.27",
   "entry": "entry.mjs",
   "style": "style.css",
   "files": [
@@ -22,6 +22,7 @@
     "optimistic.mjs",
     "pictures.mjs",
     "signal.svg",
-    "skin-motion.mjs"
+    "skin-motion.mjs",
+    "native-request.mjs"
   ]
 }

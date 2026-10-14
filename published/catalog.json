@@ -5,30 +5,30 @@
       "id": "classic",
       "name": "Classic",
       "description": "AgentNet's original interface: your chats in a list on the left and the open conversation on the right, with topics, people, agents, activity and every setting one click away. Plain, familiar and quick on a desktop or a phone, in light and dark.",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "api": 1,
-      "agentnet": "v0.8.26",
-      "digest": "03c4d2d3f9f499d2034262e32a4b74e8e5d0bce2d08a3aa29211de0a3a4a0195",
+      "agentnet": "v0.8.27",
+      "digest": "433ee3ad9f1b94d3b8b98ba8aed6d76434e90c03c8ca24fb95f50007b4429b22",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "4099bcaf072be39b40d5f169bebb709fac4338e14acb7b88ab2f7960704bdcd5",
-          "size": 562
+          "sha256": "d3f9bfaf4805fb12aca1d86a826715e414e0a3318bb64dfd2d14ef7895a59e11",
+          "size": 588
         },
         {
           "path": "entry.mjs",
-          "sha256": "9d0aa34fb2bb5dbcc88b23696ce368775b0bc60b2fd9ea76e7d6a9cfdbd76b14",
-          "size": 380828
+          "sha256": "e1327ef1bdf56b3d727b20c7d905dd7a7f2feeab85777615d1c8aabc14037078",
+          "size": 381543
         },
         {
           "path": "manifest.mjs",
-          "sha256": "9e189a181b2ff89e3094f2754f15c52cfc215f14026db839e4db50e75b004a39",
-          "size": 578
+          "sha256": "341fd236a44ff72c12ca09c055568202e1eb3496af45469e6ea4ca697ff199df",
+          "size": 604
         },
         {
           "path": "style.css",
-          "sha256": "900faabf44757db477d32ddd7157c38bcc88fea8e68d64d3aca959e98874c021",
-          "size": 55264
+          "sha256": "37c29ae042048f2b527f2457df4f4e854da3743f40ad65fc995fb570c210c2a3",
+          "size": 55716
         },
         {
           "path": "template.mjs",
@@ -109,6 +109,11 @@
           "path": "reaction-preferences.mjs",
           "sha256": "e5601c862b65f754b4880fae50371e1d4ce5188c53d91a8d8a037a1ae6d8c197",
           "size": 1927
+        },
+        {
+          "path": "native-request.mjs",
+          "sha256": "bf41ec6576c7e68e2d9415ffe2b0b953f9382fcfb24e45df8af306c678ba7d69",
+          "size": 6894
         }
       ],
       "previews": [
@@ -142,30 +147,30 @@
       "id": "holonet",
       "name": "Holonet",
       "description": "A starship comms console for AgentNet: command navigation across the top, a framed transmission display, a crew panel and a command dock for writing. A brief scanner sweep and split shutters mark what you open, and both stay still when your device asks for less motion. Every chat, topic, agent and setting is still there.",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "api": 1,
-      "agentnet": "v0.8.26",
-      "digest": "c91936bc3f6e87b5a32128cb96b578ce3945922e5580b19b4a4684acdf04ffcf",
+      "agentnet": "v0.8.27",
+      "digest": "454f526cf65db34a733652ef4fd19ea14ad6b965c058fa99aab8ab90cb3bdc71",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "a7af8553a88b3d3448179791a843ff14ad850c9629691ac1bfade5fd24b68422",
-          "size": 499
+          "sha256": "ce9c0c028a7d0ef4e4656e6c27938b9cf6b56d6dd52517e3c811da7b0cc8b216",
+          "size": 525
         },
         {
           "path": "entry.mjs",
-          "sha256": "71ec3370754b3fd81fa703e0072b62fe31b492a70e46d4ac31fc697d3079584a",
-          "size": 347460
+          "sha256": "014102d274c5cad81b581c1688fad99e98fd66ba727633262f06ee97ee46e485",
+          "size": 348175
         },
         {
           "path": "manifest.mjs",
-          "sha256": "fba445f461e150e138460c8f54829527096f7d5cc5d3fdd5aa40a4b72737398c",
-          "size": 515
+          "sha256": "92506181d05202aa1dc1b01a93937ed1dd51805f3ffec1989bda3fafd363bd39",
+          "size": 541
         },
         {
           "path": "style.css",
-          "sha256": "d9c1a161fb1eaebee94822b4e4b5127759a04956040636820a2c69e5fad1e38c",
-          "size": 69155
+          "sha256": "7408deb2cf55a6a97da977888e953226bc02bd8265d5ead1984141d8ef4ab8d7",
+          "size": 69607
         },
         {
           "path": "template.mjs",
@@ -236,6 +241,11 @@
           "path": "skin-motion.mjs",
           "sha256": "c0c03e2e2c2c7788d7fa280414c0584ecf93454c9bcccb850baf63e21e392a47",
           "size": 2959
+        },
+        {
+          "path": "native-request.mjs",
+          "sha256": "bf41ec6576c7e68e2d9415ffe2b0b953f9382fcfb24e45df8af306c678ba7d69",
+          "size": 6894
         }
       ],
       "previews": [
@@ -269,25 +279,25 @@
       "id": "pulp",
       "name": "Pulp",
       "description": "A 1970s paperback by day and a roadside diner by night. Chats read like a table of contents, every topic opens with a chapter card, requests for your OK arrive as a glowing case, and your agents wear costumes. Everything Comic does, in a new look.",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "api": 1,
-      "agentnet": "v0.8.26",
-      "digest": "87f0dc94d5fe7496d58be7a1c3d3e11f5fc5942ab9ffb696b7ff3e43669b55bb",
+      "agentnet": "v0.8.27",
+      "digest": "80584e36d10ec194943b95de48f368fb1cbe804f9ecb53051bd279f3b435c58b",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "5bb5e96d327b0bc8307092a18e17d1a28d67268fd7875720b39e3bf64789617a",
+          "sha256": "d969bbcd3a1c75701c488132a308dc33c198a6f89e917418c10bc9e5c8bd2831",
           "size": 1131
         },
         {
           "path": "entry.mjs",
-          "sha256": "e04fcad23b531d792db838223d4e3e0cd86a4a8b563eed81ceb1f2b69c58d504",
-          "size": 1187638
+          "sha256": "336101486803f571a0685684795b949d6e458e3771ee825ebf1d7b6880d02a0e",
+          "size": 1196192
         },
         {
           "path": "style.css",
-          "sha256": "8aa0a0aea4d5d0d5dcd98a4557ff69720b6353f57c982a1423f6d41edd41ab96",
-          "size": 86933
+          "sha256": "fa99f6ebc805aa97aba0ca6c03395d59820d45728f8a92ec241d7245847a8eca",
+          "size": 87140
         },
         {
           "path": "document.css",
@@ -416,30 +426,30 @@
       "id": "zoom",
       "name": "Zoom",
       "description": "Move through your workspace by zooming in: everyone, then one person, then a conversation, then a single message with everything known about it. Esc steps back out. You write in a focused dialog, and every chat, topic, agent and setting is still there.",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "api": 1,
-      "agentnet": "v0.8.26",
-      "digest": "45ad7534a8fd4f44d5172ceb2cc9935372fcd2451752ba2a253c30772c81c019",
+      "agentnet": "v0.8.27",
+      "digest": "724249d51372eed14e062948ef94dc35aa7e18ab4b1cb076925b160438211911",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "10cb5802ccadaffce5501b917305b922d44586a9005847da6673381746f1dde7",
-          "size": 556
+          "sha256": "2de616e0bd12c823e0b79cd1fc4c48e9e73aaae4fa06101f0b3c9f1f2f65e708",
+          "size": 582
         },
         {
           "path": "entry.mjs",
-          "sha256": "4217c8d0a497c0600681bbfbe4a4e4adea57de92d1a49a2b0fb0cee925c6e644",
-          "size": 407673
+          "sha256": "952d245367dfa0cce0f618c714a856f3a2d841ff16c161e7d7cb67ab3340497b",
+          "size": 408388
         },
         {
           "path": "manifest.mjs",
-          "sha256": "64225d997daec886820c7980d5439ed810b21a9a3883d49bc927473f6542b6b1",
-          "size": 572
+          "sha256": "5b971b8aa7f7ccaf96e472ae86f8ab6134cb15f93b8d8068a530d7f455eacf4e",
+          "size": 598
         },
         {
           "path": "style.css",
-          "sha256": "2594f6ec92a5a4249133fbf894e5750961184f5f2b1a06e026c38391065596ad",
-          "size": 62658
+          "sha256": "c55739633a235f68ae0b581bc83bd968dd079605551b3edea150a2acfe9b8bc9",
+          "size": 63110
         },
         {
           "path": "template.mjs",
@@ -520,6 +530,11 @@
           "path": "reaction-preferences.mjs",
           "sha256": "e5601c862b65f754b4880fae50371e1d4ce5188c53d91a8d8a037a1ae6d8c197",
           "size": 1927
+        },
+        {
+          "path": "native-request.mjs",
+          "sha256": "bf41ec6576c7e68e2d9415ffe2b0b953f9382fcfb24e45df8af306c678ba7d69",
+          "size": 6894
         }
       ],
       "previews": [

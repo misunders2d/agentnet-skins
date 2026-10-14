@@ -2,7 +2,7 @@ export default {
   "api": 1,
   "id": "zoom",
   "name": "Zoom",
-  "agentnet": "v0.8.26",
+  "agentnet": "v0.8.27",
   "entry": "entry.mjs",
   "style": "style.css",
   "files": [
@@ -24,6 +24,7 @@ export default {
     "optimistic.mjs",
     "pictures.mjs",
     "link-text.mjs",
-    "reaction-preferences.mjs"
+    "reaction-preferences.mjs",
+    "native-request.mjs"
   ]
 };

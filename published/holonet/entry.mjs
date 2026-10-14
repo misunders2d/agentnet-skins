@@ -1,3 +1,4 @@
+import { nativeRequestItem } from "./native-request.mjs";
 // Modified for AgentNet Skins Holonet from AgentNet v0.8.1 Classic.
 // Visual identity and Host API v1 compatibility fixes; see PROVENANCE.md.
 function niceGoogleDevice(address) { const name = String(address || "").split("/").pop() || "device"; return name.charAt(0).toUpperCase() + name.slice(1); }
@@ -74,6 +75,7 @@ export async function unmount(root) { const stop = mounted.get(root); if (stop) 
 function createClassic(root, host) {
 let currentHost = host, alive = true;
 const abort = new AbortController(), cleanups = [], timers = new Set();
+const nativeResponses = new Map(); cleanups.push(() => nativeResponses.clear());
 const on = (target, kind, handler) => target.addEventListener(kind, handler, {signal: abort.signal});
 const setTimeout = (fn, ms) => { const timer = globalThis.setTimeout(() => { timers.delete(timer); if (alive) fn(); }, ms); timers.add(timer); return timer; };
 // AgentNet messenger page. Text from anyone is inserted as text nodes only.
@@ -1001,9 +1003,10 @@ function reportLine(c) {
   const tied = all.filter((r) => r.open && +new Date(r.at) === +new Date(latest.at));
   const snapshots = tied.map((r) => ({ r, item: ((state.overview && state.overview.review) || []).find((it) => it.notice && it.peer === c.peer && it.id === r.id) }));
   const canAct = snapshots.some(({ item }) => item && item.report && item.report.items.some((x) => x.actionable));
+  const hasNative = snapshots.some(({ item }) => item?.report?.items?.some(x => x.native));
   return el("div", { class: "report-line" },
     el("p", {}, el("strong", {}, c.peer), " reported at " + when(v2 ? v2.at : latest.at) + (tied.length > 1 ? ": " + tied.length + " snapshots at that time; their order is not known." : v2 ? ", from " + v2.host + ": " + plural(v2.items.length || v2.count || 0, "request", "requests") + " waiting there." : ": " + firstSentence(latest.text) + ".")),
-    el("p", { class: "hint" }, canAct ? "As their operator you can decide these from here; the host applies a decision only if the request is still in the state you saw."
+    el("p", { class: "hint" }, hasNative ? "You can answer your agent’s native request here; its native permissions stay unchanged." : canAct ? "As their operator you can decide these from here; the host applies a decision only if the request is still in the state you saw."
       : "That was true on that machine at that time. " + decidersSentence(v2, c.peer)),
     tied.length > 1 ? el("div", {}, snapshots.map(({ r, item }) => el("div", {},
       el("p", { class: "hint" }, "Snapshot from " + (item && item.report ? item.report.host : c.peer) + " at " + when(r.at) + ". This is what it reported then, not a live queue."),
@@ -1025,6 +1028,7 @@ const firstSentence = (s) => (s || "").split(/\.\s/)[0].replace(/\.$/, "");
 function decidersSentence(report, host) {
   if (!report) return host + " did not say who decides these.";
   const items = report.items || [];
+  if (items.some(x => x.native)) return "You can answer your agent’s native request from this device.";
   if (items.length) return items.some((x) => x.actionable) ? "You decide these from this device." : host + " listed these but did not let this device decide them.";
   if (!report.count) return "Nothing waits there any more.";
   const list = report.deciders || [];
@@ -3459,6 +3463,11 @@ function reportItems(it) {
   const r = it.report;
   if (!r || !Array.isArray(r.items)) return null;
   return el("ul", { class: "report-requests" }, r.items.map((x) => {
+    if (x.native) {
+      const capturedHost = currentHost;
+      return nativeRequestItem(el, it, x, capturedHost, nativeResponses, sendID, state.overview?.me?.address,
+        () => { if (alive && currentHost === capturedHost) void loadOverview(); }, setTimeout);
+    }
     // After a decision the host applied, the state this snapshot shows no
     // longer holds: no further decision is offered on it (the host's next
     // report names what waits now); a refusal leaves the choice open.

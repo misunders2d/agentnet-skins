@@ -1,0 +1,3 @@
+/* Office bundles no fonts: it uses the system interface font of the device
+   (document.css holds only @font-face rules, so this file is intentionally
+   empty). */

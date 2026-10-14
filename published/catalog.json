@@ -276,6 +276,113 @@
       ]
     },
     {
+      "id": "office",
+      "name": "Office",
+      "description": "A plain workplace messenger: white pages, thin hairlines, a dark neutral rail, the device's own font. Green for what you can do, blue for agents. Flat messages, a bordered composer, hairline request cards with a coloured edge. Everything Comic does, without the stickers.",
+      "version": "1.0.0",
+      "api": 1,
+      "agentnet": "v0.8.27",
+      "digest": "696cbe3f75b1bb14f95e90b813af7c31b22c3b135957d3ed688298fcec301cfa",
+      "files": [
+        {
+          "path": "skin.json",
+          "sha256": "a0677926fc956bb905937b2d0456f4cfd12cfe47f7ed0ea8552216c7b302f9e8",
+          "size": 675
+        },
+        {
+          "path": "entry.mjs",
+          "sha256": "a79da0928f902186af0c5887577fb74b63d15be0430d9d7bfde4eef71ef25cea",
+          "size": 1192878
+        },
+        {
+          "path": "style.css",
+          "sha256": "8c4cc686bf717e3f7bee0f40db80f3e0bae6c54a7314b4e88816b1c0784bb7e8",
+          "size": 84399
+        },
+        {
+          "path": "document.css",
+          "sha256": "dc75ce6da855d448c6518042eaeeefbbe587c7e7f77e240acd409fedd1db1f21",
+          "size": 3254
+        },
+        {
+          "path": "m/emoji/en/data.json",
+          "sha256": "ed014f1049bd370c5794f815850156196ac382850f51c3e9f6a9e83553fb3f01",
+          "size": 775157
+        },
+        {
+          "path": "m/emoji/en/messages.json",
+          "sha256": "6bffab078a0d90c4cca03bd3ff1045fdba33a77d31b1408b1cf1c414d7f1ab3c",
+          "size": 6499
+        },
+        {
+          "path": "m/fonts/onest-cyrillic-ext-wght-normal.woff2",
+          "sha256": "268f03691b3d06e57abcf20f9277e314ea8784298983aab5b40c1b91965027e1",
+          "size": 10540
+        },
+        {
+          "path": "m/fonts/onest-cyrillic-wght-normal.woff2",
+          "sha256": "68e5e01d6265bd68967746d4f5a9d18d0e6cbb5d15583c7082d6384ab1229b27",
+          "size": 15860
+        },
+        {
+          "path": "m/fonts/onest-latin-ext-wght-normal.woff2",
+          "sha256": "14e7d3079b75860e2ab50efc6c318c398fdb46ede9b56e625f12ae70a3c5d9a4",
+          "size": 28452
+        },
+        {
+          "path": "m/fonts/onest-latin-wght-normal.woff2",
+          "sha256": "052df74533250c2e0ca0c4bdd32de594e107d99c1648e63820ef9c6142067828",
+          "size": 33760
+        },
+        {
+          "path": "m/fonts/rubik-cyrillic-ext-wght-normal.woff2",
+          "sha256": "35e30483bb79be6fd8de0fec4e038fda9e637fc7337f6ff61418c7d08077878b",
+          "size": 12388
+        },
+        {
+          "path": "m/fonts/rubik-cyrillic-wght-normal.woff2",
+          "sha256": "bdb2b33ab916e9e7b42edb61f8aea5f5dd83ad773d6ee4e9b55665daf8954ce8",
+          "size": 15112
+        },
+        {
+          "path": "m/fonts/rubik-latin-ext-wght-normal.woff2",
+          "sha256": "09472f217ad1ebb61a7669cf532f9f2f80685e07652ee862fde9a79665aef479",
+          "size": 19400
+        },
+        {
+          "path": "m/fonts/rubik-latin-wght-normal.woff2",
+          "sha256": "691cd1d9b4c0cdf31a1dcf04259c86f92c85e69f6622abab7964d81e36890691",
+          "size": 35348
+        }
+      ],
+      "previews": [
+        {
+          "path": "previews/desktop-light.png",
+          "sha256": "6de1e6764156c4648c63b5a294bc5de195e86035902456be0fb5b46fcc63fc22",
+          "size": 110504,
+          "alt": "Office on a desktop, light: the chat list beside an open conversation with flat messages"
+        },
+        {
+          "path": "previews/desktop-dark.png",
+          "sha256": "2debdb5600504352b8f1ad90d5def95e3b168cb38a4ac497fbb650543e7788c1",
+          "size": 113728,
+          "alt": "Office on a desktop, dark: the same conversation on dark grey"
+        },
+        {
+          "path": "previews/mobile-light.png",
+          "sha256": "46577afe33ebd7829bb281eab601b9549292ff61a21cbd2e8a85b1ed37ebefed",
+          "size": 55264,
+          "alt": "Office on a phone, light: an open conversation and the composer"
+        },
+        {
+          "path": "previews/mobile-dark.png",
+          "sha256": "fe145652a931cada1c7ebbd7e2353d4310278605c44537bcc6fe37a484bdf517",
+          "size": 57471,
+          "alt": "Office on a phone, dark"
+        }
+      ]
+    },
+    {
       "id": "pulp",
       "name": "Pulp",
       "description": "A 1970s paperback by day and a roadside diner by night. Chats read like a table of contents, every topic opens with a chapter card, requests for your OK arrive as a glowing case, and your agents wear costumes. Everything Comic does, in a new look.",

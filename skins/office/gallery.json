@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "description": "A plain workplace messenger: white pages, thin hairlines, a dark neutral rail, the device's own font. Green for what you can do, blue for agents. Flat messages, a bordered composer, hairline request cards with a coloured edge. Everything Comic does, without the stickers.",
+  "previews": [
+    {
+      "file": "desktop-light.png",
+      "alt": "Office on a desktop, light: the chat list beside an open conversation with flat messages"
+    },
+    {
+      "file": "desktop-dark.png",
+      "alt": "Office on a desktop, dark: the same conversation on dark grey"
+    },
+    {
+      "file": "mobile-light.png",
+      "alt": "Office on a phone, light: an open conversation and the composer"
+    },
+    {
+      "file": "mobile-dark.png",
+      "alt": "Office on a phone, dark"
+    }
+  ]
+}

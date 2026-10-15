@@ -3522,16 +3522,19 @@ async function refreshThread() {
 }
 
 async function loadThread(scrollToEnd, localView) {
-  const id = state.thread, gen = state.gen;
-  if (!id) return;
+  const id = state.thread, gen = state.gen, host = currentHost;
+  const current = () => alive && host === currentHost && gen === state.gen && state.thread === id && !state.dm;
+  if (!id || !current()) return;
+  let read = state.threadRead;
+  if (!read || read.id !== id || read.gen !== gen || read.host !== host) read = state.threadRead = { id, gen, host, pending: new Set(), done: new Set() };
   let t=localView;
   try {
-    if(!t)t = await api("/api/thread?id=" + encodeURIComponent(id));
+    if(!t)t = await api("/api/thread?id=" + encodeURIComponent(id), undefined, host);
   } catch (e) {
-    announce(e.message);
+    if (current()) announce(e.message);
     return;
   }
-  if (state.thread !== id || gen !== state.gen) return; // another thread or workspace was opened meanwhile
+  if (!current()) return; // another thread or workspace was opened meanwhile
   state.data = t;
   fill($("conv-name"), who(t.peer));
   $("conv-topic").textContent = firstLine(t.messages[0].body, 90);
@@ -3542,8 +3545,8 @@ async function loadThread(scrollToEnd, localView) {
   showPane("conv");
   $("composer").hidden = false;
   setHubBack();
-  const page=localView ? {topics:t.topic?[t.topic]:[]} : t.topic ? await api("/api/topics?peer="+encodeURIComponent(t.peer)+"&limit=200") : {topics:[]};
-  if(state.thread!==id||gen!==state.gen)return;
+  const page=localView ? {topics:t.topic?[t.topic]:[]} : t.topic ? await api("/api/topics?peer="+encodeURIComponent(t.peer)+"&limit=200", undefined, host) : {topics:[]};
+  if(!current())return;
   topicUI.update({peer:t.peer},page.topics,t.topic?.id||id);
   renderBody(scrollToEnd);
   const key = t.messages[0].id; // a conversation's first message names its draft
@@ -3552,8 +3555,13 @@ async function loadThread(scrollToEnd, localView) {
   if (state.deviceAgentID && !state.targetCatalog) loadTargetCatalog();
   syncComposer();
   if (scrollToEnd) { commitConversation(); $("timeline").scrollTop = $("timeline").scrollHeight; }
-  const unread = t.messages.filter((m) => m.unread).map((m) => m.id);
-  if (unread.length) api("/api/act", { do: "read", ids: unread }).catch(() => {});
+  const ids = t.messages.filter(m => (m.unread || m.dir === "out") && !read.pending.has(m.id) && !read.done.has(m.id)).map(m => m.id);
+  if (ids.length) {
+    ids.forEach(id => read.pending.add(id));
+    void api("/api/act", { do: "read", ids }, host).then(() => {
+      ids.forEach(id => read.done.add(id));
+    }).catch(() => {}).finally(() => ids.forEach(id => read.pending.delete(id)));
+  }
   await refreshTyping();
 }
 

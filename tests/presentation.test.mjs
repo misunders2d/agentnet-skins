@@ -39,10 +39,10 @@ test('private runtime targets and Zoom Markdown use the current presentation', {
     const view=document.createElement('section');view.className='presentation-fixture';app.append(view);
     const ids=['a'.repeat(32),'b'.repeat(32)],host='atlas/desk',key='current-key';
     const own={person:'atlas',label:'Atlas',address:host,state:'self',devices:[{address:host,fingerprint:key}]};
-    const overview={me:{address:host,fingerprint:key,agent:true},person:own,people:[],threads:[],dms:[],review:[],agent_devices:[host],model_reports:[{host,host_key:key,agent_id:'',model:'DEFAULT_ONLY',reasoning:'low',at:1791709352},...ids.map((id,i)=>({host,host_key:key,agent_id:id,model:i?'quill-model':'ledger-model',reasoning:i?'medium':'xhigh',at:1791709352})),{host:'outside/desk',host_key:'foreign-key',agent_id:'',model:'PRIVATE_FOREIGN',at:1791709352}]};
+    const overview={agents:true,me:{address:host,fingerprint:key,agent:true},person:own,people:[],threads:[],dms:[],review:[],agent_devices:[host],model_reports:[{host,host_key:key,agent_id:'',model:'DEFAULT_ONLY',reasoning:'low',at:1791709352},...ids.map((id,i)=>({host,host_key:key,agent_id:id,model:i?'quill-model':'ledger-model',reasoning:i?'medium':'xhigh',at:1791709352})),{host:'outside/desk',host_key:'foreign-key',agent_id:'',model:'PRIVATE_FOREIGN',at:1791709352}]};
     fixture.state.overview=overview;
     const agents=ids.map((id,i)=>({pid:'pid-'+i,agent_id:id,host:own,label:i?'Quill':'Ledger',state:'active',can_ask:true,shared:[],missing:0,inviter:own,tasks_from:[]}));
-    const d={id:'c'.repeat(64),kind:'group',title:'Harbor team',members:[own],agents,guests:[],messages:[]};
+    const d={id:'c'.repeat(64),kind:'group',role:'member',title:'Harbor team',members:[own],agents,guests:[],messages:[]};
     fixture.state.dm=d.id;fixture.state.dmData=d;fixture.state.dmAgent=agents[0].pid;
     const input=app.querySelector('#body');input.value='@Ledger @Quill ';
     fixture.state.mentions=[{start:0,name:'Ledger',ref:{kind:'agent',id:agents[0].pid}},{start:8,name:'Quill',ref:{kind:'agent',id:agents[1].pid}}];

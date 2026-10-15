@@ -2243,7 +2243,7 @@ function dmMsg(m, t, prev) {
         !acts.length && m.target && el("p", {class:"hint"}, "Open it on " + deviceWords(m.target.address))),
       acts.length > 0 && el("div", { class: "decide" }, el("p", { class: "decide-why" }, m.state_text),
         proposalCard(m.proposal),
-        m.job_detail && !acts.includes("resolve") && m.exec?.state !== "needs_human" && el("p", {class:"hint"}, m.job_detail),
+        m.job_detail && !acts.includes("resolve") && m.exec?.state !== "needs_human" && (acts.includes("cancel") && nativeActivity(m.job_detail) || el("p", {class:"hint"}, m.job_detail)),
         el("div", { class: "acts" }, acts.map((a, i) => actionButton(a, m, t, i === 0)))),
       sharedWith.length > 0 && el("p", { class: "shared-note" }, "Shared with " + sharedWith.map((a) => agentName(a).replace(/^Your/, "your")).join(" and ")),
       el("div", { class: "foot" }, reactionsRow(m, t.id), execLine(m, t), !held && !acts.length && (m.delivery||m.state_text) && el("span", {}, m.dir==="out"&&m.delivery?(deliveryText(m)):m.state_text),
@@ -2389,7 +2389,9 @@ async function loadDMNames(t) {
 // participants list and @ both offer only these existing consent paths).
 function inviteRights(t) {
   const open = !!t && !t.frozen && !dmVisitor(t) && !dmHumanGuest(t);
-  return { assistants: open && !!(state.overview?.agents && state.overview?.person),
+  const parent = dmHumanGuest(t) && !t.frozen && guestAuthor(t);
+  const guest = parent && parent.state === "active" && !!parent.topic && parent.topic === topicSelections[t.id] && !topicFresh[t.id];
+  return { assistants: !!(open || guest) && !!(state.overview?.agents && state.overview?.person),
     people: open && (humanGroup(t) ? t.members.some(p => p.person === state.overview?.person?.person && p.admin) : !!state.overview?.person) };
 }
 function renderAgents(t) {
@@ -2418,10 +2420,10 @@ function participantsDialog(t) {
   const admin = humanGroup(t) && t.members.some(p => p.person === state.overview?.person?.person && p.admin);
   dialog({title: "Add participants", body: [
     el("p", {}, "People and assistants join this conversation only through their existing invitation and consent rules."),
-    humanGroup(t) ? el("button", {type: "button", class: "btn", disabled: !admin, onclick: () => { if (current()) inviteGroupDialog(t); }}, "Invite a person…")
-      : el("button", {type: "button", class: "btn", onclick: () => { if (current()) inviteHumanDialog(t); }}, "Invite a person…"),
+    humanGroup(t) ? el("button", {type: "button", class: "btn", disabled: !inviteRights(t).people || !admin, onclick: () => { if (current()) inviteGroupDialog(t); }}, "Invite a person…")
+      : el("button", {type: "button", class: "btn", disabled: !inviteRights(t).people, onclick: () => { if (current() && inviteRights(t).people) inviteHumanDialog(t); }}, "Invite a person…"),
     humanGroup(t) && el("p", {class: "hint"}, admin ? "Choose earlier context explicitly. People can leave; an administrator can remove them in Conversation details. Shared copies remain. There is no automatic expiry." : "Only a current administrator can invite or remove people. You can leave in Conversation details."),
-    state.overview?.agents && el("button", {type: "button", class: "btn", onclick: () => { if (current()) inviteDialog(t); }}, "Invite an assistant…"),
+    inviteRights(t).assistants && el("button", {type: "button", class: "btn", onclick: () => { if (current()) inviteDialog(t); }}, "Invite an assistant…"),
     el("p", {class: "hint"}, "An assistant gets only selected history; its owner accepts the invitation. Address it with @mention. Ordinary chat never runs it.")], ok: "Close", run: async () => {}});
 }
 
@@ -2748,7 +2750,8 @@ function choice(type, name, value, label) {
 // chosen for the person: whose agent, what it may be shown and who may
 // give it tasks are all picked here, and both people see them.
 function inviteDialog(t) {
-  if (dmVisitor(t) || dmHumanGuest(t)) { announce("Only original DM members can invite an agent."); return; }
+  if (!inviteRights(t).assistants) { announce("Invite an assistant while joined to its exact topic."); return; }
+  const guest = dmHumanGuest(t), parent = guest && guestAuthor(t), topic = parent?.topic;
   const me = state.overview.person;
   const transport = currentHost, gen = state.gen, ws = wsNow();
   let catalogHost = "", catalog = [], catalogError = "", catalogSeq = 0;
@@ -2757,7 +2760,7 @@ function inviteDialog(t) {
   const modelStatus=el("div");
   const showModel=()=>fill(modelStatus,ownModelReport(catalogHost,named.value));
   named.addEventListener("change",showModel);
-  const current = () => gen === state.gen && wsNow() === ws && state.dm === t.id;
+  const current = () => gen === state.gen && wsNow() === ws && state.dm === t.id && (!guest || inviteRights(state.dmData).assistants && guestAuthor(state.dmData)?.pid === parent.pid && guestAuthor(state.dmData)?.topic === topic);
   const loadCatalog = async address => {
     const seq = ++catalogSeq;
     catalogHost = address; catalog = []; catalogError = ""; named.disabled = true;
@@ -2778,39 +2781,41 @@ function inviteDialog(t) {
   const browser = transport?.platform === "browser" || !!state.overview.device;
   const members = humanGroup(t) ? t.members : [me, t.peer];
   const devices = humanGroup(t) ? members.flatMap(p => (p.devices?.length ? p.devices : [{address:p.address,fingerprint:p.fingerprint}]).map(d => ({...d,label:p.label,person:p.person}))) : [];
-  const hosts = humanGroup(t) ? [...new Map(devices.filter(d=>d.address && !(browser && d.address===me.address)).map(d=>[d.address,choice("radio","agent-host",d.address,(d.person===me.person?"Yours":d.label+"'s")+", on "+d.address)])).values()] : [!browser && choice("radio", "agent-host", me.address, "Yours, on " + me.address),
+  const ownDevices = [{address:me.address,fingerprint:me.fingerprint}, ...(me.devices || []).map(d => ({address:d.address,fingerprint:d.fingerprint}))];
+  const hosts = guest ? [...new Map(ownDevices.filter(d => d.address && d.fingerprint && runsAgent(d.address) && !(browser && d.address === me.address)).map(d => [d.address, choice("radio", "agent-host", d.address, "Yours, on " + deviceWords(d.address))])).values()] : humanGroup(t) ? [...new Map(devices.filter(d=>d.address && !(browser && d.address===me.address)).map(d=>[d.address,choice("radio","agent-host",d.address,(d.person===me.person?"Yours":d.label+"'s")+", on "+d.address)])).values()] : [!browser && choice("radio", "agent-host", me.address, "Yours, on " + me.address),
     choice("radio", "agent-host", t.peer.address, t.peer.label + "'s, on their " + deviceWords(t.peer.address))].filter(Boolean);
-  if (!humanGroup(t)) for (const d of me.devices || []) {
+  if (!guest && !humanGroup(t)) for (const d of me.devices || []) {
     if (d.address !== me.address && runsAgent(d.address) && !hosts.some(c => c.input.value === d.address))
       hosts.push(choice("radio", "agent-host", d.address, "Yours, on " + deviceWords(d.address)));
   }
   const memberAddresses = new Set(humanGroup(t) ? devices.map(d=>d.address) : [me.address, t.peer.address, ...(me.devices || []).map(d => d.address), ...(t.peer.devices || []).map(d => d.address)]);
-  const external = new Set(directory().current ? directory().members.filter(m => !memberAddresses.has(m.address)).map(m => m.address) : []);
+  const external = new Set(!guest && directory().current ? directory().members.filter(m => !memberAddresses.has(m.address)).map(m => m.address) : []);
   for (const address of external) hosts.push(choice("radio", "agent-host", address, "External host · " + address));
   hosts.forEach(c => c.input.addEventListener("change", () => { if (c.input.checked) loadCatalog(c.input.value); }));
-  const share = t.messages.filter((m) => !m.event && !m.excerpt_pid).slice(-30)
+  const shareable = m => !m.event && (guest ? !m.deleted && m.topic === topic && (!m.excerpt_pid || m.excerpt_pid === parent.pid) : !m.excerpt_pid);
+  const share = t.messages.filter(shareable).slice(-30)
     .map((m) => choice("checkbox", "agent-share", m.id, el("span", {}, dmAuthor(m, t) + ": " + (firstLine(m.body, 70) || "(files only)"),
       (m.attachments || []).map(f => el("span", { class: "tag" }, f.name + " · " + size(f.size))))));
   const fileConsent = choice("checkbox", "agent-file-consent", "yes", "Let this assistant read files attached to the messages I select.");
   share.forEach(c => c.input.addEventListener("change", () => { fileConsent.input.checked = false; }));
-  const tasks = humanGroup(t) ? [...new Map(devices.filter(d=>d.fingerprint).map(d=>[d.fingerprint,choice("checkbox","agent-tasks",d.fingerprint,(d.person===me.person?"You":d.label)+" on "+d.address)])).values()] : [[me, "You"], [t.peer, t.peer.label]].filter(([p]) => p.fingerprint)
+  const tasks = guest ? [] : humanGroup(t) ? [...new Map(devices.filter(d=>d.fingerprint).map(d=>[d.fingerprint,choice("checkbox","agent-tasks",d.fingerprint,(d.person===me.person?"You":d.label)+" on "+d.address)])).values()] : [[me, "You"], [t.peer, t.peer.label]].filter(([p]) => p.fingerprint)
     .map(([p, label]) => choice("checkbox", "agent-tasks", p.fingerprint, label));
   const note = el("input", { id: "agent-note", type: "text", maxlength: "200", autocomplete: "off" });
   const picked = (cs) => cs.filter((c) => c.input.checked).map((c) => c.input.value);
   dialog({
     title: "Add an assistant to " + (humanGroup(t) ? "this group" : "this DM"),
-    body: [el("p", {}, humanGroup(t) ? "The agent stays as a member after its owner accepts. Every member can ask it; its owner decides what runs. Choosing an agent already here shares more messages with the same membership." : "It joins only if its owner accepts, on their computer. You both see the invitation, what it may be shown and who may give it tasks."),
+    body: [el("p", {}, guest ? "Your own assistant joins only this topic and leaves when your guest participation ends. Choose only context already shared with you." : humanGroup(t) ? "The agent stays as a member after its owner accepts. Every member can ask it; its owner decides what runs. Choosing an agent already here shares more messages with the same membership." : "It joins only if its owner accepts, on their computer. You both see the invitation, what it may be shown and who may give it tasks."),
       el("fieldset", { class: "choices" }, el("legend", {}, "Whose agent"), hosts.map((c) => c.row)),
-      el("p", { class: "hint" }, "External hosts are listed by this workspace's server, not verified real-world owners. Choose an exact named agent; its host must prove support and its owner must accept."),
+      !guest && el("p", { class: "hint" }, "External hosts are listed by this workspace's server, not verified real-world owners. Choose an exact named agent; its host must prove support and its owner must accept."),
       el("label", { for: "invite-agent", class: "field-label" }, "Assistant on that host"), named, catalogStatus, modelStatus,
       el("fieldset", { class: "choices" }, el("legend", {}, "Earlier messages it may be shown"),
         share.length ? share.map((c) => c.row) : el("p", { class: "hint" }, "No messages yet."),
         el("p", { class: "hint" }, "None unless you choose. Only selected messages and their available attached files become visible to this agent. Unselected history and files are excluded; unavailable bytes are reported as missing. No private agent session is copied.")),
       fileConsent.row,
-      el("fieldset", { class: "choices" }, el("legend", {}, "Tasks without asking its owner each time"), tasks.map((c) => c.row),
+      !guest && el("fieldset", { class: "choices" }, el("legend", {}, "Tasks without asking its owner each time"), tasks.map((c) => c.row),
         el("p", { class: "hint" }, humanGroup(t) ? "Every current member can ask the same agent. Its owner approves questions and tasks. If the agent is already here, this only shares more selected messages; it grants no new task permission." : "Either of you can ask it questions or give it tasks. A task from someone not chosen here waits for its owner to accept it.")),
       el("label", { for: "agent-note", class: "field-label" }, "A note for its owner (optional)"), note],
-    ok: humanGroup(t) ? "Add agent or share more" : "Invite",
+    ok: !guest && humanGroup(t) ? "Add agent or share more" : "Invite",
     run: async () => {
       const host = picked(hosts)[0];
       if (!host) throw new Error("Choose whose agent to invite.");
@@ -2827,7 +2832,14 @@ function inviteDialog(t) {
         if (!fresh.some(a => a.id === agentID)) throw new Error("That agent is no longer available on this computer. Nothing was invited.");
       }
       if (t.messages.some(m => picked(share).includes(m.id) && (m.attachments || []).length) && !fileConsent.input.checked) throw new Error("Selected messages include files. Confirm file access, or deselect those messages.");
-      await api("/api/dm/agent/invite", { conv: t.id, host, ...(agentID ? { agent_id: agentID } : {}), share: picked(share), tasks_from: picked(tasks), note: note.value }, transport);
+      if (guest) {
+        const [latest, overview] = await Promise.all([api("/api/dm?id=" + encodeURIComponent(t.id), undefined, transport), api("/api/overview", undefined, transport)]);
+        const own = overview.person, device = [own, ...(own?.devices || [])].find(d => d?.address === host), original = ownDevices.find(d => d.address === host);
+        if (!current() || latest.frozen || !dmHumanGuest(latest) || guestAuthor(latest)?.state !== "active" || guestAuthor(latest)?.pid !== parent.pid || guestAuthor(latest)?.topic !== topic) throw new Error("Your guest topic is no longer current. Reopen this invitation.");
+        if (own?.person !== me.person || !device || !original || device.fingerprint !== original.fingerprint || !runsAgentIn(overview, host)) throw new Error("Your agent host is no longer current. Reopen this invitation.");
+        if (picked(share).some(id => !latest.messages.some(m => m.id === id && shareable(m)))) throw new Error("Selected context is no longer available in this topic. Reopen this invitation.");
+      }
+      await api("/api/dm/agent/invite", { conv: t.id, host, ...(agentID ? { agent_id: agentID } : {}), ...(guest ? {topic} : {}), share: picked(share), tasks_from: picked(tasks), note: note.value }, transport);
       if (!current()) return;
       announce(humanGroup(t) && t.agents?.some(a=>["active","invited"].includes(a.state)&&a.host.address===host&&(a.agent_id||"")===agentID) ? "Shared more messages with the agent already here." : "Invited. Its owner accepts or declines it on their computer.");
       await loadDM();
@@ -2996,13 +3008,44 @@ function rerender() {
   renderThreads(state.overview.threads);
 }
 
+// Review reuses the exact guest invitation and the chat's existing decision.
+// A row never grants authority; refresh current participation before opening it.
+function guestInvitationRow(c) {
+  let busy = false;
+  const decide = async action => {
+    if (busy) return;
+    busy = true; join.disabled = decline.disabled = true;
+    const host = currentHost, workspace = wsNow(), gen = state.gen;
+    try {
+      const t = await api("/api/dm?id=" + encodeURIComponent(c.conv), undefined, host);
+      if (!alive || host !== currentHost || workspace !== wsNow() || gen !== state.gen) return;
+      const guest = (t.guests || []).find(g => g.pid === c.pid && g.host_here && g.can_decide && g.state === "invited");
+      if (!guest) throw Error("This invitation no longer needs your decision.");
+      toggleReview(false);
+      await openDM(c.conv, t);
+      if (!alive || host !== currentHost || workspace !== wsNow() || state.dm !== c.conv || state.dmData !== t) return;
+      guestActionDialog(guest, t, action);
+    } catch (e) { if (host === currentHost && workspace === wsNow()) announce(e.message); }
+    finally { busy = false; join.disabled = decline.disabled = false; }
+  };
+  const join = el("button", {type:"button",class:"btn primary",onclick:()=>void decide("accept")}, "Join conversation…");
+  const decline = el("button", {type:"button",class:"btn",onclick:()=>void decide("decline")}, "Decline invitation…");
+  const chat = (state.overview.dms || []).find(d => d.id === c.conv);
+  return el("li", {"data-guest-invitation":c.pid},
+    el("strong", {}, "Guest invitation"),
+    el("p", {class:"review-why"}, c.excerpt || chat?.title || "You are invited to a conversation."),
+    c.decide_on ? el("p", {class:"hint"}, "Decide on " + deviceWords(c.decide_on)) : el("div", {class:"agent-actions"}, join, decline));
+}
+
 function renderReview(items) {
-  const decisions = items.filter((it) => !it.notice);
+  const decisions = items.filter((it) => !it.notice && it.reason !== "agent_running");
+  const working = items.filter((it) => !it.notice && it.reason === "agent_running");
   const security = items.filter((it) => it.reason === "device_admin");
   const reports = items.filter((it) => it.notice && it.reason !== "device_admin");
   const btn = $("review-btn");
   const conversations = (state.overview.needs_you || []).filter(c => c.reason === "agent_needs_human");
-  const n = decisions.length + conversations.length;
+  const invitations = [...new Map((state.overview.needs_you || []).filter(c => c.reason === "agent_invite" && c.role === "human" && !c.stale).map(c => [c.pid, c])).values()];
+  const n = decisions.length + conversations.length + invitations.filter(c => !c.decide_on).length;
   const total = n + reports.length + security.length + (state.overview.links || []).filter((l) => l.state === "pending").length;
   $("review-count").textContent = total;
   $("review-count").hidden = !total;
@@ -3012,7 +3055,7 @@ function renderReview(items) {
   btn.dataset.n = n;
   btn.setAttribute("aria-label", (n === 1 ? "1 item needs attention" : n + " items need attention") +
     (reports.length ? ", " + plural(reports.length, "report", "reports") + " from other machines" : "") + (security.length ? ", " + plural(security.length, "company settings notice", "company settings notices") : ""));
-  fill($("review-list"), ...conversations.map(c => {
+  fill($("review-list"), ...invitations.map(guestInvitationRow), ...conversations.map(c => {
     const chat = (state.overview.dms || []).find(d => d.id === c.conv);
     return el("li", {}, el("button", {type:"button", onclick:()=>{ toggleReview(false); openMessage({id:c.id,conv:c.conv}); }},
       el("strong", {}, "Your agent couldn’t finish — it needs your attention"),
@@ -3023,8 +3066,8 @@ function renderReview(items) {
     el("button", { type: "button", onclick: () => { openThread(it.id, it.id); } },
       el("span", {}, who(it.peer), " · ", kindTag[it.kind] || it.kind),
       el("span", { class: "review-why" }, it.why),
-      el("span", { class: "review-text" }, it.excerpt)))) : conversations.length ? [] : [el("li", { class: "hint" }, "Nothing here waits for your decision.")]));
-  fill($("activity-extra"), remindersSection(), ...security.map(it => el("li", {}, el("p", {}, it.why), el("time", {datetime:it.at}, when(it.at)), el("button", {type:"button", onclick:async()=>{ await api("/api/act",{do:"resolve",id:it.id}); await loadOverview(); }}, "Hide notice"))), ...linkNotices().map((n) => el("li", {}, n)));
+      el("span", { class: "review-text" }, it.excerpt)))) : conversations.length || invitations.length ? [] : [el("li", { class: "hint" }, "Nothing here waits for your decision.")]));
+  fill($("activity-extra"), remindersSection(), ...working.map(it => el("li", {}, el("button", {type:"button", onclick:()=>{toggleReview(false);openThread(it.id,it.id);}}, el("strong", {}, "Working · ", who(it.peer)), nativeActivity(it.why) || el("span", {class:"review-why"},it.why), el("span", {class:"review-text"},it.excerpt)))), ...security.map(it => el("li", {}, el("p", {}, it.why), el("time", {datetime:it.at}, when(it.at)), el("button", {type:"button", onclick:async()=>{ await api("/api/act",{do:"resolve",id:it.id}); await loadOverview(); }}, "Hide notice"))), ...linkNotices().map((n) => el("li", {}, n)));
   const senders = [...new Set(reports.map((it) => it.peer))];
   const contacts = contactsOf(state.overview.threads);
   fill($("report-list"), ...senders.map((peer) => {
@@ -3552,6 +3595,17 @@ function ago(iso) {
   const s = Math.max(0, (Date.now() - asDate(iso)) / 1000);
   return s < 90 ? "just now" : s < 5400 ? Math.round(s / 60) + " min ago" : s < 172800 ? Math.round(s / 3600) + " h ago" : Math.round(s / 86400) + " d ago";
 }
+// Same fixed public grammar as the pinned Comic NativeActivity model.
+function nativeActivity(detail) {
+  if (!detail) return null;
+  const [label, at, extra] = detail.split("\nReported at ");
+  if (!["Working", "Reading files", "Editing files", "Running a command", "Searching", "Using a tool", "Preparing answer"].includes(label) || extra !== undefined) return null;
+  if (at !== undefined) {
+    const date = new Date(at);
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(at) || !Number.isFinite(date.getTime()) || date.toISOString() !== at.replace("Z", ".000Z")) return null;
+  }
+  return el("span", {class:"hint", "data-native-activity":""}, label, " · ", at ? ["Native event reported ", el("time", {datetime:at,title:at}, new Date(at).toLocaleTimeString())] : "Native activity");
+}
 function execLine(m, t) {
   const e = m.exec;
   if (!e || !e.state) return null;
@@ -3559,10 +3613,13 @@ function execLine(m, t) {
   // word on the request: once it is answered, nothing is "running" for it.
   if (t && (t.messages || []).some((x) => x.reply_to === m.id && (x.kind === "answer" || x.kind === "result"))) return null;
   const word = e.state === "running" ? "Working" : execWord[e.state] || e.state;
-  const detail = e.detail && (blockerWord[e.detail] || e.detail); // a blocker category, or the host's bounded plain reason
+  const native = nativeActivity(e.detail);
+  const local = (m.actions || []).includes("cancel") && (m.detail || m.job_detail);
+  const activity = !local && e.state === "running" && !e.stale && !m.stop?.pending && !m.stop?.result ? native : null;
+  const detail = !native && e.detail && (blockerWord[e.detail] || e.detail); // retain unrelated bounded reasons
   const text = word + " on " + e.host + (e.state === "running" && e.at ? " since " + when(e.at) : "") + (detail ? ": " + detail : "");
   return el("span", { class: "exec " + e.state + (e.stale ? " stale" : ""), title: "Asserted by " + e.host + (e.at ? " at " + new Date(e.at).toLocaleString() : "") },
-    e.state === "running" && !e.stale && el("span", {class: "working-dots", "aria-hidden": "true"}, "···"), text, e.stale && el("span", { class: "exec-stale" }, " · last known " + (e.at ? ago(e.at) : "earlier") + ", not confirmed now"),
+    e.state === "running" && !e.stale && el("span", {class: "working-dots", "aria-hidden": "true"}, "···"), text, activity && " · ", activity, e.stale && el("span", { class: "exec-stale" }, " · last known " + (e.at ? ago(e.at) : "earlier") + ", not confirmed now"),
     e.refused && el("span", { class: "exec-refused" }, " · refused: " + e.refused));
 }
 
@@ -3713,7 +3770,7 @@ function renderMsg(m, byId, prev, t) {
       proposalCard(m.proposal),
       el("div", { class: "acts" }, actions.map((a, i) => actionButton(a, m, t, i === 0))));
   } else if (working) {
-    panel = el("div", { class: "working" }, el("span", {}, m.state_text), actionButton("cancel", m, t, false));
+    panel = el("div", { class: "working" }, el("span", {}, m.state_text), nativeActivity(m.detail), actionButton("cancel", m, t, false));
   }
 
   const footText = !needs && !working ? m.state_text : "";
@@ -5150,6 +5207,10 @@ function start() {
   renderInstalledInterfaces();
   if (currentHost.onSkinsChange) cleanups.push(currentHost.onSkinsChange(renderInstalledInterfaces));
   if (currentHost.manageLocalSkins) cleanups.push(currentHost.manageLocalSkins($("local-interfaces")) || (() => {}));
+  if (currentHost.controls) {
+    $("settings-appearance").append(el("button", {type:"button",class:"btn",onclick:e=>currentHost.controls?.open(e.currentTarget)}, "AgentNet controls"));
+    cleanups.push(currentHost.controls.claim(root));
+  }
   let theme = "system";
   try { theme = localStorage.getItem("agentnet-theme") || theme; } catch (e) { /* default */ }
   setTheme(theme);

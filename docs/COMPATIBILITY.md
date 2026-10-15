@@ -1,8 +1,8 @@
 # Compatibility policy
 
 - Host API **v1** is the consumed contract. Each manifest declares `api:1`.
-- Pin: AgentNet at exact commit `f9c8b1c38c14a7a6d743b02f67f5bf59d57fd276`, the v0.8.28 candidate, in `upstream.json` (version `v0.8.28`). Tests archive or fetch that revision, never a moving `main` or working-tree changes.
-- A skin's optional `agentnet` field names the required release (`"agentnet": "v0.8.28"`): an older AgentNet leaves it out of its catalog, and the skin gallery lists it as incompatible there. Every skin here names `v0.8.28`. AgentNet v0.8.24 and older also reserve the ids `classic` and `zoom` for their built-in copies. Full collection qualification of this candidate remains a release gate; build, focused checks and previews alone do not establish it.
+- Pin: AgentNet at exact commit `55fc668fdbf04fdb84431b78e15770d9943d51c7`, the v0.8.29 candidate, in `upstream.json`. Tests archive or fetch that revision, never a moving `main` or working-tree changes.
+- A skin's optional `agentnet` field names its required release. Pulp and Office require `v0.8.29`; standalone skins retain `v0.8.28`. Full `npm test` passes against this pinned candidate, including all standalone and overlay skins; the release owner must repin and qualify the final integrated release before tagging.
 - Overlay skins are built by the pinned AgentNet itself (its Comic build), so their `agentnet` must equal the pin’s version; moving the pin rebuilds them with that release’s Comic.
 - Additive host methods remain optional: feature-detect and handle rejection. `platform:"daemon"` alone does not imply native app capabilities.
 - A workspace host never changes membership. Capture it when an operation starts; do not retarget/replay staged files, sends, downloads or provider calls.

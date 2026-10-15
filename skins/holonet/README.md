@@ -10,7 +10,7 @@ Complete Classic-derived interface, not a chat demo: people and groups, agents, 
 
 Actual AgentNet rendering through the production loader with a disposable fictional company (Brightwater Ceramics: invented people and messages, `npm run previews`); current Holonet source, Host API v1 on AgentNet `2c00c135` (v0.8.30 candidate). These previews show the skin's own area on a desktop (1440 × 1000) and a phone viewport (390 × 844), with light and dark themes; AgentNet's switcher bar above the skin is not part of it. Phone screenshots use Chromium emulation.
 
-The current v0.8.30 pin is `63302582`. These previews are retained from `2c00c135`; the final pin changes only tests and the race script, with identical product source and assets.
+The current v0.8.30 pin is `33447e2c`. These previews are retained from `2c00c135`; the final pin changes only tests and the race script, with identical product source and assets.
 
 | Desktop dark | Desktop light |
 | --- | --- |

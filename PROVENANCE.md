@@ -1,6 +1,6 @@
 # Source provenance
 
-Holonet baseline: [misunders2d/agentnet v0.8.1](https://github.com/misunders2d/agentnet/tree/daddab38d229f695936a6d975702668b381f3135), commit `daddab38d229f695936a6d975702668b381f3135`. Classic and Zoom: commit `b9c2a6e78be1d34f38f737517a7a5b0fe53a83b6`. Test pin: the v0.8.26 candidate `1727eaff1aeeb5429a8f018829d8bc4e1f263d08`. All Apache-2.0.
+Holonet baseline: [misunders2d/agentnet v0.8.1](https://github.com/misunders2d/agentnet/tree/daddab38d229f695936a6d975702668b381f3135), commit `daddab38d229f695936a6d975702668b381f3135`. Classic and Zoom: commit `b9c2a6e78be1d34f38f737517a7a5b0fe53a83b6`. Test pin: the v0.8.28 candidate `f9c8b1c38c14a7a6d743b02f67f5bf59d57fd276`. All Apache-2.0.
 
 | Local source | Pinned upstream source | Changes |
 | --- | --- | --- |

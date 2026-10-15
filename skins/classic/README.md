@@ -6,7 +6,7 @@ Classic was built into AgentNet up to v0.8.24. From v0.8.25 AgentNet keeps only 
 
 ## Preview
 
-Actual AgentNet rendering through the production loader with a disposable fictional company (invented people and messages, `npm run previews`); Classic as moved here, Host API v1 on the AgentNet `fdf7c37a` (v0.8.26 base; its interface host is the v0.8.25 one). These previews show the skin's own area on a desktop (1440 × 1000) and a phone viewport (390 × 844), with light and dark themes; AgentNet's switcher bar above the skin is not part of it. Phone screenshots use Chromium emulation.
+Actual AgentNet rendering through the production loader with a disposable fictional company (Brightwater Ceramics: invented people and messages, `npm run previews`); current Classic source, Host API v1 on AgentNet `0622f88c` (v0.8.28 candidate). These previews show the skin's own area on a desktop (1440 × 1000) and a phone viewport (390 × 844), with light and dark themes; AgentNet's switcher bar above the skin is not part of it. Phone screenshots use Chromium emulation.
 
 | Desktop light | Desktop dark |
 | --- | --- |
@@ -16,7 +16,7 @@ Actual AgentNet rendering through the production loader with a disposable fictio
 | --- | --- |
 | ![Classic light phone viewport: a conversation with the fictional Tomasz Reyes](previews/mobile-light.png) | ![Classic dark phone viewport: a conversation with the fictional Tomasz Reyes](previews/mobile-dark.png) |
 
-Build: `node scripts/build.mjs classic` from the repository root. Install or import `dist/classic/` as described in the [main README](../../README.md). Targets Host API v1; `"agentnet": "v0.8.25"`. Drafts are namespaced by manifest identity and workspace; staged files are retired after a reconnect rather than replayed. No code, image or import needs a sibling skin, a CDN or a network service.
+Build: `node scripts/build.mjs classic` from the repository root. Install or import `dist/classic/` as described in the [main README](../../README.md). Targets Host API v1; `"agentnet": "v0.8.28"`. Drafts are namespaced by manifest identity and workspace; staged files are retired after a reconnect rather than replayed. No code, image or import needs a sibling skin, a CDN or a network service.
 
 ## v0.8.26 usability corrections
 

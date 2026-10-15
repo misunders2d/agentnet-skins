@@ -1,8 +1,9 @@
+import { composerFollowup, activeComposerFollowups, sameFollowup } from "./composer-followup.mjs";
 import { nativeRequestItem } from "./native-request.mjs";
 // Modified for AgentNet Skins Holonet from AgentNet v0.8.1 Classic.
 // Visual identity and Host API v1 compatibility fixes; see PROVENANCE.md.
 function niceGoogleDevice(address) { const name = String(address || "").split("/").pop() || "device"; return name.charAt(0).toUpperCase() + name.slice(1); }
-import { rawLinkParts } from "./link-text.mjs";
+import { rawLinkParts, previewText, portableLink } from "./link-text.mjs";
 import { avatarPicture, openPictureEditor, pastePictures } from "./pictures.mjs";
 import { topicControls } from './topics.mjs';
 import { pendingSends, sendID } from "./optimistic.mjs";
@@ -161,7 +162,7 @@ const mentionRef = /\[@([^\[\]\r\n]{1,80})\]\(agentnet:(person|guest)\/([A-Za-z0
 const mentionName = (s) => String(s || "").replace(/[\[\]\r\n]/g, "").trim().slice(0, 80);
 const mentionPlain = (s) => typeof s === "string" ? s.replace(mentionRef, (_, name) => "@" + name) : s;
 const firstLine = (s, n) => {
-  const l = mentionPlain(s || "").split("\n")[0]; // a person mention reads as @Name
+  const l = previewText(mentionPlain(s || "")).split("\n")[0]; // a person mention reads as @Name
   return l.length > n ? l.slice(0, n - 1).trimEnd() + "…" : l;
 };
 const announce = (t) => { if (alive) $("live").textContent = t; };
@@ -221,6 +222,8 @@ async function loadOverview() {
   if (state.pendingOpen) retryOpen();
   if (o.reply_receivers) loadReceiverBindings();
   if (state.dm || state.data) renderReplyReceiver();
+  refreshModelReports();
+  if(state.dm || state.data)renderAgentTarget();
   return o;
 }
 
@@ -739,11 +742,45 @@ function openNotified(chan) {
     }
   }, 15000);
 }
+// Portable links validate local views before ordinary navigation can change a draft.
+async function openLinkTarget(id, kind, context) {
+  const host=currentHost,gen=state.gen;
+  if(kind==='topic' ? !/^[0-9a-f]{64}$/.test(id) || !/^(main|[0-9a-f]{32})$/.test(context?.topic||'') : !/^[0-9a-f]{32}$/.test(id))throw new Error('That exact destination is not available on this device.');
+  const view=await api((kind==='topic'?'/api/dm?id=':'/api/thread?id=')+encodeURIComponent(id),undefined,host);
+  if(!alive||host!==currentHost||gen!==state.gen||view.id!==id)throw new Error('That exact conversation is not available on this device.');
+  if(kind==='topic') {
+    const topic=context.topic;
+    if(view.frozen || topic!=='main'&&!(view.topics||[]).some(t=>t.id===topic) || topic==='main'&&['visitor','human_guest'].includes(view.role)&&!view.main_topic)throw new Error('That exact topic is not available on this device.');
+  } else if(view.topic?.id!==id || !view.messages?.some(m=>m.id===id&&!m.deleted))throw new Error('That exact conversation root is not available on this device.');
+  const overview=state.overview || await api('/api/overview',undefined,host);
+  if(!alive||host!==currentHost||gen!==state.gen)throw new Error('Workspace changed. Open the link again.');
+  state.overview=overview;
+  if(kind==='topic') {
+    topicSelections[id]=context.topic==='main'?'':context.topic;topicFresh[id]=false;
+    await openDM(id,view);
+  } else await openThread(id,undefined,view);
+}
+function linkButtons() {
+  const host=currentHost,t=state.dmData,thread=state.data;
+  if(!host.linkTo || !t&&!thread)return [];
+  const topic=t?(topicSelections[t.id]||'main'):null;
+  const copy=async target=>{try{const value=host.linkTo(target);if(host.android?.copyText)await host.android.copyText(value);else await navigator.clipboard.writeText(value);announce('Link copied.');}catch(e){announce(e.message);}};
+  const mainUnavailable=t&&['visitor','human_guest'].includes(t.role)&&!t.main_topic;
+  return [el('button',{type:'button',class:'btn',disabled:!!mainUnavailable,onclick:()=>void copy(t?{conv:t.id,topic:'main'}:{thread:thread.id})},'Copy chat link'),
+    t&&el('button',{type:'button',class:'btn',disabled:!!topicFresh[t.id]||topic==='main'&&!!mainUnavailable,onclick:()=>void copy({conv:t.id,topic})},'Copy topic link')];
+}
+on(root,'click',async e=>{
+  const value=e.target.closest?.('a[href]')?.getAttribute('href');
+  if(!portableLink(value||''))return;
+  e.preventDefault();
+  try{if(!currentHost.openLink)throw new Error('Link opening is not available here.');await currentHost.openLink(value);}catch(error){announce(error.message);}
+});
 currentHost.onOpen((target, kind, context) => {
+  if(kind==='topic'||kind==='thread')return openLinkTarget(target,kind,context);
   const dest = kind === 'review' ? {review: true} : kind === 'message' ? {msg: target, ...context} : kind === 'conversation' ? target : null;
   if (dest !== null) { if (state.overview) void openClicked(dest); else state.clickedAtStart = dest; }
   else openNotified(target);
-}, ['message', 'review']);
+}, ['message', 'review', 'topic', 'thread']);
 
 async function retryOpen() {
   if (state.switching) await state.switching; // a workspace being shown first
@@ -971,7 +1008,7 @@ function threadFlag(t) {
 function threadRow(t, open, single) {
   const current = !!(state.data && state.data.messages.some((m) => m.id === t.id));
   const b = el("button", { type: "button", class: "thread-row" + (single ? " single" : ""), "aria-current": current ? "true" : "false" },
-    el("span", { class: "thread-title" }, t.title),
+    el("span", { class: "thread-title" }, t.renamed ? t.title : firstLine(t.title,120)),
     t.count > 1 && el("span", { class: "thread-count", title: plural(t.count, "message", "messages") }, String(t.count)),
     threadFlag(t),
     el("span", { class: "conv-time" }, when(t.last_at)));
@@ -1397,6 +1434,16 @@ function teamDialog(t) {
       el("p", { class: "hint" }, t ? "Managers rename a people list; members see the new name once the server has it." : "You become its first member and manager. Others on your server can join it themselves; a people list is not a chat and grants no chat access.")],
     run: async () => { const n = name.value.trim(); if (!n) throw new Error("Give the people list a name."); await new Promise((res, rej) => teamAct(t ? { team: t.id, op: "rename", name: n } : { op: "create", name: n }, (e) => (e ? rej(e) : res()))); } });
 }
+function teamTargetDialog(t) {
+  const gen=state.gen,o=state.overview;
+  const people=[...(o.person?[o.person]:[]),...(o.people||[])].filter(p=>p.person&&['self','pinned'].includes(p.state));
+  const person=el('select',{'aria-label':'Person'},el('option',{value:''},'Choose a person'),people.filter(p=>!t.members.includes(p.person)).map(p=>el('option',{value:p.person},p.label)));
+  dialog({title:'Add a person to @'+t.name,ok:'Add',body:[el('p',{},'Adding a person keeps this list and its current roles. Older apps keep their last readable copy until they update. Chat membership and permissions stay the same.'),person],run:async()=>{
+    if(gen!==state.gen)throw new Error('Workspace changed. Open the list again.');
+    if(!person.value)throw new Error('Choose a person.');
+    await new Promise((resolve,reject)=>teamAct({team:t.id,op:'add',target:person.value},e=>e?reject(e):resolve()));
+  }});
+}
 function teamPersonDialog(t, op, who) {
   const words = { remove: ["Remove " + who.label + " from " + t.name + "?", "Remove", "They can join again themselves; nothing else changes for them."],
     "manager-add": ["Make " + who.label + " a manager of " + t.name + "?", "Make manager", "Managers rename, delete and manage members."],
@@ -1410,6 +1457,7 @@ function teamHub(t) {
   const v = state.teams || {};
   const members = (t.members || []).map((id) => ({ id, label: personLabelOf(id), manager: (t.managers || []).includes(id), you: id === me }));
   const canManage = t.manager && !t.archived && !t.conflict;
+  const canLegacyAdd = t.version!==2 && v.current && v.legacy_add && canManage;
   const note = t.conflict ? "Frozen: a signed record conflicts with the one kept here. Nothing is changed until that is resolved on the server."
     : !v.current ? "Shown as last verified here" + (v.at ? " (" + when(v.at) + ")" : "") + "; the server could not be read now, so it may have changed."
       : "";
@@ -1419,12 +1467,15 @@ function teamHub(t) {
       el("button", { type: "button", class: "text-btn", onclick: () => teamPersonDialog(t, "remove", m) }, "Remove")));
   return [
     note && el("p", { class: "hint" }, note),
+    t.version!==2 && t.manager && !v.legacy_add && el("p", { class: "hint" }, "Update the server to add people to this existing list."),
+    canLegacyAdd && el("p", { class: "hint" }, "Adding a person keeps this list and its current roles. Older apps keep their last readable copy until they update. Chat membership and permissions stay the same."),
     el("ul", { class: "team-members", "aria-label": "Members" }, members.map(row)),
     !members.length && el("p", { class: "hint empty-list" }, "No members."),
     el("div", { class: "detail-actions" },
       o.person && !t.archived && !t.conflict && (t.member
         ? el("button", { type: "button", class: "chip", onclick: () => teamAct({ team: t.id, op: "leave" }) }, "Leave")
         : el("button", { type: "button", class: "chip", onclick: () => teamAct({ team: t.id, op: "join" }) }, "Join")),
+      canLegacyAdd && el("button",{type:"button",class:"chip",onclick:()=>teamTargetDialog(t)},"Add person…"),
       canManage && el("button", { type: "button", class: "chip", onclick: () => teamDialog(t) }, "Rename…"),
       (t.manager || state.teamAdmin) && !t.conflict && el("button", { type: "button", class: "chip", onclick: () => dialog({
         title: "Delete this people list?", ok: "Delete list", body: [el("p", {}, "Only the list is deleted. Chats, messages and group membership stay as they are.")],
@@ -1480,7 +1531,7 @@ function dmFlags(d) {
 // dmRow is one DM in a person's list.
 function dmRow(d, open) {
   const b = el("button", { type: "button", class: "thread-row", "aria-current": String(state.dm === d.id) },
-    el("span", { class: "thread-title" }, d.title || "No messages yet"),
+    el("span", { class: "thread-title" }, d.renamed ? d.title : firstLine(d.title || "No messages yet",120)),
     d.count > 1 && el("span", { class: "thread-count", title: plural(d.count, "message", "messages") }, String(d.count)),
     dmFlags(d),
     el("span", { class: "conv-time", title: "Started " + new Date(d.created).toLocaleString() + (d.mine ? " by you" : " by them") }, when(d.last_at)));
@@ -2026,22 +2077,22 @@ function saveToDrive(m, idx, name) {
     } });
 }
 
-async function openDM(id) {
+async function openDM(id, localView) {
   rememberEntry();
   const changed = beginDM(id), gen = state.gen;
-  await loadDM(true);
+  await loadDM(true,localView);
   if (gen !== state.gen) return;
-  await loadOverview();
+  if(!localView)await loadOverview();
   if (changed) motion.acquire();
-  if (changed) api("/api/refresh", { id }).catch(() => {}); // once per open: receipts the server still holds
+  if (changed&&!localView) api("/api/refresh", { id }).catch(() => {}); // once per open: receipts the server still holds
 }
 
-async function loadDM(scrollToEnd) {
+async function loadDM(scrollToEnd, localView) {
   const id = state.dm, gen = state.gen;
   if (!id) return;
-  let t;
+  let t=localView;
   try {
-    t = await api("/api/dm?id=" + encodeURIComponent(id));
+    if(!t)t = await api("/api/dm?id=" + encodeURIComponent(id));
   } catch (e) {
     announce(e.message);
     return;
@@ -2274,6 +2325,56 @@ const namedAgentOn = (id, host, whose = "") => {
   const name = catalogName(id, host);
   return name ? name + " on " + host : (whose ? whose + " assistant on " : "Assistant on ") + host + " · name unavailable";
 };
+// Ordinary agent sends choose exact current work before capturing any plans.
+let requestView,requestMe,requestTopic,requestRows=new Map(),requestScope='',requestVersion=0;
+let requestChoices={},requestExplicit={};
+const requestPIDs=()=>state.dm?(typeof selectedAgentPIDs==='function'?selectedAgentPIDs():state.dmAgent?[state.dmAgent]:[]):[];
+function composerRequests(){
+ const d=state.dmData,topic=d?topicSelections[d.id]||'':'',fresh=!!(d&&topicFresh[d.id]),me=state.overview?.me;
+ if(requestView!==d||requestMe!==me||requestTopic!==topic){requestView=d;requestMe=me;requestTopic=topic;requestRows=activeComposerFollowups(d,me,topic);requestVersion++;}
+ const pids=fresh?[]:requestPIDs(),scope=JSON.stringify([d?.id,topic,fresh]);
+ if(scope!==requestScope){requestScope=scope;requestChoices={};requestExplicit={};}
+ for(const pid of Object.keys(requestChoices))if(!pids.includes(pid)){delete requestChoices[pid];delete requestExplicit[pid];}
+ for(const pid of pids){const rows=requestRows.get(pid)||[];if(rows.length>1&&!requestExplicit[pid])delete requestChoices[pid];else if(!requestChoices[pid]&&rows.length===1)requestChoices[pid]=rows[0].id;}
+ return pids;
+}
+function selectedComposerFollowup(pid){
+ composerRequests();if(topicFresh[state.dm]||requestChoices[pid]==='new')return;
+ const choice=requestChoices[pid],rows=requestRows.get(pid)||[];
+ if(!choice){if(rows.length>1)throw Error('Choose the exact request for this agent, or a new independent request. Your draft is kept.');return;}
+ const source=state.dmData?.messages?.find(m=>m.id===choice),followup=composerFollowup(source,pid,requestTopic,state.dmData,state.overview?.me);
+ if(!followup)throw Error('The selected request or its exact agent is unavailable. Choose it again, or a new independent request. Your draft is kept.');
+ return followup;
+}
+const ambiguousComposerRequest=()=>composerRequests().some(pid=>(requestRows.get(pid)||[]).length>1&&!requestChoices[pid]);
+function renderComposerRequests(container,pids=composerRequests()){
+ if(!container)return;
+ const signature=JSON.stringify([requestScope,pids,requestVersion,requestChoices,state.sending]);
+ if(container.requestSignature===signature)return;container.requestSignature=signature;
+ fill(container,pids.map(pid=>{
+  const rows=requestRows.get(pid)||[],choice=requestChoices[pid]||(rows.length?'':'new'),a=agentOf(pid);
+  const select=el('select',{'aria-label':'Request for '+(a?agentName(a):pid),disabled:state.sending,onchange:e=>{requestChoices[pid]=e.target.value;requestExplicit[pid]=true;syncComposer();}},
+   !choice&&el('option',{value:''},'Choose the exact request…'),
+   rows.map(m=>el('option',{value:m.id},'Continue: '+firstLine(m.body,72)+' · '+m.id.slice(0,8))),
+   choice&&choice!=='new'&&!rows.some(m=>m.id===choice)&&el('option',{value:choice},'Selected request unavailable · '+choice.slice(0,8)),
+   el('option',{value:'new'},'New independent request'));
+  select.value=choice;
+  return el('label',{class:'native-field'},el('strong',{},'Work for '+(a?agentName(a):'this agent')),select,
+   el('span',{class:'hint'},choice&&choice!=='new'?'Preserves the original objective; status shows native acceptance or queued continuation.':'Choose exact work, or start a new independent request.'));
+ }));
+ container.hidden=!container.childElementCount;
+}
+function syncComposerRequests(){
+ const pids=composerRequests();let box=$('request-target');
+ if(!box){box=el('div',{id:'request-target'});$('composer').prepend(box);}
+ renderComposerRequests(box,pids);renderComposerRequests($('write-request-target'),pids);
+ if($('dialog').open&&$('write-request-target')&&!state.dialogBusy)$('dialog-ok').disabled=ambiguousComposerRequest();
+}
+async function validateCapturedFollowup(followup,t,host,me){
+ const fresh=await api('/api/dm?id='+encodeURIComponent(t.id),undefined,host),source=fresh.messages?.find(m=>m.id===followup.source);
+ if(!sameFollowup(followup,composerFollowup(source,followup.pid,followup.topic,fresh,me)))throw Error('This exact request or agent changed. Nothing sent; the original follow-up and files remain available for review.');
+}
+
 // whoseAgent: a participation's host as the owner of its agent ("Your", "Bob's").
 const whoseAgent = (a) => !a ? "" : a.host_here ? "Your" : a.host && a.host.label ? a.host.label + "'s" : "";
 const agentName = (a) => a.agent_id ? namedAgentLabel(a.agent_id, a.host.address, undefined, whoseAgent(a)) : (isMe(a.host) ? "Your agent" : a.host.label + "'s agent");
@@ -2612,6 +2713,41 @@ function mentionKey(e) {
   } else if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && n) { e.preventDefault(); pickMention(mentionView.index); }
 }
 
+function ownModelReport(host,agentID="") {
+  const o=state.overview;
+  const device=o?.person?.state==="self" && o.person.devices?.find(d=>d.address===host);
+  if(!device)return null;
+  const report=(o.model_reports||[]).find(r=>r.host===host&&r.host_key===device.fingerprint&&r.agent_id===agentID);
+  const date=report?new Date(report.at*1000):null,known=date&&Number.isFinite(date.getTime());
+  return el("p", {class:"hint report-line", "data-agent-model":host+"#"+agentID}, report
+    ? "Last reported model: "+report.model+" · Reasoning: "+(report.reasoning||"not reported")+" · "+(known?date.toLocaleString():"Timestamp unavailable")+" · Settings may have changed."
+    : "Model and reasoning not reported for this agent’s current setup. They appear after a run that reports its runtime.");
+}
+function ownModelReports() {
+  const o=state.overview,targets=new Map();
+  if(o?.person?.state!=="self")return null;
+  const own=host=>o.person.devices?.find(d=>d.address===host);
+  for(const host of o.agent_devices||[])if(own(host))targets.set(host+"#",{host,id:"",label:"Default agent"});
+  for(const report of o.model_reports||[])if(own(report.host)?.fingerprint===report.host_key)targets.set(report.host+"#"+report.agent_id,{host:report.host,id:report.agent_id,label:report.agent_id?namedAgentLabel(report.agent_id,report.host):"Default agent"});
+  return targets.size ? el("section",{"aria-label":"Your agents’ reported models"},el("h3",{},"Your agents’ reported models"),[...targets.values()].map(t=>el("div",{},el("strong",{},t.label+" · "+deviceWords(t.host)),ownModelReport(t.host,t.id)))) : null;
+}
+
+function refreshModelReports() {
+  for(const row of root.querySelectorAll("[data-agent-model]")) {
+    const [host,id]=row.getAttribute("data-agent-model").split("#");
+    const next=ownModelReport(host,id);
+    if(next)row.replaceWith(next);else row.remove();
+  }
+}
+function selectedModelReports() {
+  if(!state.dm || state.answering)return [];
+  const ids=state.dmAgent?[state.dmAgent]:[];
+  return ids.flatMap(pid=>{
+    const a=agentOf(pid),report=a&&ownModelReport(a.host.address,a.agent_id||"");
+    return report?[el("div",{class:"selected-agent-model"},el("strong",{},agentName(a)),report)]:[];
+  });
+}
+
 function agentCard(a, t) {
   const shown = a.shared.length + a.missing;
   const facts = ["invited by " + (a.inviters?.length ? a.inviters : [a.inviter]).map(p => isMe(p) ? "you" : p.label).join(" and "),
@@ -2622,6 +2758,7 @@ function agentCard(a, t) {
   return el("div", { class: "agent-card " + a.state },
     el("div", { class: "agent-head" }, el("span", { class: "tag" }, "Agent"), el("strong", { ...(a.agent_id ? { title: a.agent_id + " · " + a.host.address } : {}) }, agentName(a)),
       el("details", {}, el("summary", {}, "Runs on " + (a.host_here ? "your computer" : a.host.label + "’s computer")), el("span", { class: "hint" }, a.state_text))),
+    ownModelReport(a.host.address,a.agent_id||""),
     el("p", { class: "agent-state" }, a.state_text),
     el("p", { class: "hint" }, facts.join(" · ")),
     a.external && a.member && el("p", { class: "hint" }, "Runs outside this group on " + a.host.label + "’s computer; that computer receives every new message and file here until the agent is removed."),
@@ -2651,11 +2788,15 @@ function inviteDialog(t) {
   let catalogHost = "", catalog = [], catalogError = "", catalogSeq = 0;
   const named = el("select", { id: "invite-agent", "aria-label": "Agent on selected host" }, el("option", { value: "" }, "Device default agent"));
   const catalogStatus = el("p", { class: "hint", role: "status" }, "Choose a computer to see its agents. You can also choose its default agent.");
+  const modelStatus=el("div");
+  const showModel=()=>fill(modelStatus,ownModelReport(catalogHost,named.value));
+  named.addEventListener("change",showModel);
   const current = () => gen === state.gen && wsNow() === ws && state.dm === t.id;
   const loadCatalog = async address => {
     const seq = ++catalogSeq;
     catalogHost = address; catalog = []; catalogError = ""; named.disabled = true;
     fill(named, el("option", { value: "" }, "Device default agent"));
+    showModel();
     catalogStatus.textContent = "Loading agents on " + address + "…";
     try {
       const records = await readAgentCatalog(address, transport);
@@ -2664,7 +2805,7 @@ function inviteDialog(t) {
       fill(named, el("option", { value: "" }, "Device default agent"), records.map(a => el("option", { value: a.id, title: a.id + " · " + a.host }, catalogLabel(a, records))));
       catalogStatus.textContent = "Agent names are supplied by this computer. Its owner still decides which tasks may run. Only the earlier messages you choose are shared.";
     } catch (e) { if (current() && seq === catalogSeq) { catalogError = e.message; catalogStatus.textContent = "Named agents unavailable: " + e.message + " Device default can still be chosen."; } }
-    finally { if (current() && seq === catalogSeq) named.disabled = false; }
+    finally { if (current() && seq === catalogSeq) {named.disabled = false;showModel();} }
   };
   // A browser device runs no agent. External hosts come from this workspace's
   // current directory; listing does not verify a real-world owner or grant trust.
@@ -2695,7 +2836,7 @@ function inviteDialog(t) {
     body: [el("p", {}, humanGroup(t) ? "The agent stays as a member after its owner accepts. Every member can ask it; its owner decides what runs. Choosing an agent already here shares more messages with the same membership." : "It joins only if its owner accepts, on their computer. You both see the invitation, what it may be shown and who may give it tasks."),
       el("fieldset", { class: "choices" }, el("legend", {}, "Whose agent"), hosts.map((c) => c.row)),
       el("p", { class: "hint" }, "External hosts are listed by this workspace's server, not verified real-world owners. Choose an exact named agent; its host must prove support and its owner must accept."),
-      el("label", { for: "invite-agent", class: "field-label" }, "Assistant on that host"), named, catalogStatus,
+      el("label", { for: "invite-agent", class: "field-label" }, "Assistant on that host"), named, catalogStatus, modelStatus,
       el("fieldset", { class: "choices" }, el("legend", {}, "Earlier messages it may be shown"),
         share.length ? share.map((c) => c.row) : el("p", { class: "hint" }, "No messages yet."),
         el("p", { class: "hint" }, "None unless you choose. Only selected messages and their available attached files become visible to this agent. Unselected history and files are excluded; unavailable bytes are reported as missing. No private agent session is copied.")),
@@ -2813,7 +2954,7 @@ function startSend(key, text, files, reply, answering, t, kind, retry, id, topic
     state.files = state.files.filter(f => !files.includes(f)); renderPending(); keepDraft(); syncComposer();
   }
 }
-function failSend(id, key, ws, text, files, reply, answering, reason, mentions, agent = null) {
+function failSend(id, key, ws, text, files, reply, answering, reason, mentions, agent = null,followup = null) {
   if (!sends.fail(id, reason)) return; // a pushed durable message already merged
   if (!alive) return; // the current renderer owns drafts; this failed turn keeps its Retry
   const here = alive && wsNow() === ws && state.draftKey === key;
@@ -2822,7 +2963,7 @@ function failSend(id, key, ws, text, files, reply, answering, reason, mentions, 
   // assistant keeps its target even with no text, and an assistant that can no longer
   // be asked is not replaced by the conversation. Otherwise this turn keeps its Retry.
   const newerTarget = !!d.agent && d.agent !== agent, eligible = !agent || !here || !!agentOf(agent)?.can_ask;
-  const restore = !d.text && !(d.files || []).length && !newerTarget && eligible;
+  const restore = !followup && !d.text && !(d.files || []).length && !newerTarget && eligible;
   if (restore) {
     if (here) {
       $("body").value = text; state.mentions = mentions || []; state.mentionText = text; grow();
@@ -2830,16 +2971,19 @@ function failSend(id, key, ws, text, files, reply, answering, reason, mentions, 
     } else draftsOf(ws)[key] = {...d, text, files, reply, answering, mentions, ...(agent ? {agent} : {})};
     sends.remove(id);
   }
-  if (here) $("compose-error").textContent = "Not sent: " + reason + (restore ? " Your text and files are restored." : d.text || d.files?.length ? " Your newer draft is kept. Retry the failed message above." : " Retry the failed message above.");
+  if (here) $("compose-error").textContent = "Not sent: " + reason + (restore ? " Your text and files are restored." : followup ? " The exact follow-up and files are kept above. Review the original work before retrying." : d.text || d.files?.length ? " Your newer draft is kept. Retry the failed message above." : " Retry the failed message above.");
   else announce("Not sent: " + reason + ". Your draft is kept in its conversation.");
 }
 
 async function sendDM(retry) {
   const t = retry?.t || state.dmData;
   if (state.sending || !t || t.frozen || (dmHumanGuest(t) && !guestAuthor(t)) || (dmVisitor(t) && !(state.dmAgent && agentOf(state.dmAgent)?.can_ask))) return;
+  if(!retry){try{requestPIDs().forEach(selectedComposerFollowup);}catch(e){$("compose-error").textContent=e.message;return;}}
   const {key,text,reply,agent,files,kind} = retry || {key:state.draftKey,text:$("body").value,reply:state.dmReply,agent:state.dmAgent,files:state.files.slice(),kind:"question"};
   const topic = retry ? retry.topic : topicFresh[t.id] ? sendID() : topicSelections[t.id] || "";
   const id = retry?.id || sendID(), mentions = retry?.mentions || (state.mentions || []).slice();
+  const followup=retry?retry.followup:agent?selectedComposerFollowup(agent):undefined;
+  const requestKind=followup?.kind||kind;
   if (!retry) trackMentions();
   const signed = encodeMentions(text, mentions); // each exact person mention as its reference; the rest as typed
   if (!retry && askGone()) { kindHint(); return; } // never sent to the person instead
@@ -2847,32 +2991,34 @@ async function sendDM(retry) {
   if (elsewhere) { $("compose-error").textContent = elsewhere; return; }
   if (!retry && files.length && overLimit(files)) { $("compose-error").textContent = overLimit(files); return; }
   if (typingUI) typingUI.stop();
-  const host = currentHost, ws = wsNow(), receiverSelection = retry ? retry.receiverSelection : state.replyReceiver && { ...state.replyReceiver }, nativeReceiver = retry ? retry.nativeReceiver : !!state.overview?.reply_receivers, nativeSessions = retry ? retry.nativeSessions : !!state.overview?.reply_sessions, receiverContext = retry ? retry.receiverContext : receiverCapture(); // captured local delegation
+  const host = retry?.host || currentHost, ws = retry?.ws || wsNow(), me=retry?.me || state.overview?.me, receiverSelection = retry ? retry.receiverSelection : state.replyReceiver && { ...state.replyReceiver }, nativeReceiver = retry ? retry.nativeReceiver : !!state.overview?.reply_receivers, nativeSessions = retry ? retry.nativeSessions : !!state.overview?.reply_sessions, receiverContext = retry ? retry.receiverContext : receiverCapture(); // captured local delegation
   if (!retry && topicFresh[t.id]) { topicSelections[t.id] = topic; topicFresh[t.id] = false; }
-  startSend(key, text, files, reply, null, t, agent ? kind : "message", () => { sends.remove(id); void sendDM({id,key,text,reply,agent,files,kind,t,topic,mentions,receiverSelection,nativeReceiver,nativeSessions,receiverContext}); }, id, topic, "", agent);
+  startSend(key, text, files, reply, null, t, agent ? requestKind : "message", () => { sends.remove(id); void sendDM({id,key,text,reply,agent,files,kind,t,topic,mentions,receiverSelection,nativeReceiver,nativeSessions,receiverContext,followup,host,ws,me}); }, id, topic, "", agent);
   if (alive) { syncComposer(); $("compose-error").textContent = ""; }
   try {
     await sends.ready(id);
     let r;
+    if(followup)await validateCapturedFollowup(followup,t,host,me);
     const humanAsk = !!agent && (dmHumanGuest(t) || (t.guests || []).some(g => g.state === "active")); // a request with guests present names its assistant only
     // An agent this device runs answers here as a local job: there is no
     // request copy to bind a default reply receiver to (the program refuses
     // one), and its answer comes back in this conversation anyway. An
     // explicitly chosen receiver is still sent and checked as chosen.
     const localJob = !!agent && !receiverSelection && !receiverContext?.host && (t.agents || []).some(a => (a.pid === agent || (a.pids || []).includes(agent)) && a.host_here);
-    const receiver = humanAsk || localJob ? null : await prepareReplyReceiverSelection(receiverSelection, host, ws, nativeReceiver, nativeSessions, receiverContext);
+    const receiver = followup || humanAsk || localJob ? null : await prepareReplyReceiverSelection(receiverSelection, host, ws, nativeReceiver, nativeSessions, receiverContext);
     const ids = await preparedFiles(files, host); // a failure here keeps what was handed over, for the retry
     try {
-      r = agent ? await api("/api/dm/agent/ask", { id, pid: agent, kind,topic, body: signed, files: ids, ...(receiver ? { reply_receiver: receiver } : {}) }, host)
+      if(followup){const result=await api("/api/request/followup",{id,conv:t.id,ref:followup.ref,body:signed,files:ids},host);r={id,lid:id,state:"queued",detail:result.note};}
+      else r = agent ? await api("/api/dm/agent/ask", { id, pid: agent, kind,topic, body: signed, files: ids, ...(receiver ? { reply_receiver: receiver } : {}) }, host)
         : await api("/api/dm/send", { id, conv: t.id, topic,...(dmHumanGuest(t) ? { pid: guestAuthor(t).pid } : {}), body: signed, reply_to: reply ? reply.id : "", quote:reply?.id||"", files: ids, ...(receiver ? { reply_receiver: receiver } : {}) }, host);
     } finally { sentStaged(files); }
-    announce(r.state === "receiver_waiting" ? r.detail || "Waiting for the selected reply host to accept this exact request." : r.state === "waiting" ? "Kept here, not sent yet: " + (r.detail || "they cannot read conversations now.")
+    announce(followup ? r.detail : r.state === "receiver_waiting" ? r.detail || "Waiting for the selected reply host to accept this exact request." : r.state === "waiting" ? "Kept here, not sent yet: " + (r.detail || "they cannot read conversations now.")
       : r.state === "queued" ? "Sending…" : "Sent.");
     sends.finish(id, r);
     files.forEach(f => f.url && URL.revokeObjectURL(f.url));
     if (alive && wsNow() === ws) void loadDM();
   } catch (e) {
-    failSend(id, key, ws, text, files, reply, null, e.message, mentions, agent);
+    failSend(id, key, ws, text, files, reply, null, e.message, mentions, agent,followup);
   } finally {
     if (alive && wsNow() === ws) { state.sending = false; kindHint(); syncComposer(); if (state.newVersion) updated(state.newVersion); }
     else { state.sending = false; sentElsewhere(ws); }
@@ -3123,19 +3269,19 @@ function beginThread(id) {
   return changed;
 }
 
-async function openThread(id, focusId) {
+async function openThread(id, focusId, localView) {
   rememberEntry();
   const changed = beginThread(id), gen = state.gen;
-  await loadThread(true);
+  await loadThread(true,localView);
   if (gen !== state.gen) return;
   if (state.data) commitConversation();
   if (state.data) { // a single message opens with its device's single messages shown
     const s = state.overview && state.overview.threads.find((x) => x.id === state.data.messages[0].id);
     if (s && s.count === 1 && !(s.review || s.running || s.waiting)) state.singlesOpen[s.peer] = true;
   }
-  await loadOverview();
+  if(!localView)await loadOverview();
   if (focusId) flash(focusId);
-  if (changed) { motion.acquire(); refreshThread(); }
+  if (changed) { motion.acquire(); if(!localView)refreshThread(); }
 }
 
 function flash(id) {
@@ -3160,12 +3306,12 @@ async function refreshThread() {
   } catch (e) { /* presence stays unknown */ }
 }
 
-async function loadThread(scrollToEnd) {
+async function loadThread(scrollToEnd, localView) {
   const id = state.thread, gen = state.gen;
   if (!id) return;
-  let t;
+  let t=localView;
   try {
-    t = await api("/api/thread?id=" + encodeURIComponent(id));
+    if(!t)t = await api("/api/thread?id=" + encodeURIComponent(id));
   } catch (e) {
     announce(e.message);
     return;
@@ -3181,7 +3327,7 @@ async function loadThread(scrollToEnd) {
   showPane("conv");
   $("composer").hidden = false;
   setHubBack();
-  const page=t.topic ? await api("/api/topics?peer="+encodeURIComponent(t.peer)+"&limit=200") : {topics:[]};
+  const page=localView ? {topics:t.topic?[t.topic]:[]} : t.topic ? await api("/api/topics?peer="+encodeURIComponent(t.peer)+"&limit=200") : {topics:[]};
   if(state.thread!==id||gen!==state.gen)return;
   topicUI.update({peer:t.peer},page.topics,t.topic?.id||id);
   renderBody(scrollToEnd);
@@ -3526,9 +3672,10 @@ function operatorDialog(it, x, action) {
 // Nothing is sent, accepted or read for the person by landing.
 async function openMessage(ref) {
   if (!ref || !ref.id) return;
+  const gen = state.gen, host = currentHost;
   if (ref.conv && (state.overview.dms || []).some((d) => d.id === ref.conv)) {
     await openDM(ref.conv);
-    focusDMMessage(ref);
+    focusDMMessage(ref, ref.conv, gen, host);
     return;
   }
   if (!ref.conv) {
@@ -3537,16 +3684,18 @@ async function openMessage(ref) {
   for (const d of state.overview.dms || []) { // a DM's message: found by looking, never guessed
     try {
       const v = await api("/api/dm?id=" + encodeURIComponent(d.id));
-      if (v.messages.some((m) => m.id === ref.id && (!ref.dir || m.dir === ref.dir))) { await openDM(d.id); focusDMMessage(ref); return; }
+      if (!alive || gen !== state.gen || host !== currentHost) return;
+      if (v.messages.some((m) => m.id === ref.id && (!ref.dir || m.dir === ref.dir))) { await openDM(d.id); focusDMMessage(ref, d.id, gen, host); return; }
     } catch (e) { /* next */ }
   }
-  showList("That message is not on this device.");
+  if (alive && gen === state.gen && host === currentHost) showList("That message is not on this device.");
 }
 
 
 // A notification may name a message outside the currently selected topic.
 // Resolve its exact id/direction in the loaded DM before choosing that flow.
-function focusDMMessage(ref) {
+function focusDMMessage(ref, conv, gen, host) {
+  if (!alive || gen !== state.gen || host !== currentHost || state.dm !== conv) return;
   const message = state.dmData?.messages.find(m => m.id === ref.id && (!ref.dir || m.dir === ref.dir));
   if (!message) { showList("That message is not on this device."); return; }
   topicSelections[state.dm] = message.topic || "";
@@ -3876,6 +4025,7 @@ function renderAgentTarget() {
         "@" + s.name,
         el("button", { type: "button", class: "text-btn", disabled: state.sending, "aria-label": "Make @" + s.name + " plain text", onclick: () => { state.mentions = (state.mentions || []).filter(x => x !== s); keepDraft(); renderAgentTarget(); } }, "×"))),
       el("button", { type: "button", class: "text-btn", disabled: state.sending, onclick: () => { showMentions(true); $("body").focus(); } }, "@ Mention"));
+    box.append(...selectedModelReports());
     return;
   }
   const catalog = state.targetCatalog, selected = state.deviceAgentID || "", agents = catalog && catalog.host === t.peer ? catalog.agents || [] : [];
@@ -3884,11 +4034,11 @@ function renderAgentTarget() {
       const gen = state.gen, key = state.draftKey;
       const choose = id => { if (gen !== state.gen || key !== state.draftKey) return; chooseDeviceAgent(id); $("dialog").close(); $("body").focus(); };
       dialog({title: "Address an assistant on " + t.peer, body: [
-        el("button", {type: "button", class: "btn", onclick: () => choose("")}, "Device default responder"),
-        agents.map(a => el("button", {type: "button", class: "btn", title: a.id + " · " + a.host, onclick: () => choose(a.id)}, catalogLabel(a, agents))),
+        el("div",{},el("button", {type: "button", class: "btn", onclick: () => choose("")}, "Device default responder"),ownModelReport(t.peer)),
+        agents.map(a => el("div",{},el("button", {type: "button", class: "btn", title: a.id + " · " + a.host, onclick: () => choose(a.id)}, catalogLabel(a, agents)),ownModelReport(a.host,a.id))),
         el("button", {type: "button", class: "text-btn", disabled: catalog?.loading, onclick: async () => { await loadTargetCatalog(); $("dialog").close(); }}, "Refresh agents"),
         catalog?.error && el("p", {class: "error"}, catalog.error)], ok: "Close", run: async () => {}});
-    }}, selected ? "@" + namedAgentLabel(selected, t.peer) + (deviceAgentMissing() && catalogName(selected, t.peer) ? " · unavailable" : "") : "Address assistant…"), catalog?.error && el("p", {class: "error", role: "alert"}, catalog.error));
+    }}, selected ? "@" + namedAgentLabel(selected, t.peer) + (deviceAgentMissing() && catalogName(selected, t.peer) ? " · unavailable" : "") : "Address assistant…"), ownModelReport(t.peer,selected), catalog?.error && el("p", {class: "error", role: "alert"}, catalog.error));
 
 }
 
@@ -4247,6 +4397,7 @@ function restoreDraft(key, t) {
 // syncComposer enables what the open conversation allows. A send on its way
 // keeps Send disabled, whatever refreshes meanwhile.
 function syncComposer() {
+  syncComposerRequests();
   $("mention-button").hidden = !state.dm || dmHumanGuest() && !guestAuthor(); // a guest mentions only while joined
   $("mention-button").disabled = state.sending;
   $("mention-button").setAttribute("aria-label", "Mention a person or assistant");
@@ -4257,7 +4408,7 @@ function syncComposer() {
     const blocked = !d || !!d.frozen || revoked || (dmHumanGuest(d) && !guestAuthor(d)) || (dmVisitor(d) && !(state.dmAgent && agentOf(state.dmAgent)?.can_ask));
     $("composer").hidden = dmVisitor(d) && blocked;
     $("body").disabled = blocked;
-    $("send").disabled = blocked || state.sending || askGone();
+    $("send").disabled = blocked || state.sending || askGone() || ambiguousComposerRequest();
     const a = state.dmAgent && agentOf(state.dmAgent);
     // Asking an agent: a question, or a task when the invitation lets you give it tasks.
     $("kind").hidden = true;
@@ -4681,7 +4832,7 @@ async function renderResponder() {
   const host = currentHost, gen = state.gen, ws = wsNow();
   const currentView = () => gen === state.gen && wsNow() === ws;
   if ((host && host.platform === "browser") || (state.overview && state.overview.device)) {
-    fill(box, el("p", { class: "hint" }, "This browser runs nothing: questions and tasks wait for you. Choose an agent on a computer with AgentNet."));
+    fill(box, el("p", { class: "hint" }, "This browser runs nothing: questions and tasks wait for you. Choose an agent on a computer with AgentNet."),ownModelReports());
     fill($("named-agents"));
     return;
   }
@@ -4712,7 +4863,7 @@ async function renderResponder() {
     } catch (e) { if (currentView()) err.textContent = e.message; }
   };
   fill(box,
-    el("h3", {}, "Answers for you"),
+    el("h3", {}, "Answers for you"), ownModelReport(state.overview?.me.address),ownModelReports(),
     el("p", {}, !r.chosen ? "Nothing chosen yet" + (r.problem ? ": " + r.problem : ".") : r.manual ? "No automatic responder: everything waits for you."
       : r.harness + " answers approved questions and runs accepted tasks in " + r.dir + (r.ready ? "." : ". Not ready: " + (r.problem || "check the folder and the program."))),
     el("div", { class: "responder-choice", role: "radiogroup", "aria-label": "Your agent" }, options.map((o) =>
@@ -4771,6 +4922,7 @@ async function renderNamedAgents(note = "", host = currentHost, gen = state.gen,
       return el("section", { class: "named-agent-card", "aria-label": "Local agent " + namedAgentLabel(entry.record.id, view.host, records) },
         el("strong", { title: entry.record.id + " · " + view.host + " (host-signed agent)" }, namedAgentLabel(entry.record.id, view.host, records)), el("p", {}, "On " + view.host),
         el("p", { class: "hint" }, !entry.enabled ? "Disabled on this computer. Earlier messages remain." : r ? "Program: " + r.harness + " · " + r.dir + (r.ready ? " · program/folder checks pass" : " · not ready: " + (r.problem || "check program and folder")) : "Program settings unavailable."),
+        ownModelReport(view.host,entry.record.id),
         r && el("p", { class: "hint" }, (r.timeout_seconds ? "Your time limit: " + r.timeout_seconds + " seconds · " : "") + "Context files: " + ((r.context || []).join(", ") || "none")),
         el("div", { class: "detail-actions" }, el("button", { type: "button", class: "btn", onclick: () => edit(entry) }, "Configure…"),
           entry.enabled && el("button", { type: "button", class: "text-btn", onclick: () => dialog({ title: "Disable " + namedAgentLabel(entry.record.id, view.host, records) + "?", ok: "Disable locally",
@@ -5003,7 +5155,7 @@ function start() {
     const chatControls = state.dmData ? dmNotifyChips(t) : [];
     if (state.dmData && t.peer?.person) chatControls.push(el("button", { type: "button", class: "peer-chip" + (state.driveOpen ? " on" : ""), onclick: () => toggleDrivePanel(t) }, "Project space"));
     for (const b of chatControls) b.addEventListener("click", () => $("dialog").close());
-    dialog({ title: peer, body: [state.dmData ? deviceDisclosure(t.peer) : el("p", { class: "mono" }, state.data.key?.pinned || "Key not checked yet"), members, guests, past, actions, chatControls.length > 0 && el("div", { class: "detail-actions" }, chatControls), routing, remove], ok: "Close", run: async () => {} });
+    dialog({ title: peer, body: [state.dmData ? deviceDisclosure(t.peer) : el("p", { class: "mono" }, state.data.key?.pinned || "Key not checked yet"), members, guests, past, actions, el("div",{class:"detail-actions"},linkButtons()), chatControls.length > 0 && el("div", { class: "detail-actions" }, chatControls), routing, remove], ok: "Close", run: async () => {} });
   });
   $("nav-chats").addEventListener("click", () => selectSection("chats"));
   $("nav-people").addEventListener("click", () => selectSection("people"));
@@ -5087,7 +5239,7 @@ function start() {
     refetch(false);
   });
   // What the person has in front of them, reported when it changes.
-  $("timeline").addEventListener("scroll", reportSeen);
+  on($("timeline"), "scroll", reportSeen);
   on(document, "visibilitychange", reportSeen);
   on(window, "focus", reportSeen);
   // A desktop alert's click opens this page on its conversation (#conv=ID,

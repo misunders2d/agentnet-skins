@@ -1,22 +1,22 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "A 1970s paperback by day and a roadside diner by night. Chats read like a table of contents, every topic opens with a chapter card, requests for your OK arrive as a glowing case, and your agents wear costumes. Everything Comic does, in a new look.",
   "previews": [
     {
       "file": "desktop-light.png",
-      "alt": "Pulp on a desktop, day: the contents list, a chapter card and a typed message"
+      "alt": "Pulp on a desktop, day: the contents list beside a conversation with the fictional Tomasz Reyes"
     },
     {
       "file": "desktop-dark.png",
-      "alt": "Pulp on a desktop, night: the same chat in diner neon"
+      "alt": "Pulp on a desktop, night: the same fictional conversation in diner neon"
     },
     {
-      "file": "phone-light.png",
-      "alt": "Pulp on a phone, day: a chapter card above the messages"
+      "file": "mobile-light.png",
+      "alt": "Pulp on a phone, day: a conversation with the fictional Tomasz Reyes about a glaze test"
     },
     {
-      "file": "phone-dark.png",
-      "alt": "Pulp on a phone, night"
+      "file": "mobile-dark.png",
+      "alt": "Pulp on a phone, night: the same fictional conversation and composer"
     }
   ]
 }

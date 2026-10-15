@@ -2,11 +2,12 @@ export default {
   "api": 1,
   "id": "zoom",
   "name": "Zoom",
-  "agentnet": "v0.8.27",
+  "agentnet": "v0.8.28",
   "entry": "entry.mjs",
   "style": "style.css",
   "files": [
     "entry.mjs",
+    "composer-followup.mjs",
     "manifest.mjs",
     "style.css",
     "template.mjs",

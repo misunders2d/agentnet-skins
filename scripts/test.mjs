@@ -70,7 +70,7 @@ try{
  fs.writeFileSync(path.join(evidence,'gallery-acceptance.txt'),(x.stdout||'')+'\n'+(x.stderr||''),{mode:0o600});
  if(x.status!==0){failed=true;console.error('FAIL AgentNet gallery acceptance of published/\n'+x.stdout+'\n'+x.stderr);}
  else{console.log(x.stdout.trim().split('\n').at(-1));const r=JSON.parse(x.stdout.slice(0,x.stdout.lastIndexOf('}')+1));for(const[id,v]of Object.entries(r))if(summary[id])summary[id]['agentnet gallery (published/)']='PASS: '+v;}}
-const env={...process.env,...browserEnv,AGENTNET_UPSTREAM:up,AGENTNET_SKINS:JSON.stringify(skins.filter(s=>!s.overlay)),AGENTNET_COMPANY_BINARY:wrapper,AGENTNET_COMPANY_WORLD:world,AGENTNET_SKIN_WORLD:world,AGENTNET_COMPANY_GO:go,AGENTNET_COMPANY_SEED:'1',AGENTNET_TEST_ROOT:root,AGENTNET_SKINS_EVIDENCE:evidence,AGENTNET_COMPANY_RUN:'node "$AGENTNET_TEST_ROOT/scripts/world-tests.mjs"'};
+const env={...process.env,...browserEnv,AGENTNET_UPSTREAM:up,AGENTNET_SKINS:JSON.stringify(skins.filter(s=>!s.overlay)),AGENTNET_COMPANY_BINARY:wrapper,AGENTNET_COMPANY_WORLD:world,AGENTNET_SKIN_WORLD:world,AGENTNET_COMPANY_GO:go,AGENTNET_COMPANY_SEED:'1',...(skins.some(s=>!s.overlay&&s.family==='zoom')?{AGENTNET_COMPANY_HISTORY_COUNT:'200'}:{}),AGENTNET_TEST_ROOT:root,AGENTNET_SKINS_EVIDENCE:evidence,AGENTNET_COMPANY_RUN:'node "$AGENTNET_TEST_ROOT/scripts/world-tests.mjs"'};
 for(const s of skins.filter(s=>s.overlay))summary[s.id]['world journeys']='not applicable (Comic-based overlay; the Classic-family and Zoom journeys test other interfaces)';
 try{
  if(spawnSync('bash',[path.join(up,'internal/ui/testdata/company_world.sh')],{cwd:root,stdio:'inherit',env}).status!==0)failed=true;

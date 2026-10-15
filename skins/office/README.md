@@ -29,8 +29,9 @@ settings, workspaces) and picks up Comic's fixes whenever it is rebuilt.
 ## Previews
 
 Rendered with an invented company (Brightwater Ceramics: invented people and
-messages), Office built from this overlay on AgentNet v0.8.27 (commit
-`d9966789`).
+messages), Office built from this overlay on AgentNet v0.8.28 candidate
+(commit `0622f88c`). Desktop 1440 × 1000 and phone 390 × 844 previews show the
+skin's own area; phone screenshots use Chromium emulation.
 
 | Desktop, light | Desktop, dark |
 | --- | --- |

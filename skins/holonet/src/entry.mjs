@@ -3672,9 +3672,10 @@ function operatorDialog(it, x, action) {
 // Nothing is sent, accepted or read for the person by landing.
 async function openMessage(ref) {
   if (!ref || !ref.id) return;
+  const gen = state.gen, host = currentHost;
   if (ref.conv && (state.overview.dms || []).some((d) => d.id === ref.conv)) {
     await openDM(ref.conv);
-    focusDMMessage(ref);
+    focusDMMessage(ref, ref.conv, gen, host);
     return;
   }
   if (!ref.conv) {
@@ -3683,16 +3684,18 @@ async function openMessage(ref) {
   for (const d of state.overview.dms || []) { // a DM's message: found by looking, never guessed
     try {
       const v = await api("/api/dm?id=" + encodeURIComponent(d.id));
-      if (v.messages.some((m) => m.id === ref.id && (!ref.dir || m.dir === ref.dir))) { await openDM(d.id); focusDMMessage(ref); return; }
+      if (!alive || gen !== state.gen || host !== currentHost) return;
+      if (v.messages.some((m) => m.id === ref.id && (!ref.dir || m.dir === ref.dir))) { await openDM(d.id); focusDMMessage(ref, d.id, gen, host); return; }
     } catch (e) { /* next */ }
   }
-  showList("That message is not on this device.");
+  if (alive && gen === state.gen && host === currentHost) showList("That message is not on this device.");
 }
 
 
 // A notification may name a message outside the currently selected topic.
 // Resolve its exact id/direction in the loaded DM before choosing that flow.
-function focusDMMessage(ref) {
+function focusDMMessage(ref, conv, gen, host) {
+  if (!alive || gen !== state.gen || host !== currentHost || state.dm !== conv) return;
   const message = state.dmData?.messages.find(m => m.id === ref.id && (!ref.dir || m.dir === ref.dir));
   if (!message) { showList("That message is not on this device."); return; }
   topicSelections[state.dm] = message.topic || "";
@@ -5236,7 +5239,7 @@ function start() {
     refetch(false);
   });
   // What the person has in front of them, reported when it changes.
-  $("timeline").addEventListener("scroll", reportSeen);
+  on($("timeline"), "scroll", reportSeen);
   on(document, "visibilitychange", reportSeen);
   on(window, "focus", reportSeen);
   // A desktop alert's click opens this page on its conversation (#conv=ID,

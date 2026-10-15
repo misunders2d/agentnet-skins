@@ -5584,7 +5584,7 @@ function start() {
     refetch(false);
   });
   // What the person has in front of them, reported when it changes.
-  $("timeline").addEventListener("scroll", reportSeen);
+  on($("timeline"), "scroll", reportSeen);
   on(document, "visibilitychange", reportSeen);
   on(window, "focus", reportSeen);
   // A desktop alert's click opens this page on its conversation (#conv=ID,

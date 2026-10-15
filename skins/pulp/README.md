@@ -25,9 +25,11 @@ Comic's fixes whenever it is rebuilt.
 
 ## Previews
 
-Rendered with AgentNet's demo data (invented people and agents; the demo's
-person names are replaced with invented ones), Pulp built from this overlay
-on the AgentNet v0.8.25 candidate.
+Rendered through the production loader with an invented company (Brightwater
+Ceramics: invented people and messages), Pulp built from this overlay on the
+AgentNet v0.8.28 candidate (commit `0622f88c`). Desktop 1440 × 1000 and phone
+390 × 844 previews show the skin's own area; phone screenshots use Chromium
+emulation.
 
 | Desktop, day | Desktop, night |
 | --- | --- |
@@ -35,7 +37,7 @@ on the AgentNet v0.8.25 candidate.
 
 | Phone, day | Phone, night |
 | --- | --- |
-| ![Pulp on a phone, day](previews/phone-light.png) | ![Pulp on a phone, night](previews/phone-dark.png) |
+| ![Pulp on a phone, day](previews/mobile-light.png) | ![Pulp on a phone, night](previews/mobile-dark.png) |
 
 ## What is in the overlay
 

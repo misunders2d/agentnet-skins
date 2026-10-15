@@ -8,7 +8,7 @@ Complete Classic-derived interface, not a chat demo: people and groups, agents, 
 
 ## Preview
 
-Actual AgentNet rendering through the production loader with a disposable fictional company (invented people and messages, `npm run previews`); Holonet cockpit source unchanged since `c11e612`, Host API v1 on the AgentNet `fdf7c37a` (v0.8.26 base; its interface host is the v0.8.25 one). These previews show the skin’s own area on a desktop (1440 × 1000) and a phone viewport (390 × 844), with dark and light themes; AgentNet’s switcher bar above the skin is not part of it. Phone screenshots use Chromium emulation.
+Actual AgentNet rendering through the production loader with a disposable fictional company (Brightwater Ceramics: invented people and messages, `npm run previews`); current Holonet source, Host API v1 on AgentNet `0622f88c` (v0.8.28 candidate). These previews show the skin's own area on a desktop (1440 × 1000) and a phone viewport (390 × 844), with light and dark themes; AgentNet's switcher bar above the skin is not part of it. Phone screenshots use Chromium emulation.
 
 | Desktop dark | Desktop light |
 | --- | --- |
@@ -22,7 +22,7 @@ Actual AgentNet rendering through the production loader with a disposable fictio
 
 Build: `node scripts/build.mjs holonet` from repository root. Install/import `dist/holonet/` as described in the [main README](../../README.md).
 
-Targets Host API v1; `"agentnet": "v0.8.25"`, checked against the AgentNet v0.8.25 candidate pinned in `upstream.json`. No code, images or imports require a sibling skin, CDN or external network service. Holonet always starts with its dark direction for System mode; explicit Light and Dark choices remain available. Unsent drafts are namespaced by manifest identity and workspace; staged files are retired after reconnect rather than replayed.
+Targets Host API v1; `"agentnet": "v0.8.28"`, built for the AgentNet v0.8.28 candidate pinned in `upstream.json`. No code, images or imports require a sibling skin, CDN or external network service. Holonet always starts with its dark direction for System mode; explicit Light and Dark choices remain available. Unsent drafts are namespaced by manifest identity and workspace; staged files are retired after reconnect rather than replayed.
 
 ## v0.8.26 usability corrections
 

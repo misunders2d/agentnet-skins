@@ -1,6 +1,6 @@
 # Host API v1 conformance
 
-Authoritative: [pinned UI_SKINS.md](https://github.com/misunders2d/agentnet/blob/f9c8b1c38c14a7a6d743b02f67f5bf59d57fd276/docs/UI_SKINS.md) (AgentNet v0.8.28 candidate). This guide records the rules; it does not define a new API.
+Authoritative: [pinned UI_SKINS.md](https://github.com/misunders2d/agentnet/blob/8b6aae52b9b6cb7eaf337bbf41f0e8a78cc7d4c1/docs/UI_SKINS.md) (AgentNet v0.8.29 candidate). This guide records the rules; it does not define a new API.
 
 | Requirement | Implementation / shared evidence |
 | --- | --- |

@@ -1,4 +1,4 @@
-import { composerFollowup, activeComposerFollowups, sameFollowup } from "./composer-followup.mjs";
+import { composerFollowup, currentComposerFollowup, composerReplyFollowup, sameFollowup } from "./composer-followup.mjs";
 import { nativeRequestItem } from "./native-request.mjs";
 import { reactionChoices, recordReaction, humanReactionOrder } from "./reaction-preferences.mjs";
 import {collectiveOptions, parseCollective, collectiveHref} from './collective-mentions.mjs';
@@ -2317,50 +2317,11 @@ const namedAgentOn = (id, host, whose = "") => {
   const name = catalogName(id, host);
   return name ? name + " on " + host : (whose ? whose + " assistant on " : "Assistant on ") + host + " · name unavailable";
 };
-// Ordinary agent sends choose exact current work before capturing any plans.
-let requestView,requestMe,requestTopic,requestRows=new Map(),requestScope='',requestVersion=0;
-let requestChoices={},requestExplicit={};
+// Resolve current work only when sending; typing adds no request scans or controls.
 const requestPIDs=()=>state.dm?(typeof selectedAgentPIDs==='function'?selectedAgentPIDs():state.dmAgent?[state.dmAgent]:[]):[];
-function composerRequests(){
- const d=state.dmData,topic=d?topicSelections[d.id]||'':'',fresh=!!(d&&topicFresh[d.id]),me=state.overview?.me;
- if(requestView!==d||requestMe!==me||requestTopic!==topic){requestView=d;requestMe=me;requestTopic=topic;requestRows=activeComposerFollowups(d,me,topic);requestVersion++;}
- const pids=fresh?[]:requestPIDs(),scope=JSON.stringify([d?.id,topic,fresh]);
- if(scope!==requestScope){requestScope=scope;requestChoices={};requestExplicit={};}
- for(const pid of Object.keys(requestChoices))if(!pids.includes(pid)){delete requestChoices[pid];delete requestExplicit[pid];}
- for(const pid of pids){const rows=requestRows.get(pid)||[];if(rows.length>1&&!requestExplicit[pid])delete requestChoices[pid];else if(!requestChoices[pid]&&rows.length===1)requestChoices[pid]=rows[0].id;}
- return pids;
-}
 function selectedComposerFollowup(pid){
- composerRequests();if(topicFresh[state.dm]||requestChoices[pid]==='new')return;
- const choice=requestChoices[pid],rows=requestRows.get(pid)||[];
- if(!choice){if(rows.length>1)throw Error('Choose the exact request for this agent, or a new independent request. Your draft is kept.');return;}
- const source=state.dmData?.messages?.find(m=>m.id===choice),followup=composerFollowup(source,pid,requestTopic,state.dmData,state.overview?.me);
- if(!followup)throw Error('The selected request or its exact agent is unavailable. Choose it again, or a new independent request. Your draft is kept.');
- return followup;
-}
-const ambiguousComposerRequest=()=>composerRequests().some(pid=>(requestRows.get(pid)||[]).length>1&&!requestChoices[pid]);
-function renderComposerRequests(container,pids=composerRequests()){
- if(!container)return;
- const signature=JSON.stringify([requestScope,pids,requestVersion,requestChoices,state.sending]);
- if(container.requestSignature===signature)return;container.requestSignature=signature;
- fill(container,pids.map(pid=>{
-  const rows=requestRows.get(pid)||[],choice=requestChoices[pid]||(rows.length?'':'new'),a=agentOf(pid);
-  const select=el('select',{'aria-label':'Request for '+(a?agentName(a):pid),disabled:state.sending,onchange:e=>{requestChoices[pid]=e.target.value;requestExplicit[pid]=true;syncComposer();}},
-   !choice&&el('option',{value:''},'Choose the exact request…'),
-   rows.map(m=>el('option',{value:m.id},'Continue: '+firstLine(m.body,72)+' · '+m.id.slice(0,8))),
-   choice&&choice!=='new'&&!rows.some(m=>m.id===choice)&&el('option',{value:choice},'Selected request unavailable · '+choice.slice(0,8)),
-   el('option',{value:'new'},'New independent request'));
-  select.value=choice;
-  return el('label',{class:'native-field'},el('strong',{},'Work for '+(a?agentName(a):'this agent')),select,
-   el('span',{class:'hint'},choice&&choice!=='new'?'Preserves the original objective; status shows native acceptance or queued continuation.':'Choose exact work, or start a new independent request.'));
- }));
- container.hidden=!container.childElementCount;
-}
-function syncComposerRequests(){
- const pids=composerRequests();let box=$('request-target');
- if(!box){box=el('div',{id:'request-target'});$('composer').prepend(box);}
- renderComposerRequests(box,pids);renderComposerRequests($('write-request-target'),pids);
- if($('dialog').open&&$('write-request-target')&&!state.dialogBusy)$('dialog-ok').disabled=ambiguousComposerRequest();
+ if(topicFresh[state.dm])return;
+ return currentComposerFollowup(state.dmData,pid,topicSelections[state.dm]||'',state.overview?.me,state.dmReply?.id);
 }
 async function validateCapturedFollowup(followup,t,host,me){
  const fresh=await api('/api/dm?id='+encodeURIComponent(t.id),undefined,host),source=fresh.messages?.find(m=>m.id===followup.source);
@@ -3020,7 +2981,7 @@ function setDMAgent(a) {
     return href?[{...s,ref:{kind:'collective',id:href.slice('agentnet:collective/'.length)}}]:[];
   });
   if (a) {
-    state.dmReply = null;
+    if(!composerReplyFollowup(state.dmData,a.pid,topicSelections[state.dm]||"",state.overview?.me,state.dmReply?.id))state.dmReply = null;
     $("replying").hidden = false;
     $("replying-label").textContent = "Asking";
     $("replying-text").textContent = a.host ? agentName(a) + " (on " + a.host.address + ")" + (a.can_ask ? "" : ", cannot be asked now") : "an agent no longer in this DM";
@@ -3125,7 +3086,7 @@ async function sendDM(retry) {
     const receiver = followup || humanAsk || localJob ? null : await prepareReplyReceiverSelection(receiverSelection, host, ws, nativeReceiver, nativeSessions, receiverContext);
     const ids = await preparedFiles(files, host); // a failure here keeps what was handed over, for the retry
     try {
-      if(followup){const result=await api("/api/request/followup",{id,conv:t.id,ref:followup.ref,body:signed,files:ids},host);r={id,lid:id,state:"queued",detail:result.note};}
+      if(followup){const result=await api("/api/request/followup",{id,conv:t.id,ref:followup.ref,attempt:followup.attempt,body:signed,files:ids},host);r={id,lid:id,state:"queued",detail:result.note};}
       else r = agent ? await api("/api/dm/agent/ask", { id, send_group: group, pid: agent, kind,topic, body: signed, files: ids, ...(receiver ? { reply_receiver: receiver } : {}) }, host)
         : await api("/api/dm/send", { id, conv: t.id, topic,...(dmHumanGuest(t) ? { pid: guestAuthor(t).pid } : {}), body: signed, reply_to: reply ? reply.id : "", quote:reply?.id||"", files: ids, ...(receiver ? { reply_receiver: receiver } : {}) }, host);
     } finally { sentStaged(files); }
@@ -4485,7 +4446,7 @@ function boundElsewhere() {
 function setDMReply(m) {
   if (m && (dmVisitor() || m.excerpt_pid)) return;
   state.dmReply = m ? { id: m.id, body: m.body } : null;
-  if (m && state.dmAgent) setDMAgent(null);
+  if (m && state.dmAgent && !composerReplyFollowup(state.dmData,state.dmAgent,topicSelections[state.dm]||"",state.overview?.me,m.id)) setDMAgent(null);
   if (!m && (state.answering || state.dmAgent)) return;
   $("replying").hidden = !m;
   if (m) {
@@ -4551,7 +4512,6 @@ function restoreDraft(key, t) {
 // syncComposer enables what the open conversation allows. A send on its way
 // keeps Send disabled, whatever refreshes meanwhile.
 function syncComposer() {
-  syncComposerRequests();
   $("mention-button").hidden = !state.dm || dmHumanGuest() && !guestAuthor(); // a guest mentions only while joined
   $("mention-button").disabled = state.sending;
   $("mention-button").setAttribute("aria-label", "Mention a person or assistant");
@@ -4562,7 +4522,7 @@ function syncComposer() {
     const blocked = !d || !!d.frozen || revoked || (dmHumanGuest(d) && !guestAuthor(d)) || (dmVisitor(d) && !selectedAgentPIDs().some(pid => agentOf(pid)?.can_ask));
     $("composer").hidden = dmVisitor(d) && blocked;
     $("body").disabled = blocked;
-    $("send").disabled = blocked || state.sending || askGone() || ambiguousComposerRequest();
+    $("send").disabled = blocked || state.sending || askGone();
     const a = state.dmAgent && agentOf(state.dmAgent);
     // Asking an agent: a question, or a task when the invitation lets you give it tasks.
     $("kind").hidden = true;
@@ -5546,18 +5506,17 @@ function dmWriteDialog(d) {
   const body = el("textarea", { id: "write-body", rows: "4" });
   body.value = $("body").value;
   body.addEventListener("input", e => {
-    $("body").value = body.value;trackMentions(e.isComposing ? undefined : body.selectionStart);keepDraft();renderAgentTarget();syncComposerRequests();showMentions();
+    $("body").value = body.value;trackMentions(e.isComposing ? undefined : body.selectionStart);keepDraft();renderAgentTarget();showMentions();
   });
   body.addEventListener("keydown", mentionKey);
   const mentions = el("div", {id:"write-mentions",hidden:true});
   const targets = el("div", {id:"write-agent-target"});
-  const requests = el("div", {id:"write-request-target"});
   const canFiles = filesAllowed();
   const quote = state.dmReply && el("div", { class: "quote" }, "Replying to: " + firstLine(state.dmReply.body, 80) + " ",
     el("button", { type: "button", class: "text-btn", "aria-label": "Do not reply to that message", onclick: () => { setDMReply(null); quote.remove(); } }, "×"));
   dialog({
     title: (topicFresh[d.id] ? "New topic with " : "Write to ") + (humanGroup(d) ? d.title : d.peer.label),
-    body: [quote, el("label", { for: "write-body", class: "field-label" }, "Message"), body, targets, requests, mentions,
+    body: [quote, el("label", { for: "write-body", class: "field-label" }, "Message"), body, targets, mentions,
       canFiles && dialogFiles(body),
       el("p", { class: "hint" }, humanGroup(d) ? "Messages go to current members and accepted guests. Each selected assistant receives its own request, subject to its owner’s permissions." : "Messages stay in this DM. Each selected assistant receives its own request, subject to its owner’s permissions.")],
     ok: "Send", focus: body,
@@ -5572,7 +5531,7 @@ function dmWriteDialog(d) {
     },
   });
   state.dialogRestore = { type: "dmwrite" };
-  renderAgentTarget();syncComposerRequests();
+  renderAgentTarget();
 }
 
 // zoomReminders are the pending reminders on the everyone level.

@@ -1,4 +1,47 @@
 // Actual standalone packages; invented report projection and recorded API actions.
+// Keep every intercepted action, including reads and rejected actions. Native
+// decision assertions use their own list; a read must match the real thread view.
+function createNativeAudit() {
+ const assert=require('node:assert/strict'),events=[],calls=[],reads=[];
+ let expected=[];
+ const keys=(value,names)=>assert.deepEqual(Object.keys(value).sort(),names.sort());
+ return {events,calls,reads,
+  observeThread(view) {
+   expected=view.messages.filter(m=>m.unread||m.dir==='out').map(m=>m.id);
+   assert(expected.every(id=>/^[0-9a-f]{32}$/.test(id)));
+   assert.equal(new Set(expected).size,expected.length);
+  },
+  record(path,body) {
+   const call={path,body:structuredClone(body)};events.push(call);
+   if(path==='/api/act'&&body.do==='read') {
+    keys(body,['do','ids']);assert(Array.isArray(body.ids)&&body.ids.length>0);
+    assert.deepEqual(body.ids,expected,'Read must name exactly the eligible real thread messages');
+    const entry={call,expected:[...expected],status:null};reads.push(entry);expected=[];
+    return {kind:'read',entry};
+   }
+   const local=path==='/api/act';assert(local||path==='/api/operator/decide','Unexpected action endpoint');
+   keys(body,local?['do','id','key','attempt','body','send_id']:['host','id','key','attempt','action','expect','text','report','send_id']);
+   assert.equal(local?body.do:body.action,'continue');assert.equal(body.id,'a'.repeat(32));
+   assert.equal(body.key,'fixture-request-key');assert.equal(body.attempt,1);assert.match(body.send_id,/^[0-9a-f]{32}$/);
+   if(!local){assert.equal(body.host,'owner/native-host');assert.equal(body.expect,'running');assert.equal(body.report,'c'.repeat(32));}
+   const text=local?body.body:body.text,prefix='agentnet-native-response-v1\n';assert(text.startsWith(prefix));
+   const response=JSON.parse(text.slice(prefix.length));assert.equal(response.token,'b'.repeat(32));
+   assert(['allow','deny','cancel','submit'].includes(response.choice));
+   assert(Object.keys(response).every(k=>['token','choice','answers','values'].includes(k)));
+   calls.push(call);return {kind:'native'};
+  },
+  completeRead(entry,status) {
+   assert(reads.includes(entry));assert.equal(entry.status,null);entry.status=status;
+   assert(status>=200&&status<300,'The real demo provider must accept the read');
+  },
+  verify() {
+   assert.equal(events.length,calls.length+reads.length,'Every action must be classified');
+   assert(reads.every(r=>r.status>=200&&r.status<300),'Every read must complete successfully');
+  }
+ };
+}
+module.exports={createNativeAudit};
+if(require.main===module) {
 const fs=require('fs'),path=require('path'),http=require('http'),assert=require('assert/strict');
 const {chromium}=require(process.env.AGENTNET_PLAYWRIGHT || 'playwright');
 const main=process.env.AGENTNET_UPSTREAM;
@@ -6,13 +49,16 @@ const [target,...dirs]=process.argv.slice(2);
 if (!main || !target || !dirs.length) { console.error('Usage: AGENTNET_UPSTREAM=source node tests/native-requests.cjs DAEMON_URL SKIN_DIR...');process.exit(2); }
 const packages=new Map(dirs.map(dir=>[JSON.parse(fs.readFileSync(path.join(dir,'skin.json'))).id,path.resolve(dir)])),ids=[...packages.keys()];
 const root=process.env.AGENTNET_SCREENSHOTS;if(root)fs.mkdirSync(root,{recursive:true,mode:0o700});
-let browser,server;const calls=[],errors=[];
+let browser,server;const actionAudit=createNativeAudit(),calls=actionAudit.calls,errors=[];
 (async()=>{const url=new URL(target);
 const first=await fetch(url),cookie=first.headers.get('set-cookie')?.split(';')[0];assert(cookie);
 server=http.createServer(async(req,res)=>{try{const u=new URL(req.url,'http://fixture');
  if(u.pathname.startsWith('/transport/')){const p=u.pathname.slice('/transport'.length)+u.search;let body='';for await(const chunk of req)body+=chunk;
-  if(req.method==='POST'&&(p==='/api/operator/decide'||p==='/api/act')){calls.push({path:p,body:JSON.parse(body)});if(calls.at(-1).body.text?.includes('\"secret\"')&&calls.filter(c=>c.body.text?.includes('\"secret\"')).length%2===1){res.statusCode=503;res.end('Lost response');return;}res.setHeader('Content-Type','application/json');res.end(JSON.stringify({note:'saved'}));return;}
+  const action=req.method==='POST'&&(p==='/api/operator/decide'||p==='/api/act')?actionAudit.record(p,JSON.parse(body)):null;
+  if(action?.kind==='native'){if(calls.at(-1).body.text?.includes('\"secret\"')&&calls.filter(c=>c.body.text?.includes('\"secret\"')).length%2===1){res.statusCode=503;res.end('Lost response');return;}res.setHeader('Content-Type','application/json');res.end(JSON.stringify({note:'saved'}));return;}
   const r=await fetch(new URL(p,url),{method:req.method,headers:{Cookie:cookie,Origin:url.origin,...(body?{'Content-Type':'application/json'}:{})},body:body||undefined});let bytes=Buffer.from(await r.arrayBuffer());
+  if(p.startsWith('/api/thread?')&&r.ok)actionAudit.observeThread(JSON.parse(bytes));
+  if(action?.kind==='read')actionAudit.completeRead(action.entry,r.status);
   if(p==='/api/overview'&&r.ok){const o=JSON.parse(bytes);const mode=req.headers['x-native-fixture']||'allow';o.threads.push({id:'c'.repeat(32),peer:'owner/native-host',title:'Native request',last_at:new Date().toISOString(),count:1,notices:1});o.review=[{id:'c'.repeat(32),peer:'owner/native-host',kind:'message',why:'Native request',notice:true,at:new Date().toISOString(),report:{host:'owner/native-host',at:new Date().toISOString(),items:[{id:'a'.repeat(32),from:o.me.address,key:'fixture-request-key',kind:'question',state:'running',blocker:'running',since:new Date().toISOString(),attempt:1,actionable:false,native:{harness:'codex',host:'owner/native-host',request:'a'.repeat(32),key:'fixture-request-key',attempt:1,token:'b'.repeat(32),expires:0,choices:['allow','deny','cancel'],cwd:'/fixture',operation:'printf exact > fixture.md'}}]}}];const item=o.review[0].report.items[0],n=item.native;if(mode==='secret'){n.choices=['submit','cancel'];n.questions=[{id:'secret',question:'Private fixture answer',isSecret:true}];}if(mode==='form'){n.choices=['submit','cancel'];n.fields=[{id:'ready',type:'boolean',title:'Ready?',required:true},{id:'empty',type:'string',enum:['','value'],title:'Empty enum',required:true}];}if(mode==='local'){n.host=o.me.address;o.review[0].peer=n.host;o.review[0].report.host=n.host;o.threads.at(-1).peer=n.host;}if(mode==='expired')n.expires=Date.now()-100;bytes=Buffer.from(JSON.stringify(o));}
   res.writeHead(r.status,{'Content-Type':r.headers.get('content-type')||'application/json'});res.end(bytes);return;}
  if(u.pathname.startsWith('/pkg/')){const [, ,id,...parts]=u.pathname.split('/'),pkg=packages.get(id),name=parts.join('/'),m=JSON.parse(fs.readFileSync(path.join(pkg,'skin.json')));if(!['skin.json',...m.files].includes(name)){res.statusCode=404;res.end();return;}res.setHeader('Content-Type',name.endsWith('.css')?'text/css':name.endsWith('.json')?'application/json':name.endsWith('.mjs')?'text/javascript':'application/octet-stream');res.end(fs.readFileSync(path.join(pkg,name)));return;}
@@ -42,5 +88,6 @@ for(const mode of ['secret','form','local','expired']) {
  }else {assert.equal(await card.getByRole('button',{name:'Allow this action',exact:true}).isDisabled(),true);assert.equal(calls.length,before);}
  await page.evaluate(()=>window.unmountNative());results.push({skin:id,mode,pass:true});
 }await page.close();}
-assert.deepEqual(errors,[]);if(root)fs.writeFileSync(path.join(root,'native-result.json'),JSON.stringify({results,errors},null,2));console.log(JSON.stringify({checks:results.length,result:'PASS',scope:'actual built standalone skins, mocked native report/action; no native authority claim'}));
-})().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{if(browser)await browser.close();if(server)await new Promise(r=>server.close(r));});
+actionAudit.verify();assert.deepEqual(errors,[]);if(root)fs.writeFileSync(path.join(root,'native-result.json'),JSON.stringify({results,errors,audit:actionAudit.events,reads:actionAudit.reads},null,2));console.log(JSON.stringify({checks:results.length,actions:actionAudit.events.length,reads:actionAudit.reads.length,result:'PASS',scope:'actual built standalone skins, mocked native report/action; real validated demo reads; no native authority claim'}));
+})().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{if(root)fs.writeFileSync(path.join(root,'native-audit.json'),JSON.stringify({actions:actionAudit.events,reads:actionAudit.reads,errors},null,2));if(browser)await browser.close();if(server)await new Promise(r=>server.close(r));});
+}

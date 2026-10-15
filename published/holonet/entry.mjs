@@ -18,6 +18,7 @@ const mounted = new WeakMap();
 // title, as a verified detail); a name shared with another person, or only
 // listed by the server, shows its key's first group. The same rules as
 // Comic's model.ts and the vectors in internal/ui/testdata/device_words.json.
+const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 const deviceSpecial = { iphone: "iPhone", ipad: "iPad", imac: "iMac", mac: "Mac", macbook: "MacBook" };
 function deviceWords(address) {
   const s = String(address || ""), i = s.indexOf("/");
@@ -987,8 +988,8 @@ const plural = (n, one, many) => n + " " + (n === 1 ? one : many);
 // never added together.
 function counts(x) {
   return [
-    x.review > 0 && el("span", { class: "badge", title: "Decisions for you here" }, String(x.review),
-      el("span", { class: "sr-only" }, x.review === 1 ? " needs your decision" : " need your decision")),
+    x.review > 0 && el("span", { class: "badge", title: "Needs attention here" }, String(x.review),
+      el("span", { class: "sr-only" }, x.review === 1 ? " needs attention" : " need attention")),
     x.unread > 0 && el("span", { class: "conv-flag unread" }, x.unread + " new"),
     x.notices > 0 && el("span", { class: "conv-flag report", title: "Reports that requests wait on that machine" },
       plural(x.notices, "report", "reports")),
@@ -996,7 +997,7 @@ function counts(x) {
 }
 
 function threadFlag(t) {
-  if (t.review) return el("span", { class: "badge" }, String(t.review), el("span", { class: "sr-only" }, " needs your decision"));
+  if (t.review) return el("span", { class: "badge" }, String(t.review), el("span", { class: "sr-only" }, " needs attention"));
   if (t.key_changed) return el("span", { class: "conv-flag danger" }, "Key changed");
   if (t.running) return el("span", { class: "conv-flag calm" }, "Responder working");
   if (t.unread) return el("span", { class: "conv-flag unread" }, t.unread + " new");
@@ -2238,7 +2239,7 @@ function dmMsg(m, t, prev) {
         !m.deleted && fileChips(humanGroup(t) && (m.synced_from || m.via) ? {...m,dir:"in"} : m, m.attachments)),
       held && el("div", { class: "decide" }, el("p", { class: "decide-why" }, m.state_text)),
       m.job_detail && ((m.actions || []).includes("resolve") || m.exec?.state === "needs_human") && el("div", {class:"agent-turn", role:"region", tabindex:"-1", "aria-label":"Your agent says"},
-        el("strong", {}, "Your agent couldn’t finish — it needs your answer"), el("p", {class:"agent-detail"}, m.job_detail),
+        el("strong", {}, "Your agent couldn’t finish — it needs your attention"), el("p", {class:"agent-detail"}, m.job_detail),
         !acts.length && m.target && el("p", {class:"hint"}, "Open it on " + deviceWords(m.target.address))),
       acts.length > 0 && el("div", { class: "decide" }, el("p", { class: "decide-why" }, m.state_text),
         proposalCard(m.proposal),
@@ -2662,6 +2663,10 @@ function pickMention(i) {
   keepDraft(); closeMentions(); renderAgentTarget(); $("body").focus();
 }
 function mentionKey(e) {
+  if (e.code === "Digit2" && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && !e.isComposing && e.keyCode !== 229 &&
+      state.dm && state.dmData && !state.sending && !$("body").disabled && !$("mention-button").hidden) {
+    e.preventDefault(); showMentions(true); $("body").focus({preventScroll:true}); return;
+  }
   if (!mentionView) return;
   const n = mentionView.items.length;
   if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeMentions(); return; }
@@ -3005,12 +3010,12 @@ function renderReview(items) {
   $("review-reports").hidden = true;
   $("review-reports").textContent = plural(reports.length, "report", "reports");
   btn.dataset.n = n;
-  btn.setAttribute("aria-label", (n === 1 ? "1 item needs your decision" : n + " items need your decision") +
+  btn.setAttribute("aria-label", (n === 1 ? "1 item needs attention" : n + " items need attention") +
     (reports.length ? ", " + plural(reports.length, "report", "reports") + " from other machines" : "") + (security.length ? ", " + plural(security.length, "company settings notice", "company settings notices") : ""));
   fill($("review-list"), ...conversations.map(c => {
     const chat = (state.overview.dms || []).find(d => d.id === c.conv);
     return el("li", {}, el("button", {type:"button", onclick:()=>{ toggleReview(false); openMessage({id:c.id,conv:c.conv}); }},
-      el("strong", {}, "Your agent couldn’t finish — it needs your answer"),
+      el("strong", {}, "Your agent couldn’t finish — it needs your attention"),
       el("span", {class:"review-why"}, "In " + (chat?.title || (chat?.peer ? "your chat with " + (chat.peer.label || "this person") : "a chat")))),
       c.why && el("details", {}, el("summary", {}, "Read the agent’s whole message"), el("p", {class:"agent-detail"}, c.why)),
       c.decide_on && el("p", {class:"hint"}, "Open it on " + deviceWords(c.decide_on)));
@@ -3564,7 +3569,7 @@ function execLine(m, t) {
 // A version 2 report: what a machine said about its own requests at that
 // time. Actions appear only for items core marked actionable (this device's
 // key holds that host's operator grant); everything else is read-only.
-const blockerWord = { awaiting_acceptance: "waits for acceptance", question_not_approved: "asks from a sender not approved for automatic answers", needs_human: "needs a person's decision", running: "running", seems_stuck: "seems stuck" };
+const blockerWord = { awaiting_acceptance: "waits for acceptance", question_not_approved: "asks from a sender not approved for automatic answers", needs_human: "needs attention", running: "running", seems_stuck: "seems stuck" };
 function proposalCard(p) {
   if (!p || !p.proposal_id) return null;
   const name = (address) => deviceOwner(address)?.label || String(address || 'Someone').split('/')[0].replaceAll('-', ' ');
@@ -4369,7 +4374,8 @@ function syncComposer() {
   $("mention-button").hidden = !state.dm || dmHumanGuest() && !guestAuthor(); // a guest mentions only while joined
   $("mention-button").disabled = state.sending;
   $("mention-button").setAttribute("aria-label", "Mention a person or assistant");
-  $("mention-button").title = "Mention a person or assistant";
+  $("mention-button").title = "Mention a person or assistant (" + (mac ? "⌘2" : "Ctrl+2") + ")";
+  $("mention-button").setAttribute("aria-keyshortcuts", mac ? "Meta+2" : "Control+2");
   if (state.dm) { // a DM: messages only, to the person
     const d = state.dmData;
     const revoked = !!(state.overview && state.overview.device && state.overview.device.revoked);

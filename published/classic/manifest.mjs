@@ -2,7 +2,7 @@ export default {
   "api": 1,
   "id": "classic",
   "name": "Classic",
-  "agentnet": "v0.8.29",
+  "agentnet": "v0.8.30",
   "entry": "entry.mjs",
   "style": "style.css",
   "files": [

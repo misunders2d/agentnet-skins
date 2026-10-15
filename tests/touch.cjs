@@ -145,7 +145,13 @@ async function backToChat(){const rungs=z().locator('.ladder .rung');await rungs
   await details('Project space');await page.locator('#drive-panel').waitFor({state:'hidden'});
   await details('Project space');await rootWait(({root})=>!!root.querySelector('#drive-panel:not([hidden])')?.textContent.trim());result.checks.push('Phone Project space opens, closes and reopens from Conversation details');await details('Project space');
   const mute=async()=>{await tap(page.locator('#conversation-details'),'Conversation details');return page.locator('#dialog').getByRole('button',{name:/^(Mute|Unmute) chat$/});};
-  let m1=await mute();if(await m1.count()){const before=await m1.textContent();await tap(m1,'Mute chat (details)');await page.waitForTimeout(800);const m2=await mute();check((await m2.textContent())!==before,'Mute from Conversation details changes the chat');await m2.tap();}else await page.keyboard.press('Escape');
+  let m1=await mute();if(await m1.count()){
+   const before=await m1.textContent(),after=before==='Mute chat'?'Unmute chat':'Mute chat';await tap(m1,'Mute chat (details)');
+   const muteState=({root,label})=>[...root.querySelectorAll('#peer-chips button')].some(b=>b.textContent===label);
+   await rootWait(muteState,{label:after}); // closed dialog controls are snapshots; wait for the current chat state
+   const m2=await mute();check((await m2.textContent())===after,'Mute from Conversation details changes the chat');await m2.tap();
+   await rootWait(muteState,{label:before}); // prove the inverse restored the initial state
+  }else await page.keyboard.press('Escape');
   await shot('chat');await tap(page.locator('#back'),'Back');await page.locator('#conv-list').waitFor();
  }
  await tap(page.locator('#nav-people'),'People');await tap(page.locator('#review-btn'),'Activity');await page.locator('#review').waitFor();await shot('activity');await page.locator('#review-btn').tap();

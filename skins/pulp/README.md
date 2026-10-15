@@ -27,9 +27,11 @@ Comic's fixes whenever it is rebuilt.
 
 Rendered through the production loader with an invented company (Brightwater
 Ceramics: invented people and messages), Pulp built from this overlay on the
-AgentNet v0.8.29 candidate (commit `79eb9eed`). Desktop 1440 × 1000 and phone
+AgentNet v0.8.30 candidate (commit `2c00c135`). Desktop 1440 × 1000 and phone
 390 × 844 previews show the skin's own area; phone screenshots use Chromium
 emulation.
+
+The current v0.8.30 pin is `63302582`. These previews are retained from `2c00c135`; the final pin changes only tests and the race script, with identical product source and assets.
 
 | Desktop, day | Desktop, night |
 | --- | --- |

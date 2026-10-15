@@ -18,6 +18,7 @@ const mounted = new WeakMap();
 // title, as a verified detail); a name shared with another person, or only
 // listed by the server, shows its key's first group. The same rules as
 // Comic's model.ts and the vectors in internal/ui/testdata/device_words.json.
+const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 const deviceSpecial = { iphone: "iPhone", ipad: "iPad", imac: "iMac", mac: "Mac", macbook: "MacBook" };
 function deviceWords(address) {
   const s = String(address || ""), i = s.indexOf("/");
@@ -996,8 +997,8 @@ const plural = (n, one, many) => n + " " + (n === 1 ? one : many);
 // never added together.
 function counts(x) {
   return [
-    x.review > 0 && el("span", { class: "badge", title: "Decisions for you here" }, String(x.review),
-      el("span", { class: "sr-only" }, x.review === 1 ? " needs your decision" : " need your decision")),
+    x.review > 0 && el("span", { class: "badge", title: "Needs attention here" }, String(x.review),
+      el("span", { class: "sr-only" }, x.review === 1 ? " needs attention" : " need attention")),
     x.unread > 0 && el("span", { class: "conv-flag unread" }, x.unread + " new"),
     x.notices > 0 && el("span", { class: "conv-flag report", title: "Reports that requests wait on that machine" },
       plural(x.notices, "report", "reports")),
@@ -1005,7 +1006,7 @@ function counts(x) {
 }
 
 function threadFlag(t) {
-  if (t.review) return el("span", { class: "badge" }, String(t.review), el("span", { class: "sr-only" }, " needs your decision"));
+  if (t.review) return el("span", { class: "badge" }, String(t.review), el("span", { class: "sr-only" }, " needs attention"));
   if (t.key_changed) return el("span", { class: "conv-flag danger" }, "Key changed");
   if (t.running) return el("span", { class: "conv-flag calm" }, "Responder working");
   if (t.unread) return el("span", { class: "conv-flag unread" }, t.unread + " new");
@@ -1407,7 +1408,7 @@ async function loadTeams() {
     const [v, permissions] = await Promise.all([api("/api/teams", undefined, host), api("/api/workspace", undefined, host).catch(() => null)]);
     if (gen !== state.gen) return;
     state.teams = v; state.teamAdmin = !!permissions?.can_rename;
-    if (mentionView) showMentions();
+    if (mentionView) showMentions(mentionView.start === null);
   } catch (e) {
     if (gen !== state.gen) return;
     state.teams = { status: /404/.test(e.message) ? "unsupported" : "unavailable", current: false, reason: e.message, teams: (state.teams && state.teams.teams) || [] };
@@ -2745,6 +2746,10 @@ function pickMention(i) {
   keepDraft(); closeMentions(); renderAgentTarget(); mentionInput().focus();
 }
 function mentionKey(e) {
+  if (e.code === "Digit2" && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && !e.isComposing && e.keyCode !== 229 &&
+      state.dm && state.dmData && !state.sending && !$("body").disabled && !$("mention-button").hidden) {
+    e.preventDefault(); showMentions(true); mentionInput().focus({preventScroll:true}); return;
+  }
   if (!mentionView) return;
   const n = mentionView.items.length;
   if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeMentions(); return; }
@@ -3127,7 +3132,7 @@ function renderReview(items) {
   $("review-reports").hidden = true;
   $("review-reports").textContent = plural(reports.length, "report", "reports");
   btn.dataset.n = n;
-  btn.setAttribute("aria-label", (n === 1 ? "1 item needs your decision" : n + " items need your decision") +
+  btn.setAttribute("aria-label", (n === 1 ? "1 item needs attention" : n + " items need attention") +
     (reports.length ? ", " + plural(reports.length, "report", "reports") + " from other machines" : "") + (security.length ? ", " + plural(security.length, "company settings notice", "company settings notices") : ""));
   fill($("review-list"), ...conversations.map(c => {
     const chat = (state.overview.dms || []).find(d => d.id === c.conv);
@@ -3695,7 +3700,7 @@ function remoteStop(m) {
 // A version 2 report: what a machine said about its own requests at that
 // time. Actions appear only for items core marked actionable (this device's
 // key holds that host's operator grant); everything else is read-only.
-const blockerWord = { awaiting_acceptance: "waits for acceptance", question_not_approved: "asks from a sender not approved for automatic answers", needs_human: "needs a person's decision", running: "running", seems_stuck: "seems stuck" };
+const blockerWord = { awaiting_acceptance: "waits for acceptance", question_not_approved: "asks from a sender not approved for automatic answers", needs_human: "needs attention", running: "running", seems_stuck: "seems stuck" };
 function proposalCard(p) {
   if (!p || !p.proposal_id) return null;
   const name = (address) => deviceOwner(address)?.label || String(address || 'Someone').split('/')[0].replaceAll('-', ' ');
@@ -4134,7 +4139,7 @@ function renderAgentTarget() {
         el("button", { type: "button", class: "text-btn", disabled: state.sending, "aria-label": "Make @" + s.name + " plain text", onclick: () => { state.mentions = (state.mentions || []).filter(x => x !== s);
           if (mentionAgentPIDs(s).length) state.dmAgent = selectedAgentPIDs($("body").value,state.mentions,null)[0] || null;
           keepDraft(); renderAgentTarget(); syncComposer(); } }, "×"))),
-      el("button", { type: "button", class: "text-btn", disabled: state.sending, onclick: () => { showMentions(true); mentionInput().focus(); } }, "@ Mention"));
+      el("button", { type: "button", class: "text-btn", disabled: state.sending, title: "Mention a person or assistant (" + (mac ? "⌘2" : "Ctrl+2") + ")", "aria-keyshortcuts": mac ? "Meta+2" : "Control+2", onclick: () => { showMentions(true); mentionInput().focus(); } }, "@ Mention"));
     box.append(...selectedModelReports());
     return;
   }
@@ -4515,7 +4520,8 @@ function syncComposer() {
   $("mention-button").hidden = !state.dm || dmHumanGuest() && !guestAuthor(); // a guest mentions only while joined
   $("mention-button").disabled = state.sending;
   $("mention-button").setAttribute("aria-label", "Mention a person or assistant");
-  $("mention-button").title = "Mention a person or assistant";
+  $("mention-button").title = "Mention a person or assistant (" + (mac ? "⌘2" : "Ctrl+2") + ")";
+  $("mention-button").setAttribute("aria-keyshortcuts", mac ? "Meta+2" : "Control+2");
   if (state.dm) { // a DM: messages only, to the person
     const d = state.dmData;
     const revoked = !!(state.overview && state.overview.device && state.overview.device.revoked);

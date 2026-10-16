@@ -1,4 +1,4 @@
-import { composerFollowup, currentComposerFollowup, composerReplyFollowup, sameFollowup } from "./composer-followup.mjs";
+import { composerFollowup, currentComposerFollowup, composerReplyFollowup, currentDirectComposerFollowup, sameFollowup } from "./composer-followup.mjs";
 import { nativeRequestItem } from "./native-request.mjs";
 import { reactionChoices, recordReaction, humanReactionOrder } from "./reaction-preferences.mjs";
 import {collectiveOptions, parseCollective, collectiveHref} from './collective-mentions.mjs';
@@ -90,7 +90,7 @@ function flatTopicScope(t) {
 }
 async function choosePersonTopic(conv,topic) {
  state.messageOpening=null;
- topicSelections[conv]=topic||'';topicFresh[conv]=false;
+ topicSelections[conv]=topic||'';topicFresh[conv]=false;if(conv===state.dm)selectReadTopic();
  if(conv===state.dm){setDMReply(null);renderDMBody(false);markDMRead();}else await openDM(conv);
 }
 function openPersonMain(p,dms) {
@@ -103,6 +103,68 @@ const state = { thread: null, data: null, seq: -1, answering: null, lastSeen: {}
   dm: null, dmData: null, dmReply: null, dmAgent: null, seenReported: {}, pendingOpen: null, clickedAtStart: null,
   files: [], opened: [], downloads: {}, contactView: "recent", contactLimit: 20,
   version: "", updating: false, newVersion: "", dialogRestore: null, dialogBusy: false, gen: 0, switching: null, capturedFor: null };
+
+
+// Personal attention shares the existing open-topic read bookkeeping. Only
+// explicit navigation arms generations; refreshes never create another visit.
+function attentionKey(m){return m.attention?JSON.stringify([m.id,m.attention.rev,m.attention.writer]):m.id;}
+function attentionRows(t,kind,rows=t?.messages||[]){
+ if(!t)return [];
+ const topic=topicFresh[t.id]?'':topicSelections[t.id]||'';
+ return rows.filter(m=>!m._local&&!m.hidden&&!m.deleted&&!m.sub&&!m.event&&!m.topic_event&&['message','question','task','answer','result'].includes(m.kind)&&!(m.kind==='message'&&m.status==='review_notice'&&!m.reply_to&&!(m.attachments||[]).length)&&(kind!=='dm'||(m.topic||'')===topic));
+}
+function leaveReadVisit(){state.readVisit=null;}
+function enterReadVisit(kind,id,explicit=true){
+ if(!id){leaveReadVisit();return null;}
+ if(kind==='thread'&&state.data?.messages?.some(m=>m.id===id))id=state.data.id||id;
+ const topic=kind==='dm'?(topicFresh[id]?'':topicSelections[id]||''):'',scope=JSON.stringify([kind,id,topic]);
+ const old=state.readVisit;
+ if(old?.host===currentHost&&old.scope===scope)return old;
+ const same=old?.host===currentHost&&old.kind===kind&&old.id===id;
+ const pending=same&&(old.entering||old.loading>0);
+ const view=same&&kind==='dm'&&old.fresh===state.dmData?state.dmData:null;
+ const read=pending?old:{kind,id,host:currentHost,loading:0};
+ Object.assign(read,{scope,topic,entry:new Map(),pending:new Set(),done:new Set(),entering:explicit,fresh:view});
+ state.readVisit=read;
+ // A local topic transition can reuse the already committed full fresh view.
+ // While its first GET is pending, keep that entry object for the same GET.
+ if(explicit&&view&&!pending){read.entry=new Map(attentionRows(view,kind).filter(m=>m.attention).map(m=>[m.id,attentionKey(m)]));read.entering=false;}
+ return read;
+}
+function commitReadView(read,t,kind,fresh){
+ if(!read||state.readVisit!==read||read.host!==currentHost||read.kind!==kind||!fresh||kind==='dm'&&read.id!==t.id)return;
+ if(kind==='thread'){read.id=t.id;read.scope=JSON.stringify([kind,t.id,'']);}
+ read.fresh=t;
+ if(read.entering){read.entry=new Map(attentionRows(t,kind).filter(m=>m.attention).map(m=>[m.id,attentionKey(m)]));read.entering=false;}
+}
+async function markPersonalRead(t,kind){
+ const read=state.readVisit,host=currentHost;
+ if(!alive||!read||read.host!==host||read.kind!==kind||!t||read.id!==t.id)return;
+ const scope=read.scope,pending=read.pending,done=read.done;
+ const rows=attentionRows(t,kind).filter(m=>{
+  const key=attentionKey(m);
+  return !pending.has(key)&&!done.has(key)&&(m.attention?read.entry.get(m.id)===key:m.unread||kind==='thread'&&m.dir==='out');
+ });
+ if(!rows.length)return;
+ const ids=[...new Set(rows.map(m=>m.id))],attention=Object.fromEntries(rows.filter(m=>m.attention).map(m=>[m.id,{rev:m.attention.rev,writer:m.attention.writer}]));
+ rows.forEach(m=>pending.add(attentionKey(m)));
+ try{
+  await api('/api/act',{do:'read',ids,...(Object.keys(attention).length?{attention}:{})},host);
+  if(alive&&state.readVisit===read&&read.scope===scope&&host===currentHost){rows.forEach(m=>{done.add(attentionKey(m));done.add(m.id);});if(kind==='dm')void refetch(false);}
+ }catch{}finally{rows.forEach(m=>pending.delete(attentionKey(m)));}
+}
+function canMarkPersonal(m,conv){
+ const kind=conv?'dm':'thread',view=conv?state.dmData:state.data;
+ return !!view&&!view.read_only&&!view.readOnly&&!(kind==='dm'&&dmVisitor(view))&&(conv?state.dm===conv&&view.id===conv:!state.dm)&&attentionRows(view,kind,[m]).length>0;
+}
+async function markPersonalUnread(m,conv,fromHere){
+ if(!canMarkPersonal(m,conv))return;
+ const host=currentHost,kind=conv?'dm':'thread',view=conv?state.dmData:state.data,rows=attentionRows(view,kind),index=rows.findIndex(row=>row.id===m.id);
+ if(index<0)return;
+ const ids=[...new Set((fromHere?rows.slice(index):[rows[index]]).map(row=>row.id))];
+ try{await api('/api/act',{do:'unread',id:m.id,ids},host);if(alive&&host===currentHost)void refetch(false);}catch(e){announce(e.message);}
+}
+function selectReadTopic(){if(state.dm)return enterReadVisit('dm',state.dm,true);}
 
 
 // A send may finish after this root was unmounted. Workspace renderer state
@@ -153,7 +215,7 @@ function el(tag, attrs, ...kids) {
 
 // Every operation keeps the host it started with.
 async function api(path, body, host = currentHost) { return host.api(path, body); }
-const topicUI=topicControls(root,{api,isFresh:()=>!!topicFresh[state.dm||state.thread],chooseRoot:choosePersonTopic,announce:text=>announce(text),choose:id=>{state.messageOpening=null;if(state.dm){topicSelections[state.dm]=id;topicFresh[state.dm]=false;setDMReply(null);renderDMBody(false);markDMRead();if(Zoom.level===3)void Zoom.go(2,{});}else if(id!==state.thread)void openThread(id);},fresh:()=>{state.messageOpening=null;const id=state.dm||state.thread;topicFresh[id]=true;if(state.dm){topicSelections[id]='';renderDMBody(false);markDMRead();}announce('New topic: your next message starts a separate flow.');topicUI.repaint();syncComposer();if(state.dm)dmWriteDialog(state.dmData);else writeDialog(state.data,null);},changed:async()=>{await loadOverview();state.dm?await loadDM(false):await loadThread(false);}});
+const topicUI=topicControls(root,{api,isFresh:()=>!!topicFresh[state.dm||state.thread],chooseRoot:choosePersonTopic,announce:text=>announce(text),choose:id=>{state.messageOpening=null;if(state.dm){topicSelections[state.dm]=id;topicFresh[state.dm]=false;selectReadTopic();setDMReply(null);renderDMBody(false);markDMRead();if(Zoom.level===3)void Zoom.go(2,{});}else if(id!==state.thread)void openThread(id);},fresh:()=>{state.messageOpening=null;const id=state.dm||state.thread;topicFresh[id]=true;if(state.dm){topicSelections[id]='';selectReadTopic();renderDMBody(false);markDMRead();}announce('New topic: your next message starts a separate flow.');topicUI.repaint();syncComposer();if(state.dm)dmWriteDialog(state.dmData);else writeDialog(state.data,null);},changed:async()=>{await loadOverview();state.dm?await loadDM(false):await loadThread(false);}});
 cleanups.push(()=>topicUI.stop());
 
 // A time is an RFC 3339 string, or unix seconds (a host's report and its
@@ -709,6 +771,7 @@ function reportSeen() {
 // showList shows the conversation list, in every lens (a summary alert,
 // or one whose conversation is not here).
 function showList(why) {
+  leaveReadVisit();
   state.messageOpening = null;
   closeMentions();
   clearTyping();
@@ -767,8 +830,8 @@ async function openLinkTarget(id, kind, context) {
   state.overview=overview;
   if(kind==='topic') {
     topicSelections[id]=context.topic==='main'?'':context.topic;topicFresh[id]=false;
-    await openDM(id,view);
-  } else await openThread(id,undefined,view);
+    await openDM(id,view,true,true);
+  } else await openThread(id,undefined,view,true,true);
 }
 function linkButtons() {
   const host=currentHost,t=state.dmData,thread=state.data;
@@ -2006,7 +2069,8 @@ function newDMDialog(p) {
 
 // ---- a DM ---------------------------------------------------------------------------
 
-function beginDM(id) {
+function beginDM(id, readEntry = true) {
+  enterReadVisit("dm",id,readEntry);
   // A pending jump to a message survives only the open it started itself:
   // opening the conversation again (by hand) cancels it, so the view never
   // moves to another topic later, under what the person is doing.
@@ -2114,19 +2178,21 @@ function saveToDrive(m, idx, name) {
     } });
 }
 
-async function openDM(id, localView) { await Zoom.go(2, {dm: id}, undefined, localView); }
+async function openDM(id, localView, readEntry = true, freshEntryView = false) { await Zoom.go(2, {dm: id}, undefined, localView, readEntry, freshEntryView); }
 
-async function loadDM(scrollToEnd, localView) {
+async function loadDM(scrollToEnd, localView, freshEntryView = false) {
   const id = state.dm, gen = state.gen, focusOpening = state.messageOpening;
   if (!id) return;
+  const visit=state.readVisit;if(visit)visit.loading++;
   let t=localView;
   try {
     if(!t)t = await api("/api/dm?id=" + encodeURIComponent(id));
   } catch (e) {
+    if(visit)visit.loading--;
     announce(e.message);
     return;
   }
-  if (!alive || state.dm !== id || gen !== state.gen || (focusOpening && state.messageOpening !== focusOpening)) return; // another conversation or workspace was opened meanwhile
+  if (state.readVisit!==visit || !alive || state.dm !== id || gen !== state.gen || (focusOpening && state.messageOpening !== focusOpening)) {if(visit)visit.loading--;return;} // another conversation or workspace was opened meanwhile
   // A participation record is shown as the sentence it stands for, in every view.
   t.messages = t.messages.map((m) => (m.excerpt_pid ? Object.assign({}, m, { actions: [], can: [] })
     : m.event ? Object.assign({}, m, { body: m.event }) : m));
@@ -2166,22 +2232,17 @@ async function loadDM(scrollToEnd, localView) {
   state.draftKey = key;
   syncComposer();
   if (arrivedFocus) flash(arrivedFocus);
+  commitReadView(visit,t,"dm",!localView||freshEntryView);
+  if(visit)visit.loading--;
   markDMRead();
   await refreshTyping();
 }
 
 // Only the topic displayed by this skin is read; other fetched topics stay unread.
-const readingDM = new Set();
 function markDMRead() {
-  const t = state.dmData, id = state.dm, gen = state.gen, host = currentHost;
+  const t=state.dmData,id=state.dm;
   if (!alive || !t || t.id !== id || state.messageOpening?.conv === id || Zoom.level < 2 || Zoom.dm !== id || !!Zoom.query.trim()) return;
-  const ids = t.messages.filter(m => m.unread && (m.topic || "") === (topicSelections[id] || "") && !readingDM.has(gen + ":" + m.id)).map(m => m.id);
-  if (!ids.length) return;
-  const keys = ids.map(id => gen + ":" + id);
-  keys.forEach(key => readingDM.add(key));
-  void api("/api/act", { do: "read", ids }, host).then(() => {
-    if (alive && host === currentHost && gen === state.gen && state.dm === id) void refetch(false);
-  }).catch(() => {}).finally(() => keys.forEach(key => readingDM.delete(key)));
+  return markPersonalRead(t,"dm");
 }
 
 // Zoom owns its own conversation presentation.
@@ -3143,7 +3204,7 @@ function guestInvitationRow(c) {
       const guest = (t.guests || []).find(g => g.pid === c.pid && g.host_here && g.can_decide && g.state === "invited");
       if (!guest) throw Error("This invitation no longer needs your decision.");
       toggleReview(false);
-      await openDM(c.conv, t);
+      await openDM(c.conv,t,true,true);
       if (!alive || host !== currentHost || workspace !== wsNow() || state.dm !== c.conv || state.dmData !== t) return;
       guestActionDialog(guest, t, action);
     } catch (e) { if (host === currentHost && workspace === wsNow()) announce(e.message); }
@@ -3376,7 +3437,8 @@ function renderQuarantine(items) {
 // The composer's draft stays with the conversation it was written in, and
 // nothing can be sent until the new one has loaded. It reports whether the
 // conversation changed.
-function beginThread(id) {
+function beginThread(id, readEntry = true) {
+  enterReadVisit("thread",id,readEntry);
   state.messageOpening = null;
   closeMentions();
   const changed = !!state.dm || !state.data || !state.data.messages.some((m) => m.id === id);
@@ -3408,7 +3470,7 @@ function beginThread(id) {
   return changed;
 }
 
-async function openThread(id, focusId, localView) { await Zoom.go(2, {thread: id}, undefined, localView); if (focusId) await Zoom.go(3, {msg: focusId}); }
+async function openThread(id, focusId, localView, readEntry = true, freshEntryView = false) { await Zoom.go(2, {thread: id}, undefined, localView, readEntry, freshEntryView); if (focusId) await Zoom.go(3, {msg: focusId}); }
 
 function flash(id) { void Zoom.go(3, {msg: id}); }
 
@@ -3424,19 +3486,21 @@ async function refreshThread() {
   } catch (e) { /* presence stays unknown */ }
 }
 
-async function loadThread(scrollToEnd, localView) {
+async function loadThread(scrollToEnd, localView, freshEntryView = false) {
   const id = state.thread, gen = state.gen, host = currentHost;
-  const current = () => alive && host === currentHost && gen === state.gen && state.thread === id && !state.dm;
+  const visit=state.readVisit;
+  const current = () => state.readVisit===visit&& alive && host === currentHost && gen === state.gen && state.thread === id && !state.dm;
   if (!id || !current()) return;
-  let read = state.threadRead;
-  if (!read || read.id !== id || read.gen !== gen || read.host !== host) read = state.threadRead = { id, gen, host, pending: new Set(), done: new Set() };
+  if(visit)visit.loading++;
   let t=localView;
   try {
     if(!t)t = await api("/api/thread?id=" + encodeURIComponent(id), undefined, host);
   } catch (e) {
+    if(visit)visit.loading--;
     if (current()) announce(e.message);
     return;
   }
+  if(visit)visit.loading--;
   if (!current()) return; // another thread or workspace was opened meanwhile
   state.data = t;
   fill($("conv-name"), who(t.peer));
@@ -3457,13 +3521,8 @@ async function loadThread(scrollToEnd, localView) {
   state.draftKey = key;
   if (state.deviceAgentID && !state.targetCatalog) loadTargetCatalog();
   syncComposer();
-  const ids = t.messages.filter(m => (m.unread || m.dir === "out") && !read.pending.has(m.id) && !read.done.has(m.id)).map(m => m.id);
-  if (ids.length) {
-    ids.forEach(id => read.pending.add(id));
-    void api("/api/act", { do: "read", ids }, host).then(() => {
-      ids.forEach(id => read.done.add(id));
-    }).catch(() => {}).finally(() => ids.forEach(id => read.pending.delete(id)));
-  }
+  commitReadView(visit,t,"thread",!localView||freshEntryView);
+  void markPersonalRead(t,"thread");
   await refreshTyping();
 }
 
@@ -3602,6 +3661,7 @@ function reactPicker(m, conv) {
 function messageMenu(m, conv, bubble) {
   if (m.deleted) return null;
   const items = [];
+  if(canMarkPersonal(m,conv))for(const [label,fromHere] of [["Mark unread",false],["Mark unread from here",true]])items.push(el("button",{type:"button",onclick:e=>{e.currentTarget.closest("details").open=false;void markPersonalUnread(m,conv,fromHere);}},label));
   if (canDo(m, "edit")) items.push(el("button", { type: "button", onclick: (e) => { e.currentTarget.closest("details").open = false; editInPlace(m, conv, bubble); } }, "Edit"));
   if (canDo(m, "delete")) items.push(el("button", { type: "button", onclick: (e) => { e.currentTarget.closest("details").open = false; deleteDialog(m, conv); } }, "Delete…"));
   if(conv&&!m.topic&&!m.topic_event&&state.dmData&&!state.dmData.frozen&&!dmVisitor(state.dmData)&&!m.excerpt_pid)items.push(el("button",{type:"button",onclick:async()=>{try{await api("/api/topic/create",{conv,peer:"",id:m.lid||m.id});topicSelections[conv]=m.lid||m.id;await loadDM(false);await Zoom.go(2,{});}catch(e){announce(e.message);}}},"Make a topic"));
@@ -3850,14 +3910,15 @@ function resumeMessageFocus(t) {
   state.messageOpening = null;
   topicSelections[t.id] = message.topic || "";
   topicFresh[t.id] = false;
+  selectReadTopic();
   return pending.chat ? "" : message.id; // a list row stays in the chat: no message level
 }
 // chat: open the conversation at that message's topic and stay on the chat
 // level (a list row), instead of zooming to the message (a notification).
-async function openDMMessage(conv, ref, chat = false) {
+async function openDMMessage(conv, ref, chat = false, readEntry = true) {
   const pending = {conv, ref, waiting:false, own:true, chat}; state.messageOpening = pending;
   try {
-    const opening = openDM(conv), gen = state.gen, host = currentHost;
+    const opening = openDM(conv,undefined,readEntry), gen = state.gen, host = currentHost;
     const selected = topicSelections[conv]; const generation = Zoom.generation;
     await opening;
     if (!alive || state.messageOpening !== pending || host !== currentHost || gen !== state.gen || state.dm !== conv || topicSelections[conv] !== selected || generation !== Zoom.generation) return;
@@ -3865,6 +3926,7 @@ async function openDMMessage(conv, ref, chat = false) {
     if (!message) { pending.waiting = true; announce("That message is not on this device yet. It will open when its history arrives."); return; }
     topicSelections[conv] = message.topic || "";
     topicFresh[conv] = false;
+    selectReadTopic();
     if (chat) Zoom.revealEnd = true;
     renderDMBody(false);
     if (!chat) flash(message.id);
@@ -4640,22 +4702,32 @@ async function send(ev, retry) {
   const agentID = retry ? draft.agent_id || "" : !answering && draft.kind !== "message" ? state.deviceAgentID || "" : "";
   if (agentID) draft.agent_id = agentID;
   if (!retry && agentID && deviceAgentMissing()) { $("compose-error").textContent = "Selected agent unavailable. Refresh agents or choose the device default; your draft stays here."; return; }
+  let followup=retry?.followup;
+  if(!retry&&!answering&&!newTopic&&draft.kind!=="message"){
+    try{followup=currentDirectComposerFollowup(t,agentID,state.overview?.me);}catch(e){$("compose-error").textContent=e.message;return;}
+  }
+  if(followup)draft.kind=followup.kind;
   const elsewhere = retry ? "" : boundElsewhere();
   if (elsewhere) { $("compose-error").textContent = elsewhere; return; }
   if (!retry && answering && state.files.length) { $("compose-error").textContent = noFilesWhy(); return; }
   if (!retry && files.length && overLimit(files)) { $("compose-error").textContent = overLimit(files); return; }
   // The membership this send is for: its host carries it, and only its own
   // drafts are touched when it is done, wherever the person is by then.
-  const host = currentHost, ws = wsNow(), receiverSelection = retry ? retry.receiverSelection : state.replyReceiver && { ...state.replyReceiver }, nativeReceiver = retry ? retry.nativeReceiver : !!state.overview?.reply_receivers, nativeSessions = retry ? retry.nativeSessions : !!state.overview?.reply_sessions, receiverContext = retry ? retry.receiverContext : receiverCapture();
+  const host = retry?.host || currentHost, ws = retry?.ws || wsNow(), me=retry?.me || state.overview?.me, receiverSelection = retry ? retry.receiverSelection : state.replyReceiver && { ...state.replyReceiver }, nativeReceiver = retry ? retry.nativeReceiver : !!state.overview?.reply_receivers, nativeSessions = retry ? retry.nativeSessions : !!state.overview?.reply_sessions, receiverContext = retry ? retry.receiverContext : receiverCapture();
   if (typingUI) typingUI.stop();
   if (!retry && newTopic) topicFresh[t.id] = false;
-  startSend(key, text, files, null, answering, t, answering ? "answer" : draft.kind, () => { sends.remove(id); void send(null, {id,key,text,files,answering,t,newTopic,topicRoot,mentions,draft,receiverSelection,nativeReceiver,nativeSessions,receiverContext}); }, id, "", topicRoot);
+  startSend(key, text, files, null, answering, t, answering ? "answer" : draft.kind, () => { sends.remove(id); void send(null, {id,key,text,files,answering,t,newTopic,topicRoot,mentions,draft,receiverSelection,nativeReceiver,nativeSessions,receiverContext,followup,host,ws,me}); }, id, "", topicRoot);
   if (alive) { syncComposer(); $("compose-error").textContent = ""; }
   try {
     await sends.ready(id);
     let r;
     if (answering) {
       await act({ do: "reply", id: answering.id, send_id: id, body: text }, host);
+    } else if(followup) {
+      const ids=await preparedFiles(files,host);
+      try{const result=await api("/api/request/followup",{id,conv:"",ref:followup.ref,attempt:followup.attempt,body:text,files:ids},host);r={id,state:"queued",detail:result.note};}finally{sentStaged(files);}
+      if(topicRoot)sends.move(id,topicRoot);
+      announce(r.detail);
     } else {
       if (agentID) {
         const agents = await readAgentCatalog(t.peer, host);
@@ -4676,7 +4748,7 @@ async function send(ev, retry) {
     files.forEach(f => f.url && URL.revokeObjectURL(f.url));
     if (alive && wsNow() === ws) void loadThread();
   } catch (e) {
-    failSend(id,key,ws,text,files,null,answering,e.message,mentions);
+    failSend(id,key,ws,text,files,null,answering,e.message,mentions,null,followup);
   } finally {
     if (alive && wsNow() === ws) { state.sending = false; syncComposer(); if (state.newVersion) updated(state.newVersion); }
     else { state.sending = false; sentElsewhere(ws); }
@@ -4913,8 +4985,8 @@ async function restoreAfterReload() {
   for (const [k, d] of Object.entries(keep.drafts || {})) {
     state.drafts[k] = { text: d.text, kind: d.kind, answering: d.answering ? { id: d.answering } : null, reply: d.reply ? { id: d.reply } : null, mentions: d.mentions || [], reply_receiver: d.reply_receiver || null };
   }
-  if (keep.thread) await openThread(keep.thread);
-  else if (keep.dm) await openDM(keep.dm);
+  if (keep.thread) await openThread(keep.thread,undefined,undefined,false);
+  else if (keep.dm) await openDM(keep.dm,undefined,false);
   const r = keep.dialog;
   if (r) {
     const m = r.msg && state.data ? state.data.messages.find((x) => x.id === r.msg) : null;
@@ -4967,6 +5039,7 @@ function announceChanges(o, first) {
 // Main navigation belongs to this skin. Identity and every action still come
 // from the same provider on both platforms.
 function selectSection(section) {
+  leaveReadVisit();
   keepDraft();
   if (section === "people") loadTeams();
   state.contactView = section === "people" ? "people" : "recent";
@@ -5498,7 +5571,7 @@ function start() {
     const saved = wsAPI()?.state(wsNow())[skinKey];
     if (saved) {
       for (const k of viewKeys) if (saved[k] !== undefined) state[k] = saved[k];
-      if (saved.thread) await openThread(saved.thread); else if (saved.dm) await openDM(saved.dm);
+      if (saved.thread) await openThread(saved.thread,undefined,undefined,false); else if (saved.dm) await openDM(saved.dm,undefined,false);
       if (saved.zoom) { Object.assign(Zoom, saved.zoom); Zoom.refresh(); }
       return;
     }
@@ -5758,7 +5831,7 @@ const Zoom = {
       content);
   },
 
-  async go(level, patch, from, localView) {
+  async go(level, patch, from, localView, readEntry = true, freshEntryView = false) {
     if (level < 2) state.messageOpening = null;
     if(level===1&&!patch.dm&&!patch.thread&&!patch.peer&&(patch.person||this.person)&&!(humanGroup()&&!patch.person)) {
      const key=patch.person||this.person,p=(state.overview?.people||[]).find(p=>personKey(p)===key);
@@ -5766,6 +5839,7 @@ const Zoom = {
      const main=p&&choosePersonMain(roots,p.person);
      if(main){if(patch.person){topicSelections[main]='';topicFresh[main]=false;patch={...patch,dm:main};level=2;}else level=0;}
     }
+    if(level<2)leaveReadVisit();
     this.finish?.();
     const generation = ++this.generation, host = currentHost;
     this.navigating = generation;
@@ -5776,17 +5850,17 @@ const Zoom = {
     const { thread, dm, ...rest } = patch;
     Object.assign(this, {team:null}, rest, { level });
     if (thread) {
-      const changed = beginThread(thread); // the same switch as the other views: drafts stay put
+      const changed = beginThread(thread,readEntry); // the same switch as the other views: drafts stay put
       this.person = null;
-      await loadThread(true,localView);
+      await loadThread(true,localView,freshEntryView);
       this.peer = state.data?.peer || this.peer;
       if (changed&&!localView) refreshThread();
     }
     if (dm) {
-      const changed = beginDM(dm);
+      const changed = beginDM(dm,readEntry);
       this.dm = dm;
       this.peer = null;
-      await loadDM(true,localView);
+      await loadDM(true,localView,freshEntryView);
       if (state.dmData) this.person = personKey(state.dmData.peer); // a listed person is known by its id once checked
       if (changed&&!localView) api("/api/refresh", { id: dm }).catch(() => {});
     }

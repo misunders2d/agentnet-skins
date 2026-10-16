@@ -27,7 +27,7 @@ export function topicControls(root, {api, choose, fresh, changed, announce, isFr
   const render=()=>{
    filters.replaceChildren(...['active','done','archived'].map(f=>{const b=button(f[0].toUpperCase()+f.slice(1),()=>{filter=f;void load();});b.setAttribute('aria-pressed',String(f===filter));return b;}));
    rows.replaceChildren(...items.map(t=>{const row=node('div','',{className:'topic-row'}),check=node('input','',{type:'checkbox',checked:selected.has(t.id),disabled:busy||confirming});check.setAttribute('aria-label','Select '+(t.title||'Untitled topic'));check.onchange=()=>{counts.set(t.id,t.count);check.checked?selected.add(t.id):selected.delete(t.id);renderActions();};const go=button((t.title||'Untitled topic')+' · '+t.state,()=>{finish();void select(t.id);});row.append(check,go,node('small',t.last||''));return row;}));
-   if(next)rows.append(button('Show more',()=>void load(true)));if(!items.length)rows.append(node('p','No '+filter+' topics.',{className:'hint'}));renderActions();
+   if(next)rows.append(button('Show more',()=>void load(true)));if(!items.length)rows.append(node('p',search.value.trim()?'No topics match this search.':'No '+filter+' topics.',{className:'hint'}));renderActions();
   };
   const renderActions=()=>{if(confirming)return;actions.replaceChildren();if(!selected.size)return;actions.append(node('span',selected.size+' selected'));for(const [what,label]of [['delete','Delete for me'],['done','Mark done'],['archive','Archive']]){const b=button(label,()=>confirm(what,label));b.disabled=busy;actions.append(b);}};
   const confirm=(what,label)=>{
@@ -38,7 +38,8 @@ export function topicControls(root, {api, choose, fresh, changed, announce, isFr
     timer=setTimeout(async()=>{timer=null;busy=true;status.textContent='Applying…';actions.replaceChildren();try{const r=await request(what,ids,covered);if(dead||all!==popup)return;selected.clear();announce(r.note);await changed();status.textContent=r.note;confirming=false;await load();}catch(e){if(all===popup){status.textContent=e.message;confirming=false;}}finally{busy=false;if(all===popup)render();}},TOPIC_UI.undoDelay);
    }));
   };
-  const load=async(more=false)=>{status.textContent='Loading…';try{const q=new URLSearchParams({...scope,state:filter,q:search.value,limit:String(TOPIC_UI.pageSize),...(more?{before:next}:{})});const p=await api('/api/topics?'+q);if(dead||seq!==version||all!==popup)return;items=more?[...items,...p.topics]:p.topics;next=p.next||'';status.textContent='';render();}catch(e){if(all===popup)status.textContent=e.message;}};
+  let loading=0;
+  const load=async(more=false)=>{const ask=++loading;status.textContent='Loading…';try{const query=search.value.trim(),state=query?'':filter,q=new URLSearchParams({...scope,state,q:query,limit:String(TOPIC_UI.pageSize),...(more?{before:next}:{})});const p=await api('/api/topics?'+q);if(dead||seq!==version||all!==popup||ask!==loading)return;items=more?[...items,...p.topics]:p.topics;next=p.next||'';status.textContent=query?'Search results across Active, Done and Archived.':'';render();}catch(e){if(all===popup&&ask===loading)status.textContent=e.message;}};
   search.oninput=()=>void load();popup.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();finish();}if(e.key==='Tab'){const focus=[...popup.querySelectorAll('button,input')].filter(n=>!n.disabled),i=focus.indexOf(root.getRootNode().activeElement);if(e.shiftKey&&i===0){e.preventDefault();focus.at(-1)?.focus();}else if(!e.shiftKey&&i===focus.length-1){e.preventDefault();focus[0]?.focus();}}});
   popup.cleanup=()=>{for(const n of siblings)n.inert=false;bar.inert=false;};
   popup.querySelector('button').focus();await load();

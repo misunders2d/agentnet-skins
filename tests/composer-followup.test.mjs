@@ -42,3 +42,23 @@ for(const skin of ['classic','zoom','holonet']){
  console.log(JSON.stringify({skin,identicalPureModule:true,negativeVectors:cases.length,nonRunningStates:5,naturalCurrent:true,replyAncestry:true,deduplicatedRoots:true,authorKeyPrecedence:true,exactCapturedTuple:true}));
 }
 });
+
+test('direct corrections bind default/named current work and linked original author',async()=>{
+ for(const skin of ['classic','holonet','zoom']){
+  const {currentDirectComposerFollowup:current,sameFollowup}=await import('../skins/'+skin+'/src/composer-followup.mjs');
+  assert.equal(typeof current,'function','direct selector is missing in '+skin);
+  for(const selected of ['',agent_id]){
+   const host='briar/host',fp='22222222-22222222-22222222-22222222',author='33333333-33333333-33333333-33333333';
+   const request={id:'8'.repeat(32),dir:'out',kind:'task',from:'atlas/linked',from_key:author,to:host,author:{agent:false},exec:{state:'running',host,attempt:7,stale:false},...(selected?{target:{address:host,fingerprint:fp,agent_id:selected}}:{})};
+   const thread={id:request.id,peer:host,key:{pinned:fp,pending:false},messages:[request]};
+   const captured=current(thread,selected,me);assert(captured);assert.equal(captured.ref.id,request.id);assert.equal(captured.ref.fingerprint,author);assert.equal(captured.attempt,7);assert.equal(captured.kind,'task');assert.equal(sameFollowup(captured,structuredClone(captured)),true);
+   for(const [label,change]of [['pending',t=>t.key.pending=fp],['missing pin',t=>delete t.key.pinned],['stale',t=>t.messages[0].exec.stale=true],['missing attempt',t=>delete t.messages[0].exec.attempt],['zero attempt',t=>t.messages[0].exec.attempt=0],['wrong host',t=>t.messages[0].exec.host='other/host'],['wrong selected agent',t=>t.messages[0].target={address:host,fingerprint:fp,agent_id:'9'.repeat(32)}],['wrong target key',t=>t.messages[0].target={address:host,fingerprint:me.fingerprint,agent_id:selected}],['deleted',t=>t.messages[0].deleted=true]]){
+    const t=structuredClone(thread);change(t);assert.throws(()=>current(t,selected,me),/cannot be verified/,skin+' '+label);
+   }
+   for(const state of ['completed','queued','pending']){const t=structuredClone(thread);t.messages[0].exec.state=state;assert.equal(current(t,selected,me),undefined);}
+   const multiple=structuredClone(thread);multiple.messages.push({...request,id:'7'.repeat(32)},{id:'6'.repeat(32),dir:'in',kind:'answer',reply_to:'7'.repeat(32)});
+   assert.throws(()=>current(multiple,selected,me),/multiple running requests/);assert.equal(current(multiple,selected,me,'6'.repeat(32)).ref.id,'7'.repeat(32));
+   assert.equal(current({...thread,messages:[{...request,author:{agent:true}}]},selected,me),undefined);
+  }
+ }
+});

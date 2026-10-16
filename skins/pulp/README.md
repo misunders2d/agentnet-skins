@@ -27,11 +27,11 @@ Comic's fixes whenever it is rebuilt.
 
 Rendered through the production loader with an invented company (Brightwater
 Ceramics: invented people and messages), Pulp built from this overlay on the
-AgentNet v0.8.31 (commit `2870abd8`). Desktop 1440 × 1000 and phone
+AgentNet v0.8.32 (commit `3ba44749`). Desktop 1440 × 1000 and phone
 390 × 844 previews show the skin's own area; phone screenshots use Chromium
 emulation.
 
-The tested pin is AgentNet v0.8.31 at `1894c6cd`. These previews were rendered on AgentNet v0.8.31 at `2870abd8`; the tested pin differs only in race partitioning and retains identical UI source. The complete collection gate passed against this exact pin on October 16, 2026 (466.185 seconds, all applicable suites; explicit N/A motion and overlay-world cases retained) for gallery release v2026.10.16.1.
+The release candidate pin is AgentNet v0.8.32 at `ac98b331`. These inspected previews were rendered on `3ba44749`, whose production, generated and runtime source bytes are identical to this candidate. The full collection gate passed against this exact candidate. Proposed gallery release `v2026.10.16.2` is not published.
 
 | Desktop, day | Desktop, night |
 | --- | --- |

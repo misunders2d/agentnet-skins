@@ -37,3 +37,24 @@ export function currentComposerFollowup(dm,pid,topic,me,replyTo){
  const bound=composerReplyFollowup(dm,pid,topic,me,replyTo);if(bound)return bound;
  throw Error('This agent has '+rows.length+' distinct running requests in this chat/topic, and this message has no exact reply binding. Nothing was sent; your draft is kept.');
 }
+
+// Direct topics bind immutable request IDs and the current host pin. Resolve
+// only at send time; a last-message/newest-running guess never chooses work.
+export function currentDirectComposerFollowup(thread,selected,me,replyTo){
+ if(!thread)return;
+ const rows=new Map();
+ for(const m of thread.messages||[]){
+  if(m.exec?.state!=='running'||m.dir!=='out'||!['question','task'].includes(m.kind)||m._local||m.author?.agent||m.verified_agent||m.origin?.startsWith('agent:'))continue;
+  const fingerprint=m.from_key||(m.from===me?.address?me.fingerprint:'');
+  if(!id.test(m.id)||!key.test(fingerprint||''))continue;
+  const attempt=m.exec.attempt;
+  if(m.deleted||thread.key?.pending||!thread.key?.pinned||m.to!==thread.peer||m.exec.host!==thread.peer||m.exec.stale||!Number.isSafeInteger(attempt)||attempt<1||(m.target?.agent_id||'')!==selected||m.target&&(m.target.address!==thread.peer||m.target.fingerprint!==thread.key.pinned))throw Error('Running work is reported, but its current attempt or identity cannot be verified. Nothing was sent; your draft is kept.');
+  const bound={ref:{id:m.id,fingerprint},kind:m.kind,source:m.id,pid:'',topic:thread.id,attempt,target:{address:thread.peer,fingerprint:thread.key.pinned,agent_id:selected}};
+  if(rows.has(m.id)&&!sameFollowup(rows.get(m.id),bound))throw Error('Running work is reported, but its current attempt or identity cannot be verified. Nothing was sent; your draft is kept.');
+  rows.set(m.id,bound);
+ }
+ if(rows.size<2)return rows.values().next().value;
+ const seen=new Set();
+ for(let next=replyTo;next&&!seen.has(next);){seen.add(next);if(rows.has(next))return rows.get(next);next=thread.messages?.find(m=>m.id===next)?.reply_to;}
+ throw Error('This agent has multiple running requests in this topic, and this message has no exact reply binding. Nothing was sent; your draft is kept.');
+}

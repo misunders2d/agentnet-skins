@@ -33,7 +33,7 @@ export function topicControls(root, {api, choose, chooseRoot, fresh, changed, an
   const render=()=>{
    filters.replaceChildren(...['active','done','archived'].map(f=>{const b=button(f[0].toUpperCase()+f.slice(1),()=>{filter=f;void load();});b.setAttribute('aria-pressed',String(f===filter));return b;}));
    rows.replaceChildren(...items.map(t=>{const row=node('div','',{className:'topic-row'}),check=node('input','',{type:'checkbox',checked:selected.has(t.id),disabled:busy||confirming||flat&&!t.native});check.setAttribute('aria-label','Select '+(t.title||'Untitled topic'));check.onchange=()=>{counts.set(t.id,t.count);check.checked?selected.add(t.id):selected.delete(t.id);renderActions();};const go=button((t.title||'Untitled topic')+' · '+t.state,()=>{finish();flat?chooseRoot(t.conv,t.topic):choose(t.id);});row.append(check,go,node('small',(t.count||0)+(t.count===1?' message':' messages')+(t.unread?' · '+t.unread+' unread':'')+(t.guests?' · '+t.guests+(t.guests===1?' guest':' guests'):'')),node('small',t.last||''));return row;}));
-   if(next)rows.append(button('Show more',()=>void load(true)));if(!items.length)rows.append(node('p','No '+filter+' topics.',{className:'hint'}));renderActions();
+   if(next)rows.append(button('Show more',()=>void load(true)));if(!items.length)rows.append(node('p',search.value.trim()?'No topics match this search.':'No '+filter+' topics.',{className:'hint'}));renderActions();
   };
   const renderActions=()=>{if(confirming)return;actions.replaceChildren();if(!selected.size)return;actions.append(node('span',selected.size+' selected'));for(const [what,label]of [['delete','Delete for me'],['done','Mark done'],['archive','Archive']]){const b=button(label,()=>confirm(what,label));b.disabled=busy;actions.append(b);}};
   const confirm=(what,label)=>{
@@ -45,7 +45,7 @@ export function topicControls(root, {api, choose, chooseRoot, fresh, changed, an
    }));
   };
   let loading=0;
-  const load=async(more=false)=>{const ask=++loading;status.textContent='Loading…';try{const q=new URLSearchParams({...scope,state:filter,q:search.value,limit:String(TOPIC_UI.pageSize),...(more?{before:next}:{})});const p=flat?await flatPage(filter,search.value):await api('/api/topics?'+q);if(dead||seq!==version||all!==popup||ask!==loading)return;items=more?[...items,...p.topics]:p.topics;next=p.next||'';status.textContent='';render();}catch(e){if(all===popup&&ask===loading)status.textContent=e.message;}};
+  const load=async(more=false)=>{const ask=++loading;status.textContent='Loading…';try{const query=search.value.trim(),state=query?'':filter,q=new URLSearchParams({...scope,state,q:query,limit:String(TOPIC_UI.pageSize),...(more?{before:next}:{})});const p=flat?await flatPage(state,query):await api('/api/topics?'+q);if(dead||seq!==version||all!==popup||ask!==loading)return;items=more?[...items,...p.topics]:p.topics;next=p.next||'';status.textContent=query?'Search results across Active, Done and Archived.':'';render();}catch(e){if(all===popup&&ask===loading)status.textContent=e.message;}};
   refreshList=()=>{if(!busy&&!confirming)void load();};
   search.oninput=()=>void load();popup.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();finish();}if(e.key==='Tab'){const focus=[...popup.querySelectorAll('button,input')].filter(n=>!n.disabled),i=focus.indexOf(root.getRootNode().activeElement);if(e.shiftKey&&i===0){e.preventDefault();focus.at(-1)?.focus();}else if(!e.shiftKey&&i===focus.length-1){e.preventDefault();focus[0]?.focus();}}});
   popup.cleanup=()=>{for(const n of siblings)n.inert=false;bar.inert=false;};
@@ -59,7 +59,7 @@ export function topicControls(root, {api, choose, chooseRoot, fresh, changed, an
   if(!person||person.main!==captured.main||version!==personSeq)return {topics:[],next:''};
   views=Object.fromEntries(loaded);personReady=true;paint();
   const query=q.trim().toLowerCase();
-  return {topics:personTopicEntries(captured.roots,views,captured.main).filter(t=>t.state===state&&(t.title+' '+t.last).toLowerCase().includes(query)).map(t=>({...t,id:t.key})),next:''};
+  return {topics:personTopicEntries(captured.roots,views,captured.main).filter(t=>(!state||t.state===state)&&(t.title+' '+t.last).toLowerCase().includes(query)).map(t=>({...t,id:t.key})),next:''};
  }
  function paint() {
   bar.replaceChildren();

@@ -8,7 +8,7 @@ const require=createRequire(import.meta.url);
 const directory=process.env.AGENTNET_COLLECTION_CANDIDATE||path.resolve(import.meta.dirname,'..');
 const server=http.createServer((req,res)=>{
  const u=new URL(req.url,'http://fixture');
- if(u.pathname==='/'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}#skin{height:100vh}</style><div id="skin"></div>');return;}
+ if(u.pathname==='/'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><title>Standalone steering fixture</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}#skin{height:100vh}</style><div id="skin"></div>');return;}
  const m=/^\/(classic|zoom|holonet)\/([^/]+)$/.exec(u.pathname);if(!m){res.writeHead(404).end();return;}
  try{
   const base=path.join(directory,'skins',m[1]);
@@ -46,7 +46,8 @@ test('standalone natural tagged corrections preserve exact attempts, files and d
     stage:async f=>{calls.push({path:'stage',name:f.name,bytes:await f.text()});if(window.stageFail){window.stageFail=false;throw Error('Synthetic staging failure');}return 'staged-'+calls.filter(c=>c.path==='stage').length;},
     api:async(p,body)=>{
      calls.push({path:p,...body===undefined?{}:{body:structuredClone(body)}});
-     if(body!==undefined){posts.push({path:p,body:structuredClone(body)});if(p==='/api/request/followup'){if(hold)await new Promise(r=>release=r);if(failNext){failNext=false;throw Error('Response uncertain');}return{note:window.note||'Correction sent; native acceptance pending.'};}if(p==='/api/dm/agent/ask'||p==='/api/dm/send'||p==='/api/send')return{id:body.id,lid:body.id,state:'queued'};if(p==='/api/upload/discard'||p==='/api/typing')return{};throw Error('Unexpected fixture post '+p);}
+     if(body!==undefined){posts.push({path:p,body:structuredClone(body)});if(p==='/api/request/followup'){if(body.conv===''){const m=window.direct?.messages?.find(m=>m.id===body.ref.id);if(!m||m.from_key!==body.ref.fingerprint||m.exec?.state!=='running'||m.exec.stale||m.exec.attempt!==body.attempt||direct.key.pending||direct.key.pinned!==window.directHostPin||(m.target?.agent_id||'')!==window.directAgent)throw Error('This exact request or agent changed at the authority boundary.');if(!window.effects.some(e=>e.id===body.id))window.effects.push(structuredClone(body));}if(hold)await new Promise(r=>release=r);if(failNext){failNext=false;throw Error('Response uncertain');}return{note:window.note||'Correction sent; native acceptance pending.'};}if(p==='/api/dm/agent/ask'||p==='/api/dm/send'||p==='/api/send')return{id:body.id,lid:body.id,state:'queued'};if(p==='/api/upload/discard'||p==='/api/typing')return{};throw Error('Unexpected fixture post '+p);}
+     if(p.startsWith('/api/thread?id='))return structuredClone(window.direct);
      if(p.startsWith('/api/dm?id='))return structuredClone(dm);
      if(p.startsWith('/api/overview'))return structuredClone(overview);
      if(p.startsWith('/api/agents'))return{host:me.address,agents:[]};
@@ -178,6 +179,52 @@ test('standalone natural tagged corrections preserve exact attempts, files and d
    const device=await page.evaluate(()=>posts.find(p=>p.path==='/api/send'));assert(device);assert.equal(device.body.to,'briar/phone');assert.equal(device.body.body,'Device unchanged');assert.equal(device.body.kind,'message');assert.equal(device.body.reply_to,'8'.repeat(64));assert.equal(device.body.files.length,1);
    assert.equal(await page.evaluate(()=>posts.some(p=>p.path==='/api/request/followup'||p.path==='/api/dm/agent/ask')),false);
    assert.deepEqual(await page.evaluate(()=>calls.filter(c=>c.path==='stage').map(c=>[c.name,c.bytes])),[['device.txt','device bytes']]);
+
+   // Direct-thread routing uses the actual entry sender and rendered draft/files.
+   await page.evaluate(()=>{
+    const root=document.getElementById('skin').shadowRoot;
+    window.resetDirect=(named=false)=>{
+     window.reset();root.querySelector('#dialog').close();fixture.state.dialogRestore=null;
+     const id='8'.repeat(32),fp='22222222-22222222-22222222-22222222',author='33333333-33333333-33333333-33333333',agent='b'.repeat(32),peer='briar/phone';
+     fixture.sends.merge(id,[]).forEach(m=>fixture.sends.remove(m.id));
+     const source={id,dir:'out',kind:'task',from:'atlas/linked',from_key:author,to:peer,author:{label:'Atlas',agent:false},body:'Direct original',at:'2026-10-14T10:00:00Z',actions:[],can:[],attachments:[],exec:{state:'running',host:peer,attempt:7,stale:false},...(named?{target:{address:peer,fingerprint:fp,agent_id:agent}}:{})};
+     window.direct={id,peer,key:{pinned:fp,pending:false},messages:[source]};window.directHostPin=fp;window.directAgent=named?agent:'';window.effects=[];
+     Object.assign(fixture.state,{dm:null,dmData:null,thread:null,data:structuredClone(direct),draftKey:id,deviceAgentID:named?agent:'',dmReply:null,answering:null,files:[],targetCatalog:{host:peer,agents:[{id:agent,host:peer,label:'Named fixture'}]}});
+     fixture.topicFresh[id]=false;fixture.state.overview.agent_devices=[peer];for(const radio of root.querySelectorAll('input[name="kind"]'))radio.checked=radio.value==='question';root.querySelector('#body').value='Exact direct correction';fixture.syncComposer();fixture.renderPending();window.calls=[];window.posts=[];
+    };
+   });
+   for(const named of [false,true]){
+    await page.evaluate(named=>{resetDirect(named);const file=new File(['direct bytes'],'direct.txt');fixture.state.files=[{key:'direct',name:file.name,size:file.size,file}];fixture.renderPending();},named);
+    await page.evaluate(()=>fixture.send());
+    let directPost=await page.evaluate(()=>posts.find(p=>p.path==='/api/request/followup'));
+    assert(directPost,skin+' direct '+(named?'named':'default')+' must steer the current request');
+    assert.equal(await page.evaluate(()=>calls.filter(c=>c.path.startsWith('/api/thread?')).length),0,'direct send adds zero preflight thread GETs');
+    assert.equal(directPost.body.conv,'');assert.equal(directPost.body.ref.id,'8'.repeat(32));assert.equal(directPost.body.ref.fingerprint,'33333333-33333333-33333333-33333333');assert.equal(directPost.body.attempt,7);assert.equal(directPost.body.body,'Exact direct correction');assert.equal(directPost.body.files.length,1);
+    assert.equal(await page.evaluate(()=>posts.some(p=>p.path==='/api/send')),false);
+    assert.deepEqual(await page.evaluate(()=>calls.filter(c=>c.path==='stage').map(c=>[c.name,c.bytes])),[['direct.txt','direct bytes']]);
+    for(const change of ['key','pending','stale','attempt','completed','author']){
+     await page.evaluate(({named,change})=>{resetDirect(named);const m=direct.messages[0];if(change==='key')direct.key.pinned='44444444-44444444-44444444-44444444';if(change==='pending')direct.key.pending='44444444-44444444-44444444-44444444';if(change==='stale')m.exec.stale=true;if(change==='attempt')m.exec.attempt=8;if(change==='completed')m.exec.state='completed';if(change==='author')m.from_key='44444444-44444444-44444444-44444444';}, {named,change});
+     await page.evaluate(()=>fixture.send());
+     assert.equal(await page.evaluate(()=>posts.filter(p=>p.path==='/api/request/followup').length),1,skin+' authority refusal '+change);assert.equal(await page.evaluate(()=>effects.length),0,'refusal has zero accepted effect');assert.equal(await page.evaluate(()=>posts.some(p=>p.path==='/api/send')),false,'refusal never falls back');assert.equal(await page.evaluate(()=>calls.filter(c=>c.path.startsWith('/api/thread?')).length),0,'refusal adds no preflight GET');
+     assert.match(await page.locator('#compose-error').textContent(),/exact request|changed/);
+    }
+    await page.evaluate(named=>{resetDirect(named);direct.messages[0].exec.state='completed';fixture.state.data=structuredClone(direct);fixture.state.deviceAgentID='';},named);
+    await page.evaluate(()=>fixture.send());assert.equal(await page.evaluate(()=>posts.some(p=>p.path==='/api/send'&&p.body.kind==='question')),true,'no active work stays an ordinary question');
+    await page.evaluate(named=>{resetDirect(named);window.failNext=true;const f=new File(['retry direct bytes'],'retry.txt');fixture.state.files=[{key:'retry-direct',name:f.name,size:f.size,file:f}];fixture.renderPending();},named);
+    await page.evaluate(()=>fixture.send());const first=await page.evaluate(()=>structuredClone(posts.find(p=>p.path==='/api/request/followup')));
+    assert.match(await page.locator('#compose-error').textContent(),/exact follow-up/);
+    await page.evaluate(()=>{document.getElementById('skin').shadowRoot.querySelector('#body').value='A newer draft';fixture.state.deviceAgentID='9'.repeat(32);});
+    await page.evaluate(()=>{const row=fixture.sends.merge('8'.repeat(32),[]).find(m=>m._failed);return row._retry();});
+    await page.waitForFunction(()=>posts.filter(p=>p.path==='/api/request/followup').length===2);
+    directPost=await page.evaluate(()=>posts.filter(p=>p.path==='/api/request/followup')[1]);
+    for(const key of ['id','conv','body','attempt'])assert.equal(directPost.body[key],first.body[key]);assert.deepEqual(directPost.body.ref,first.body.ref);assert.equal(await page.evaluate(()=>calls.filter(c=>c.path.startsWith('/api/thread?')).length),0,'captured retry adds zero thread GETs');assert.equal(await page.evaluate(()=>effects.length),1,'idempotent retry accepts one effect');
+    assert.equal(await page.locator('#body').inputValue(),'A newer draft');
+    assert.deepEqual(await page.evaluate(()=>calls.filter(c=>c.path==='stage').map(c=>[c.name,c.bytes])),[['retry.txt','retry direct bytes'],['retry.txt','retry direct bytes']]);
+    await page.evaluate(named=>{resetDirect(named);direct.messages.push({...direct.messages[0],id:'7'.repeat(32)});fixture.state.data=structuredClone(direct);},named);
+    await page.evaluate(()=>fixture.send());assert.equal(await page.evaluate(()=>posts.length),0);assert.equal(await page.locator('#body').inputValue(),'Exact direct correction');
+   }
+   assert.equal(await page.title(),'Standalone steering fixture');assert.equal(page.url(),origin+'/');
+   if(process.env.AGENTNET_STEERING_EVIDENCE){fs.mkdirSync(process.env.AGENTNET_STEERING_EVIDENCE,{recursive:true});await page.screenshot({path:path.join(process.env.AGENTNET_STEERING_EVIDENCE,skin+'-'+width+'.png')});}
    console.log(JSON.stringify({skin,width,naturalCurrent:true,noChooser:true,multipleReply:true,freshNegatives:11,noTypingScan:true,stagingFailure:true,capturedRetry:true,nativeNotes:true,sharedFanout:skin!=='holonet',ordinaryDM:true,deviceSender:true,cancelClose:skin==='zoom'}));
   assert.deepEqual(errors,[]);await page.evaluate(()=>window.unmount());await context.close();
  }

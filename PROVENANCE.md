@@ -1,6 +1,6 @@
 # Source provenance
 
-Holonet baseline: [misunders2d/agentnet v0.8.1](https://github.com/misunders2d/agentnet/tree/daddab38d229f695936a6d975702668b381f3135), commit `daddab38d229f695936a6d975702668b381f3135`. Classic and Zoom: commit `b9c2a6e78be1d34f38f737517a7a5b0fe53a83b6`. Test pin: the v0.8.30 candidate `33447e2c8b5ea9ba4db9cf365876f519d0838c79`. All Apache-2.0.
+Holonet baseline: [misunders2d/agentnet v0.8.1](https://github.com/misunders2d/agentnet/tree/daddab38d229f695936a6d975702668b381f3135), commit `daddab38d229f695936a6d975702668b381f3135`. Classic and Zoom: commit `b9c2a6e78be1d34f38f737517a7a5b0fe53a83b6`. Verification candidate: AgentNet v0.8.32 at `ac98b331ce11425d7595beceb53f123068ddd705`; the full collection gate passed against this exact candidate. All Apache-2.0. The 20 inspected previews were actually rendered on `3ba44749`, whose production, generated and runtime source records are byte-identical to this candidate; only seven tests/selector files differ. Previews were retained, not rerendered on `ac98b331`.
 
 | Local source | Pinned upstream source | Changes |
 | --- | --- | --- |

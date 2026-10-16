@@ -10,7 +10,7 @@ for(const skin of ['classic','holonet','zoom']) {
  const start=source.indexOf('function reportSeen() {'),end=source.indexOf('\n}',start)+2;
  const callback=source.slice(start,end);
  const helper=source.split('\n').find(line=>line.startsWith('const on = (target, kind, handler) =>'));
- const registration=source.split('\n').find(line=>/(?:addEventListener|on\().*"scroll", reportSeen/.test(line));
+ const registration=source.split('\n').find(line=>/on\(\$\("timeline"\), "scroll",/.test(line));
  assert(start>=0&&end>start&&helper&&registration);
  assert(source.includes('abort.abort();'),'teardown aborts shared listeners');
  function fixture() {
@@ -20,15 +20,24 @@ for(const skin of ['classic','holonet','zoom']) {
    addEventListener(type,handler,options) {
     super.addEventListener(type,event=>{try{handler(event);}catch(error){errors.push(error.message);}},options);
    }
+   querySelector(){return null;}
+   querySelectorAll(){return [{id:'m-original-message',dataset:{mid:'original-message'}}];}
   }
   const old=new Timeline();let current=old;
-  vm.runInNewContext(helper+'\n'+callback+'\n'+registration,{
-   abort,$:()=>current,
-   document:{visibilityState:'visible',hasFocus:()=>true},
-   state:{dmData:{id:'original-dm',messages:[{id:'original-message',dir:'in'}]},overview:{notify:{enabled:true}},seenReported:{}},
-   api:(route,body)=>{calls.push({route,body:JSON.parse(JSON.stringify(body))});return Promise.resolve({});}
-  });
-  return {old,errors,calls,retire(){abort.abort();current=null;},remount(){current=new Timeline();}};
+  const document={visibilityState:'visible',hasFocus:()=>true,defaultView:{matchMedia:()=>({matches:false}),ResizeObserver:class{observe(){}disconnect(){}}}},host={};
+  const state={dm:'original-dm',dmData:{id:'original-dm',messages:[{id:'original-message',dir:'in',kind:'message'}]},overview:{notify:{enabled:true}},seenReported:{}};
+  state.readVisit={host,kind:'dm',id:'original-dm',scope:'exact',fresh:state.dmData,entering:false,loading:0,visible:new Set(),entry:new Map(),pending:new Set(),done:new Set(),landed:true,firstUnread:''};
+  const ctx={abort,$:id=>id==='zoom'?{hidden:false}:current,document,state,alive:true,currentHost:host,nativeVisible:true,visibleRead:null,videoFiles:new Map(),topicFresh:{},topicSelections:{},root:{ownerDocument:document,classList:{contains:()=>true},querySelector:()=>null,contains:()=>true},messageScrollRoot:()=>old,messageTopReserve:()=>0,viewReadyForRead:()=>true,dmVisitor:()=>false,refetch(){},api:(route,body)=>{calls.push({route,body:JSON.parse(JSON.stringify(body))});return Promise.resolve({});}};
+  const extract=name=>{const start=source.indexOf(name),lineEnd=source.indexOf('\n',start),end=source.slice(start,lineEnd).trimEnd().endsWith('}')?lineEnd:source.indexOf('\n}',start)+2;assert(start>=0&&end>start);return source.slice(start,end);};
+  let extra='';
+  if(skin!=='holonet'){
+   // Execute the production wrapper and onChange, with only observer geometry stubbed.
+   ctx.watchVisibleRows=(_root,options)=>{let live=true,ids=new Set(),last='';return {update(_nodes,canonical){ids=new Set(canonical);},evaluate(){if(!live)return;const shown=options.allowed()&&old.scrollHeight-old.scrollTop-old.clientHeight<=40?[...ids]:[],key=JSON.stringify(shown);if(key!==last){last=key;options.onChange(new Set(shown));}},destroy(){live=false;}};};
+   extra=['function attentionKey(','function attentionRows(','function readAllowed(','function currentReadViewShown(','async function markPersonalRead(','function syncVisibleRead(','function retireVisibleRead('].map(extract).join('\n');
+  }
+  vm.runInNewContext(helper+'\n'+extra+'\n'+callback+'\n'+registration,ctx);
+  if(skin!=='holonet')ctx.syncVisibleRead();
+  return {old,errors,calls,retire(){ctx.alive=false;if(skin!=='holonet')ctx.retireVisibleRead();abort.abort();current=null;},remount(){current=new Timeline();}};
  }
  test(skin+': queued timeline scroll cannot outlive unmount',async()=>{
   const f=fixture(),queued=Promise.resolve().then(()=>f.old.dispatchEvent(new Event('scroll')));
@@ -54,15 +63,15 @@ for(const skin of ['classic','holonet','zoom']) {
  const start=source.indexOf('async function loadThread(scrollToEnd, localView, freshEntryView = false) {'),end=source.indexOf('\n}',start)+2;
  assert(start>=0&&end>start);
  const extract=name=>{const start=source.indexOf(name),lineEnd=source.indexOf('\n',start),end=source.slice(start,lineEnd).trimEnd().endsWith('}')?lineEnd:source.indexOf('\n}',start)+2;assert(start>=0&&end>start);return source.slice(start,end);};
- const loader=source.slice(start,end),readHelpers=['function attentionKey(','function attentionRows(','function leaveReadVisit(','function enterReadVisit(','function commitReadView(','async function markPersonalRead('].map(extract).join('\n'),tick=()=>new Promise(r=>setImmediate(r));
+ const optionalReadHelpers=['function readAllowed(',...(skin==='holonet'?['function freezeReadEntry(']:['function currentReadViewShown('])].map(extract).join('\n'),loader=source.slice(start,end),readHelpers=['function attentionKey(','function attentionRows(','function leaveReadVisit(','function enterReadVisit(','function commitReadView(','async function markPersonalRead('].map(extract).join('\n'),tick=()=>new Promise(r=>setImmediate(r));
  function fixture() {
-  const originalHost={id:'original-host'},writes=[],reads=[],node={replaceWith(){},scrollTop:0,scrollHeight:1000};
+  const originalHost={id:'original-host'},writes=[],reads=[],node={replaceWith(){},scrollTop:0,scrollHeight:1000,hidden:true};
   let releaseTopics,releaseRead,failRead=false,holdTopics=false,holdRead=false;
   const messages=[{id:'question',dir:'out',kind:'question',body:'What CPU?'},{id:'answer',dir:'in',kind:'answer',unread:true}];
   const state={thread:'current-topic',gen:1,dm:null,draftKey:'current-topic',deviceAgentID:null};
   const ctx={alive:true,currentHost:originalHost,state,topicSelections:{},topicFresh:{},topicUI:{update(){}},
-   $:()=>node,fill(){},who:x=>x,firstLine:x=>x,avatar:()=>({}),peerPresence:()=>'',
-   renderPeerChips(){},renderNotice(){},showPane(){},setHubBack(){},renderBody(){},restoreDraft(){},
+   $:id=>id==='review'?{hidden:true}:id==='zoom'?{hidden:false}:node,fill(){},who:x=>x,firstLine:x=>x,avatar:()=>({}),peerPresence:()=>'',
+   renderPeerChips(){},renderNotice(){},showPane(){},setHubBack(){},renderBody(){if(state.readVisit){const ids=new Set(messages.slice(0,2).map(m=>m.id));state.readVisit.visibleIDs=ids;state.readVisit.visible=ids;}},restoreDraft(){},
    syncComposer(){},commitConversation(){},refreshTyping:async()=>{},announce(){},
    api:async(route,body,host=ctx.currentHost)=>{
     if(route.startsWith('/api/thread?')){reads.push({route,host});return {id:state.thread,peer:'owner/linux',topic:{id:state.thread},messages};}
@@ -71,7 +80,8 @@ for(const skin of ['classic','holonet','zoom']) {
     if(holdRead){holdRead=false;await new Promise(r=>releaseRead=r);}
     if(failRead)throw Error('synthetic retry');return {};
    }};
-  vm.runInNewContext(readHelpers+'\n'+loader,ctx);
+  const document={visibilityState:'visible',hasFocus:()=>true,defaultView:{matchMedia:()=>({matches:false})}};Object.assign(ctx,{unreadRequest:0,contentRevision:0,nativeVisible:true,document,root:{ownerDocument:document,classList:{contains:()=>true},querySelector:()=>null},releaseVideos(){},retireVisibleRead(){},retireViewMedia(){},retireSchedule(){},topicMetadata:()=>({}),syncScheduleControls(){},dmVisitor:()=>false,syncVisibleRead(){if(state.readVisit){const ids=new Set(messages.slice(0,2).map(m=>m.id));state.readVisit.visible=ids;state.readVisit.visibleIDs=ids;void ctx.markPersonalRead(state.data,'thread');}}});
+  vm.runInNewContext(readHelpers+'\n'+optionalReadHelpers+'\n'+loader,ctx);
   return {ctx,state,writes,reads,messages,originalHost,load:()=>{ctx.enterReadVisit('thread',state.thread);return ctx.loadThread(false);},
    fail(value){failRead=value;},holdTopics(){holdTopics=true;},releaseTopics(){releaseTopics();},
    holdRead(){holdRead=true;},releaseRead(){holdRead=false;releaseRead();}};

@@ -4,8 +4,13 @@ import { nativeRequestItem } from "./native-request.mjs";
 // Visual identity and Host API v1 compatibility fixes; see PROVENANCE.md.
 function niceGoogleDevice(address) { const name = String(address || "").split("/").pop() || "device"; return name.charAt(0).toUpperCase() + name.slice(1); }
 import { rawLinkParts, previewText, portableLink } from "./link-text.mjs";
-import { avatarPicture, openPictureEditor, pastePictures } from "./pictures.mjs";
+import { avatarPicture, openPictureEditor, pastePictures, sniffVideo } from "./pictures.mjs";
 import { topicControls } from './topics.mjs';
+import { watchVisibleRows } from './visible-rows.mjs';
+import { nativeActivityDetail } from './native-activity.mjs';
+import { unreadReview } from './unread-review.mjs';
+import { mountVideoFile, videoFileName } from './video-file.mjs';
+import { mountSchedule } from './schedule.mjs';
 import { pendingSends, sendID } from "./optimistic.mjs";
 import { markup } from './template.mjs';
 import { consoleMotion } from './skin-motion.mjs';
@@ -88,6 +93,9 @@ const setTimeout = (fn, ms) => { const timer = globalThis.setTimeout(() => { tim
 const $ = (id) => root.querySelector("#" + CSS.escape(id));
 const motion=consoleMotion(root);cleanups.push(()=>motion.stop());
 const topicSelections={},topicFresh={};
+let nativeVisible=host.android?.visible?.()!==false,contentRevision=0,scheduleUI=null,scheduleRoot=null;
+const schedulePush=new Set(),videoFiles=new Map();
+const narrowView=root.ownerDocument.defaultView.matchMedia('(max-width: 760px)');
 const sends = pendingSends(host, () => { if (alive) renderBody(false); });
 const state = { thread: null, data: null, seq: -1, answering: null, lastSeen: {}, presence: {},
   drafts: {}, draftKey: null, replyReceiver: null, replyReceiverHost: null, receiverCatalog: null, receiverCatalogSeq: 0, receiverBindings: [], sending: false, hub: null, hubUp: null, query: "", singlesOpen: {}, directoryOpen: false,
@@ -104,7 +112,7 @@ function attentionRows(t,kind,rows=t?.messages||[]){
  const topic=topicFresh[t.id]?'':topicSelections[t.id]||'';
  return rows.filter(m=>!m._local&&!m.hidden&&!m.deleted&&!m.sub&&!m.event&&!m.topic_event&&['message','question','task','answer','result'].includes(m.kind)&&!(m.kind==='message'&&m.status==='review_notice'&&!m.reply_to&&!(m.attachments||[]).length)&&(kind!=='dm'||(m.topic||'')===topic));
 }
-function leaveReadVisit(){state.readVisit=null;state.messageOpening=null;}
+function leaveReadVisit(){state.readVisit?.watcher?.destroy();state.readVisit=null;state.messageOpening=null;releaseVideos();}
 function enterReadVisit(kind,id,explicit=true){
  if(!id){leaveReadVisit();return null;}
  if(kind==='thread'&&state.data?.messages?.some(m=>m.id===id))id=state.data.id||id;
@@ -114,12 +122,13 @@ function enterReadVisit(kind,id,explicit=true){
  const same=old?.host===currentHost&&old.kind===kind&&old.id===id;
  const pending=same&&(old.entering||old.loading>0);
  const view=same&&kind==='dm'&&old.fresh===state.dmData?state.dmData:null;
+ old?.watcher?.destroy();releaseVideos();
  const read=pending?old:{kind,id,host:currentHost,loading:0};
- Object.assign(read,{scope,topic,entry:new Map(),pending:new Set(),done:new Set(),entering:explicit,fresh:view});
+ Object.assign(read,{scope,topic,initialized:false,firstUnread:'',visibleIDs:new Set(),entry:new Map(),pending:new Set(),done:new Set(),entering:explicit,fresh:view});
  state.readVisit=read;
  // A local topic transition can reuse the already committed full fresh view.
  // While its first GET is pending, keep that entry object for the same GET.
- if(explicit&&view&&!pending){read.entry=new Map(attentionRows(view,kind).filter(m=>m.attention).map(m=>[m.id,attentionKey(m)]));read.entering=false;}
+ if(explicit&&view&&!pending){read.entry=new Map(attentionRows(view,kind).filter(m=>m.attention).map(m=>[m.id,attentionKey(m)]));read.entering=false;freezeReadEntry(read,view,kind);}
  return read;
 }
 function commitReadView(read,t,kind,fresh){
@@ -127,12 +136,13 @@ function commitReadView(read,t,kind,fresh){
  if(kind==='thread'){read.id=t.id;read.scope=JSON.stringify([kind,t.id,'']);}
  read.fresh=t;
  if(read.entering){read.entry=new Map(attentionRows(t,kind).filter(m=>m.attention).map(m=>[m.id,attentionKey(m)]));read.entering=false;}
+ freezeReadEntry(read,t,kind);
 }
 async function markPersonalRead(t,kind){
  const read=state.readVisit,host=currentHost;
- if(!alive||!read||read.host!==host||read.kind!==kind||!t||read.id!==t.id)return;
+ if(!alive||!read||read.host!==host||read.kind!==kind||!t||read.id!==t.id||!readAllowed(read,t,kind))return;
  const scope=read.scope,pending=read.pending,done=read.done;
- const rows=attentionRows(t,kind).filter(m=>{
+ const rows=attentionRows(t,kind).filter(m=>read.visibleIDs?.has(m.id)).filter(m=>{
   const key=attentionKey(m);
   return !pending.has(key)&&!done.has(key)&&(m.attention?read.entry.get(m.id)===key:m.unread||kind==='thread'&&m.dir==='out');
  });
@@ -144,6 +154,39 @@ async function markPersonalRead(t,kind){
   if(alive&&state.readVisit===read&&read.scope===scope&&host===currentHost){rows.forEach(m=>{done.add(attentionKey(m));done.add(m.id);});if(kind==='dm')void refetch(false);}
  }catch{}finally{rows.forEach(m=>pending.delete(attentionKey(m)));}
 }
+function readAllowed(read,t,kind){
+ return !!t&&alive&&state.readVisit===read&&read.host===currentHost&&read.fresh===t&&!read.entering&&!read.loading&&nativeVisible&&document.visibilityState==='visible'&&document.hasFocus()&&(root.classList.contains('show-conv')||!narrowView.matches)&&$('review').hidden&&!root.querySelector('dialog[open], [role="dialog"][aria-modal="true"]')&&!state.messageOpening;
+}
+function freezeReadEntry(read,t,kind){
+ if(read.initialized)return;read.initialized=true;
+ read.firstUnread=attentionRows(t,kind).find(m=>m.unread||m.attention&&read.entry.get(m.id)===attentionKey(m))?.id||'';
+}
+function updateVisible(t,kind){
+ const read=state.readVisit;if(!read||read.host!==currentHost||read.kind!==kind||read.id!==t.id)return;
+ if(!read.watcher){read.visibleIDs=new Set();read.watcher=watchVisibleRows($('timeline'),{allowed:()=>readAllowed(read,kind==='dm'?state.dmData:state.data,kind),onChange:ids=>{if(state.readVisit!==read||read.host!==currentHost)return;read.visibleIDs=ids;void markPersonalRead(kind==='dm'?state.dmData:state.data,kind);}});}
+ const canonical=new Set(attentionRows(t,kind).map(m=>m.id));
+ for(const row of $('timeline').children){const id=row.id?.startsWith('m-')?row.id.slice(2):'';if(canonical.has(id))row.dataset.mid=id;else delete row.dataset.mid;row.classList.toggle('first-unread',!!read.firstUnread&&id===read.firstUnread);}
+ const first=read.firstUnread&&root.querySelector('#'+CSS.escape('m-'+read.firstUnread));if(first&&!$('timeline').querySelector('.unread-divider'))first.before(el('li',{class:'unread-divider',role:'separator'},'Unread messages'));
+ read.watcher.update($('timeline').children,canonical);
+}
+function positionReadEntry(){
+ const read=state.readVisit,first=read?.firstUnread&&!state.messageOpening&&root.querySelector('#'+CSS.escape('m-'+read.firstUnread));
+ const marker=first?.previousElementSibling?.classList.contains('unread-divider')?first.previousElementSibling:first;
+ if(marker)marker.scrollIntoView({block:'start'});else $('timeline').scrollTop=$('timeline').scrollHeight;
+ read?.watcher?.evaluate();
+}
+function visibleAnchor(tl){const ids=state.readVisit?.visibleIDs;const row=ids&&[...tl.children].find(n=>ids.has(n.dataset.mid));return row?{id:row.id,top:row.getBoundingClientRect().top}:null;}
+function restoreAnchor(tl,anchor){const row=anchor&&root.querySelector('#'+CSS.escape(anchor.id));if(row)tl.scrollTop+=row.getBoundingClientRect().top-anchor.top;}
+function releaseVideos(){for(const item of videoFiles.values())item.controller.destroy();videoFiles.clear();}
+function deactivateVideos(){for(const item of videoFiles.values())item.controller.deactivate();}
+function pruneVideos(messages){
+ const scope=state.readVisit?.scope||'',keep=new Set();
+ for(const m of messages)if(!m.deleted)for(const [i,f]of (m.attachments||m.files||[]).entries()){
+  const dir=state.dm&&humanGroup(state.dmData)&&(m.synced_from||m.via)?'in':m.dir;keep.add(scope+':'+dir+':'+m.id+':'+(f.index===undefined?i:f.index));
+ }
+ for(const [key,item]of videoFiles)if(!keep.has(key)){item.controller.destroy();videoFiles.delete(key);}
+}
+
 function canMarkPersonal(m,conv){
  const kind=conv?'dm':'thread',view=conv?state.dmData:state.data;
  return !!view&&!view.read_only&&!view.readOnly&&!(kind==='dm'&&dmVisitor(view))&&(conv?state.dm===conv&&view.id===conv:!state.dm)&&attentionRows(view,kind,[m]).length>0;
@@ -208,6 +251,31 @@ function el(tag, attrs, ...kids) {
 async function api(path, body, host = currentHost) { return host.api(path, body); }
 const topicUI=topicControls(root,{api,isFresh:()=>!!topicFresh[state.dm||state.thread],announce:text=>announce(text),choose:async id=>{state.messageOpening=null;motion.acquire();if(state.dm){topicSelections[state.dm]=id;topicFresh[state.dm]=false;selectReadTopic();setDMReply(null);renderDMBody(false);markDMRead();}else if(id!==state.thread)await openThread(id);},fresh:()=>{state.messageOpening=null;const id=state.dm||state.thread;topicFresh[id]=true;if(state.dm){topicSelections[id]='';selectReadTopic();renderDMBody(false);markDMRead();}announce('New topic: your next message starts a separate flow.');topicUI.repaint();syncComposer();$('body').focus();},changed:async()=>{await loadOverview();state.dm?await loadDM(false):await loadThread(false);}});
 cleanups.push(()=>topicUI.stop());
+function unreadMessage(view,row){
+ const chat=row.kind==='chat';if((!chat&&row.kind!=='device')||!row.id||!row.author||!row.lid||(chat?!row.conv:!row.peer||!row.thread))throw Error('Unread destination unavailable.');
+ const matches=(view.messages||[]).filter(m=>m.id===row.id&&m.dir===row.dir);const message=matches.length===1?matches[0]:null;
+ const author=message&&(chat?message.send_group_author||message.claimed_key:message.from_key||(row.dir==='out'?state.overview?.me.fingerprint:undefined));
+ if(view.id!==(chat?row.conv:row.thread)||(!chat&&view.peer!==row.peer)||!message||message.deleted||(chat?!author||author!==row.author:!!author&&author!==row.author)||(message.lid||message.id)!==row.lid||(chat&&(message.topic||'')!==(row.topic||'')))throw Error('Unread destination changed.');
+ return message;
+}
+const unreadUI=unreadReview($('review'),{api:(p,b)=>api(p,b,host),onChoose:async row=>{
+ if(!alive||currentHost!==host)return;
+ const gen=state.gen,visit=state.readVisit,request=state.unreadLanding=(state.unreadLanding||0)+1,pending={conv:row.conv||''};
+ const current=()=>alive&&currentHost===host&&state.gen===gen&&state.readVisit===visit&&state.unreadLanding===request&&!$('review').hidden;
+ try{
+  if(!['chat','device'].includes(row.kind)||!row.id||!row.author||!row.lid||!(row.kind==='chat'?row.conv:row.thread&&row.peer))throw Error('Missing exact unread scope.');
+  state.messageOpening=pending;
+  const view=await api(row.kind==='chat'?'/api/dm?id='+encodeURIComponent(row.conv):'/api/thread?id='+encodeURIComponent(row.thread),undefined,host);
+  if(!current())return;const message=unreadMessage(view,row);rememberEntry();returning=true;
+  if(row.kind==='chat'){
+   topicSelections[row.conv]=row.topic||'';topicFresh[row.conv]=false;
+   await openDM(row.conv,view,true,true);flash(message.id);
+  }else await openThread(row.thread,message.id,view,true,true);
+ }catch{if(current())announce('That unread message changed or could not be opened. Refresh Activity and choose it again.');}
+ finally{returning=false;if(state.messageOpening===pending)state.messageOpening=null;state.readVisit?.watcher?.evaluate();}
+}});
+cleanups.push(()=>unreadUI.stop());
+
 
 // A time is an RFC 3339 string, or unix seconds (a host's report and its
 // answers, client.Report, count in seconds).
@@ -277,7 +345,10 @@ async function loadOverview() {
   $("profile-btn").title = o.release ? "Your profile and devices · Update available" : "Your profile and devices";
   renderNotify(o.notify);
   renderProfile(o);
-  renderReview(o.review);
+  renderReview(o.review);renderUnreadCount(o);
+  unreadUI.update({overview:o,revision:contentRevision,scope:host.workspace.id+':'+(host.workspace.handle||'')});
+  $('review-btn').title=typeof o.unread_total==='number'?o.unread_total+' unread messages · '+(o.alert_total||0)+' alerts':'Activity';
+  scheduleUI?.update();
   renderThreads(o.threads);
   renderQuarantine(o.quarantine);
   if (state.dm || state.data) setHubBack();
@@ -464,11 +535,20 @@ function fileChips(m, files) {
             : open;
     const toDrive = state.dm && state.dmData && state.dmData.peer.person && (sentHere ? f.openable === true : f.availability !== "unavailable" && f.openable !== false)
       && el("button", { type: "button", class: "text-btn file-drive", title: "Copy this file to the DM's Google Drive space (outside encryption)", onclick: () => saveToDrive(m, idx, f.name) }, "To project space…");
+    const capturedHost=currentHost,visit=state.readVisit,videoKey=(visit?.scope||'')+':'+downloadKey;
+    let video=null;
+    const local=sentHere?f.openable===true:f.openable!==false&&!['requestable','requested','unavailable'].includes(f.availability);
+    if(local&&videoFileName(f.name)){
+      let item=videoFiles.get(videoKey);
+      if(item&&(item.name!==f.name||item.size!==f.size)){item.controller.destroy();videoFiles.delete(videoKey);item=null;}
+      if(!item){const slotRoot=el('span',{class:'inline-video'});item={root:slotRoot,name:f.name,size:f.size};item.controller=mountVideoFile({root:slotRoot,file:f,load:()=>fetchFile(m.id,idx,m.dir,capturedHost),sniffVideo,download:()=>openFile(m.id,idx,f.name,open,slot,m.dir),allowed:()=>alive&&currentHost===capturedHost&&state.readVisit===visit&&nativeVisible&&(root.classList.contains('show-conv')||!narrowView.matches)&&$('review').hidden,onVisibility:capturedHost.android?.onVisibility?fn=>capturedHost.android.onVisibility(fn):undefined});videoFiles.set(videoKey,item);}
+      video=item.root;open.hidden=true;
+    }
     return el("span", { class: "file" }, el("span", { class: "file-icon", "aria-hidden": "true" }, fileExt(f.name)),
       el("span", { class: "file-text" }, el("span", { class: "file-name" }, f.name),
         el("span", { class: "file-size" }, f.saved ? "Saved: " + f.saved : size(f.size)),
         f.note && el("span", { class: "file-note" }, f.note)),
-      action, toDrive, slot);
+      action, video, toDrive, slot);
   }));
 }
 
@@ -503,16 +583,16 @@ async function openFile(id, i, name, button, slot, dir) {
   button.disabled = true;
   button.setAttribute("aria-busy", "true");
   announce("Opening " + name + "…");
-  const host = currentHost, gen = state.gen; // the membership this file is in
+  const host = currentHost, gen = state.gen, visit=state.readVisit; // the membership this file is in
   try {
     const { bytes, image } = await fetchFile(id, i, dir, host);
-    if (!alive || gen !== state.gen) return; // that workspace is no longer shown
+    if (!alive || gen !== state.gen || host!==currentHost || visit!==state.readVisit) return; // that workspace is no longer shown
     const url = URL.createObjectURL(new Blob([bytes], { type: image || "application/octet-stream" }));
     state.opened.push(url);
     if (image) {
       const picture = el("img", { src: url, alt: name, class: "file-preview" });
       await picture.decode();
-      if (!alive || gen !== state.gen) return;
+      if (!alive || gen !== state.gen || host!==currentHost || visit!==state.readVisit) return;
       const viewer = el("dialog", { class: "file-viewer", "aria-modal":"true", "aria-label": name },
         picture,
         el("div", { class: "file-viewer-actions" },
@@ -547,6 +627,7 @@ async function openFile(id, i, name, button, slot, dir) {
 
 // releaseOpened frees the pictures and files opened in the conversation left.
 function releaseOpened() {
+  releaseVideos();
   for (const viewer of root.querySelectorAll(".file-viewer")) { viewer.close(); viewer.remove(); }
   state.opened.forEach((u) => URL.revokeObjectURL(u));
   state.opened = [];
@@ -679,6 +760,11 @@ function renderNotify(n) {
   } else {
     fill(line, "Notifications off · ", el("button", { type: "button", class: "text-btn", onclick: () => notifyDialog() }, "Turn on…"));
   }
+  const names={full:'Full message preview',sender:'Sender only',hidden:'Hidden'};
+  if(n.native&&names[n.preview_default]){
+    const select=el('select',{id:'notification-preview','aria-label':'Message previews',onchange:e=>{const preview=e.currentTarget.value;if(['','full','sender','hidden'].includes(preview))void notifyAct('/api/notify/preview',{preview});}},el('option',{value:''},'Default ('+names[n.preview_default]+')'),...Object.entries(names).map(([value,label])=>el('option',{value},label)));
+    select.value=n.preview||'';line.append(el('label',{for:'notification-preview'},'Message previews'),select,el('p',{class:'hint'},'Full shows the sender and current message text. Sender hides the text. Hidden omits names and message text, while keeping fixed activity, reminder, decision or security notices. This choice stays on this device in this workspace and does not turn notifications on.'),el('p',{class:'hint'},'Previews may appear on a lock screen or remain in notification history. Your operating system controls that visibility. On macOS, clicking the current native banner does not open AgentNet.'));
+  }else if(!n.native)line.append(el('p',{class:'hint'},'Browser notifications while the page is closed always hide message content.'));
 }
 
 async function notifyAct(path, body) {
@@ -2171,6 +2257,7 @@ async function loadDM(scrollToEnd, localView, freshEntryView = false) {
   t.agents = t.agents || [];
   t.guests = t.guests || [];
   state.dmData = t;
+  commitReadView(visit,t,"dm",!localView||freshEntryView);
   fill($("conv-name"), humanGroup(t) ? t.title : t.peer.label);
   $("conv-topic").textContent = humanGroup(t) ? dmVisitor(t) ? "Invited agent context · visitor to this group" : "Group conversation · " + groupMemberCount(t) : dmVisitor(t) ? "Invited agent context · you are not a member of this DM"
     : dmHumanGuest(t) ? "Temporary human participation · same private conversation" : "DM with a person · started " + when(t.created) + (t.mine ? " by you" : " by them");
@@ -2194,7 +2281,7 @@ async function loadDM(scrollToEnd, localView, freshEntryView = false) {
   loadDMNames(t);
   renderDrive(t);
   if(topicSelections[t.id]&&!(t.topics||[]).some(x=>x.id===topicSelections[t.id])&&!sends.merge("dm:"+t.id,t.messages).some(m=>m._local&&m.topic===topicSelections[t.id]))topicSelections[t.id]="";
-  topicUI.update({conv:t.id},t.topics,topicSelections[t.id]);
+  topicUI.update({conv:t.id},t.topics,topicSelections[t.id],null,topicMetadata(t));
   renderDMBody(scrollToEnd);
   const key = "dm:" + id;
   if (state.draftKey === null) restoreDraft(key, t); // just switched here (beginDM)
@@ -2202,9 +2289,9 @@ async function loadDM(scrollToEnd, localView, freshEntryView = false) {
   if (state.dmAgent && agentOf(state.dmAgent)) setDMAgent(agentOf(state.dmAgent)); // its state now; a dismissed one stays the target
   state.draftKey = key;
   syncComposer();
-  if (scrollToEnd) { commitConversation(); $("timeline").scrollTop = $("timeline").scrollHeight; }
-  commitReadView(visit,t,"dm",!localView||freshEntryView);
+  if (scrollToEnd) { commitConversation();positionReadEntry(); }
   if(visit)visit.loading--;
+  state.readVisit?.watcher?.evaluate();
   markDMRead();
   await refreshTyping();
 }
@@ -2218,12 +2305,15 @@ function renderDMBody(scrollToEnd) {
   const t = { ...base, messages: sends.merge("dm:" + base.id, base.messages) };
   const tl = $("timeline");
   const atEnd = tl.scrollHeight - tl.scrollTop - tl.clientHeight < 60;
+  const anchor=!scrollToEnd&&!atEnd?visibleAnchor(tl):null;
   const shown=t.messages.filter(m=>(m.topic||'')===(topicSelections[t.id]||''));
   if(topicSelections[t.id]&&!(t.topics||[]).some(x=>x.id===topicSelections[t.id])&&!sends.merge("dm:"+t.id,t.messages).some(m=>m._local&&m.topic===topicSelections[t.id]))topicSelections[t.id]="";
-  topicUI.update({conv:t.id},t.topics,topicSelections[t.id]);
+  topicUI.update({conv:t.id},t.topics,topicSelections[t.id],null,topicMetadata(t));
+  pruneVideos(shown);
   fill(tl, shown.length ? shown.map((m, i) => dmMsg(m, t, shown[i - 1]))
     : el("li", { class: "hint empty-list" }, "No messages yet. What you write here goes to " + (humanGroup(t) ? "the current members of " + t.title : t.peer.label) + " only."));
-  if (scrollToEnd || atEnd) tl.scrollTop = tl.scrollHeight;
+  if (scrollToEnd || atEnd) tl.scrollTop = tl.scrollHeight;else restoreAnchor(tl,anchor);
+  updateVisible(base,"dm");
   reportSeen();
 }
 
@@ -3106,6 +3196,15 @@ function guestInvitationRow(c) {
     c.decide_on ? el("p", {class:"hint"}, "Decide on " + deviceWords(c.decide_on)) : el("div", {class:"agent-actions"}, join, decline));
 }
 
+function renderUnreadCount(o){
+ const button=$('review-btn');let badge=$('unread-count');
+ if(!badge){badge=el('span',{id:'unread-count',class:'count unread'});button.querySelector('.review-counts').append(badge);}
+ const known=typeof o.unread_total==='number';badge.hidden=!known||!o.unread_total;badge.textContent=known?o.unread_total+' unread':'';
+ badge.title=known?o.unread_total+' unread messages'+(typeof o.alert_total==='number'?' · '+o.alert_total+' alerts':''):'';
+ if(known)button.setAttribute('aria-label',(button.getAttribute('aria-label')||'Activity')+', '+badge.title);
+}
+function topicMetadata(t){return {revision:contentRevision,seq:state.overview?.seq,mainUnread:t.main_topic?.unread,unreadTotal:state.dm===t.id?state.overview?.dms?.find(d=>d.id===t.id)?.unread:undefined};}
+
 function renderReview(items) {
   const decisions = items.filter((it) => !it.notice && it.reason !== "agent_running");
   const working = items.filter((it) => !it.notice && it.reason === "agent_running");
@@ -3153,6 +3252,7 @@ function renderReview(items) {
 }
 
 function toggleReview(open) {
+  const wasOpen=!$('review').hidden;
   const btn = $("review-btn");
   const show = open ?? btn.getAttribute("aria-expanded") !== "true";
   btn.setAttribute("aria-expanded", show);
@@ -3163,7 +3263,14 @@ function toggleReview(open) {
     $("nav-" + name).classList.toggle("selected", active);
     $("nav-" + name).setAttribute("aria-current", active ? "page" : "false");
   }
-  $("review").hidden = !show;
+  $('review').hidden = !show;unreadUI.show(show);
+  if(show){state.readVisit?.watcher?.evaluate();releaseVideos();}else{
+    const read=state.readVisit,view=state.dm?state.dmData:state.data,kind=state.dm?'dm':'thread';
+    if(wasOpen&&alive&&read?.host===currentHost&&view&&read.kind===kind&&read.id===view.id&&(state.dm?state.dm===view.id:!!state.thread)&&read.fresh===view&&!read.entering&&!read.loading&&!state.messageOpening&&(root.classList.contains('show-conv')||!narrowView.matches)){
+      if(state.dm)renderDMBody(false);else renderBody(false);
+    }
+    state.readVisit?.watcher?.evaluate();
+  }
   $("conv-list").hidden = show;
   $("search").hidden = show;
   $("section-title").textContent = show ? "Activity" : state.contactView === "people" ? "People" : "Chats";
@@ -3402,6 +3509,7 @@ async function loadThread(scrollToEnd, localView, freshEntryView = false) {
   if(visit)visit.loading--;
   if (!current()) return; // another thread or workspace was opened meanwhile
   state.data = t;
+  commitReadView(visit,t,"thread",!localView||freshEntryView);
   fill($("conv-name"), who(t.peer));
   $("conv-topic").textContent = firstLine(t.messages[0].body, 90);
   $("conv-avatar").replaceWith(Object.assign(avatar(t.peer), { id: "conv-avatar" }));
@@ -3413,15 +3521,15 @@ async function loadThread(scrollToEnd, localView, freshEntryView = false) {
   setHubBack();
   const page=localView ? {topics:t.topic?[t.topic]:[]} : t.topic ? await api("/api/topics?peer="+encodeURIComponent(t.peer)+"&limit=200", undefined, host) : {topics:[]};
   if(!current())return;
-  topicUI.update({peer:t.peer},page.topics,t.topic?.id||id);
+  topicUI.update({peer:t.peer},page.topics,t.topic?.id||id,null,topicMetadata(t));
   renderBody(scrollToEnd);
   const key = t.messages[0].id; // a conversation's first message names its draft
   if (state.draftKey === null) restoreDraft(key, t); // just switched here (beginThread)
   state.draftKey = key;
   if (state.deviceAgentID && !state.targetCatalog) loadTargetCatalog();
   syncComposer();
-  if (scrollToEnd) { commitConversation(); $("timeline").scrollTop = $("timeline").scrollHeight; }
-  commitReadView(visit,t,"thread",!localView||freshEntryView);
+  if (scrollToEnd) { commitConversation();positionReadEntry(); }
+  state.readVisit?.watcher?.evaluate();
   void markPersonalRead(t,"thread");
   await refreshTyping();
 }
@@ -3435,8 +3543,11 @@ function renderBody(scrollToEnd) {
   const byId = Object.fromEntries(t.messages.map((m) => [m.id, m]));
   const tl = $("timeline");
   const atEnd = tl.scrollHeight - tl.scrollTop - tl.clientHeight < 60;
+  const anchor=!scrollToEnd&&!atEnd?visibleAnchor(tl):null;
+  pruneVideos(t.messages);
   fill(tl, ...t.messages.map((m, i) => renderMsg(m, byId, t.messages[i - 1], t)));
-  if (scrollToEnd || atEnd) tl.scrollTop = tl.scrollHeight;
+  if (scrollToEnd || atEnd) tl.scrollTop = tl.scrollHeight;else restoreAnchor(tl,anchor);
+  updateVisible(base,"thread");
 }
 
 // Classic owns one presentation; interface selection belongs to the host.
@@ -3665,13 +3776,8 @@ function ago(iso) {
 }
 // Same fixed public grammar as the pinned Comic NativeActivity model.
 function nativeActivity(detail) {
-  if (!detail) return null;
-  const [label, at, extra] = detail.split("\nReported at ");
-  if (!["Working", "Reading files", "Editing files", "Running a command", "Searching", "Using a tool", "Preparing answer"].includes(label) || extra !== undefined) return null;
-  if (at !== undefined) {
-    const date = new Date(at);
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(at) || !Number.isFinite(date.getTime()) || date.toISOString() !== at.replace("Z", ".000Z")) return null;
-  }
+  const parsed=nativeActivityDetail(detail);if(!parsed)return null;
+  const {label,at}=parsed;
   return el("span", {class:"hint", "data-native-activity":""}, label, " · ", at ? ["Native event reported ", el("time", {datetime:at,title:at}, new Date(at).toLocaleTimeString())] : "Native activity");
 }
 function execLine(m, t) {
@@ -4470,7 +4576,7 @@ function keepDraft() {
   if (state.draftKey === null) return;
   const text = $("body").value;
   if (text || state.answering || state.dmReply || state.dmAgent || state.deviceAgentID || state.replyReceiver || state.replyReceiverHost || state.files.length) {
-    state.drafts[state.draftKey] = { text, kind: kindValue(), answering: state.answering, reply: state.dmReply, agent: state.dmAgent, agent_id: state.dm ? "" : state.deviceAgentID || "", files: state.files, typedFor: state.typedFor, mentions: validMentions(state.mentions, text), reply_receiver: state.replyReceiver, ...(state.replyReceiverHost ? { reply_receiver_host: state.replyReceiverHost } : {}) };
+    state.drafts[state.draftKey] = { text, ...(state.dm?{topic:topicSelections[state.dm]||"",newTopic:!!topicFresh[state.dm]}:{}), kind: kindValue(), answering: state.answering, reply: state.dmReply, agent: state.dmAgent, agent_id: state.dm ? "" : state.deviceAgentID || "", files: state.files, typedFor: state.typedFor, mentions: validMentions(state.mentions, text), reply_receiver: state.replyReceiver, ...(state.replyReceiverHost ? { reply_receiver_host: state.replyReceiverHost } : {}) };
   }
   else delete state.drafts[state.draftKey];
 }
@@ -4506,6 +4612,7 @@ function restoreDraft(key, t) {
 // syncComposer enables what the open conversation allows. A send on its way
 // keeps Send disabled, whatever refreshes meanwhile.
 function syncComposer() {
+  updateSchedule();
   $("mention-button").hidden = !state.dm || dmHumanGuest() && !guestAuthor(); // a guest mentions only while joined
   $("mention-button").disabled = state.sending;
   $("mention-button").setAttribute("aria-label", "Mention a person or assistant");
@@ -4657,6 +4764,32 @@ function kindHint() {
     }[kindValue()];
 }
 
+// Scheduling adapts this skin's existing draft; it never invokes sendDM/send.
+function scheduleDraft(conv){
+ const key='dm:'+conv;if(state.draftKey===key)keepDraft();
+ const d=state.drafts[key]||{text:'',files:[]};return {...d,replyTo:d.reply?.id,topic:state.dm===conv?topicSelections[conv]||'':d.topic||'',newTopic:state.dm===conv?!!topicFresh[conv]:!!d.newTopic};
+}
+function applyScheduledDraft(conv,next){
+ const key='dm:'+conv,d=state.drafts[key]||{text:'',files:[]},removed=(d.files||[]).filter(f=>!(next.files||[]).some(n=>n.key===f.key&&n.file===f.file));
+ for(const f of removed)if(f.url)URL.revokeObjectURL(f.url);discardStaged(removed);
+ state.drafts[key]={...d,text:next.text,files:next.files,agent:next.agent,reply:next.replyTo?d.reply:null,...(next.text!==d.text?{mentions:[],typedFor:null}:{})};
+ if(state.draftKey!==key)return;
+ $('body').value=next.text;state.files=next.files||[];state.mentions=next.text===d.text?state.mentions:[];state.mentionText=next.text;state.typedFor=next.text===d.text?state.typedFor:null;
+ if(!next.replyTo)setDMReply(null);if(!next.agent&&state.dmAgent)setDMAgent(null);renderPending();grow();keepDraft();syncComposer();
+}
+function scheduleContext(){
+ const d=state.dmData,topic=topicSelections[state.dm]||'',reply=state.dmReply;
+ return {supported:!!state.overview?.schedules,conv:state.dm||'',ordinary:!!d&&!state.dmAgent&&!state.answering&&kindValue()==='message',frozen:!!d?.frozen||!!state.overview?.device?.revoked,visitor:!!d&&dmVisitor(d),newTopic:!!topicFresh[state.dm],missing:!!d&&(!!topic&&!(d.topics||[]).some(t=>t.id===topic)||!!reply&&!d.messages.some(m=>m.id===reply.id)),fileReason:state.files.some(f=>!f.file||f.reattachRequired)?'Reattach these files before scheduling. Your draft is kept.':''};
+}
+function setupSchedule(){
+ if(!alive)return;scheduleRoot=el('div',{class:'schedule-tools'});$('composer').after(scheduleRoot);
+ scheduleUI=mountSchedule({root:scheduleRoot,host,owner:'agentnet.'+skinKey,context:scheduleContext,capture:conv=>{const draft=scheduleDraft(conv);return {draft,body:encodeMentions(draft.text,draft.mentions||[])};},getDraft:scheduleDraft,setDraft:applyScheduledDraft,audienceText:a=>{const people=[state.overview?.person,...(state.overview?.people||[]),...(state.dmData?.members||[])].filter(p=>p&&(p.state==='self'||p.state==='pinned'));return [...(a.persons||[]).map(id=>people.find(p=>p.person===id)?.label||'Verified participant ('+id.slice(0,8)+')'),...(a.pids||[]).map(id=>'Invited participant ('+id.slice(0,8)+')')].join(', ')||'No recipients';},subscribe:fn=>{schedulePush.add(fn);return()=>schedulePush.delete(fn);},isCurrent:()=>alive&&currentHost===host,onBlockingChange:()=>{if(alive&&state.newVersion)updated(state.newVersion);}});
+ updateSchedule();cleanups.push(()=>{scheduleUI?.destroy();scheduleRoot?.remove();});
+}
+function updateSchedule(){if(scheduleRoot)scheduleRoot.hidden=!state.dm||$('composer').hidden;scheduleUI?.update();}
+function scheduleBlocks(st){return [...(st?.[Symbol.for('agentnet.ui.scheduleSaves')]?.slots?.values()||[])].some(slot=>slot.attempt&&(slot.status==='saving'||slot.status==='uncertain'));}
+function anyScheduleOriginals(){if(scheduleUI?.blocking||scheduleBlocks(workspaceState))return true;try{return !!wsAPI()?.list().some(({id})=>scheduleBlocks(wsAPI().state(id)));}catch{return true;}}
+
 // ---- workspaces ------------------------------------------------------------------------
 //
 // The host (loader.js) keeps one immutable transport per membership and
@@ -4710,7 +4843,7 @@ function listen() {
   const host = currentHost;
   stopListen = host.listen((event) => {
     if (!alive || currentHost !== host) return;
-    if (event.type === 'change') { const first = state.seq < 0; state.seq = event.seq; refetch(first); }
+    if (event.type === 'change') { const first = state.seq < 0; state.seq = event.seq;if(!event.hint){contentRevision++;for(const changed of schedulePush)changed();} refetch(first); }
     else if (event.type === 'restart') { state.updating = true; $('updating').hidden = false; $('lost').hidden = true; recover(recovery.update); }
     else { typingUI?.disconnect(); $('lost').hidden = false; recover(recovery.missed); }
   });
@@ -4772,6 +4905,7 @@ async function reconnect() {
 // in memory until the person sends or clears it, including other workspaces.
 function hasUnsentDrafts() {
   const pending = (d) => d && (d.text || d.answering || d.reply || d.agent || d.agent_id || d.reply_receiver || d.reply_receiver_host || d.typedFor || (d.files && d.files.length));
+  if (anyScheduleOriginals())return true;
   if ($("body").value || state.answering || state.dmReply || state.dmAgent || state.deviceAgentID || state.replyReceiver || state.replyReceiverHost || state.typedFor || state.files.length ||
     Object.values(state.drafts).some(pending) || (state.dialogRestore && $("dialog").open)) return true;
   const w = wsAPI();
@@ -4780,7 +4914,7 @@ function hasUnsentDrafts() {
       for (const { id } of w.list()) {
         if (id === wsNow()) continue;
         const view = w.state(id)[skinKey];
-        if (w.state(id)[pendingKey]?.busy || view && Object.values(view.drafts || {}).some(pending)) return true;
+        if (scheduleBlocks(w.state(id)) || w.state(id)[pendingKey]?.busy || view && Object.values(view.drafts || {}).some(pending)) return true;
       }
     } catch (_) { return true; } // an uninspected saved view must not be discarded
   }
@@ -5234,7 +5368,7 @@ function renderInstalledInterfaces() {
   if (currentHost && currentHost.skins.length > 1) {
     const switchTo = (id) => {
       keepDraft();
-      if (state.files.length || Object.values(state.drafts).some((d) => d.files && d.files.length)) { announce("Send or remove draft attachments before switching interface."); return; }
+      if (anyScheduleOriginals() || state.files.length || Object.values(state.drafts).some((d) => d.files && d.files.length)) { announce("Send or remove draft attachments before switching interface."); return; }
       if (!keepForReload()) { announce("Could not save your draft. Finish it before switching interface."); return; }
       const change = () => currentHost.selectSkin(id);
       if (Object.values(state.drafts).some((d) => d.text)) {
@@ -5364,6 +5498,12 @@ function start() {
   });
   // What the person has in front of them, reported when it changes.
   on($("timeline"), "scroll", reportSeen);
+  on($('timeline'),'scroll',()=>state.readVisit?.watcher?.evaluate());
+  on(window,'resize',()=>state.readVisit?.watcher?.evaluate());
+  on(root,'focusin',()=>state.readVisit?.watcher?.evaluate());
+  if(window.ResizeObserver){const resize=new window.ResizeObserver(()=>state.readVisit?.watcher?.evaluate());resize.observe($('timeline'));cleanups.push(()=>resize.disconnect());}
+  if(host.android?.onVisibility)cleanups.push(host.android.onVisibility(visible=>{nativeVisible=visible;state.readVisit?.watcher?.evaluate();}));
+
   on(document, "visibilitychange", reportSeen);
   on(window, "focus", reportSeen);
   // A desktop alert's click opens this page on its conversation (#conv=ID,
@@ -5371,7 +5511,7 @@ function start() {
   // on it: taken once and removed from the address, either way.
   on(window, 'beforeunload', (e) => {
     keepForReload();
-    if (state.sending || state.files.length || Object.values(state.drafts).some(d => d.files?.length)) {
+    if (state.sending || anyScheduleOriginals() || state.files.length || Object.values(state.drafts).some(d => d.files?.length)) {
       e.preventDefault(); e.returnValue = '';
     }
   });
@@ -5401,10 +5541,12 @@ function start() {
   return ready;
 }
 const ready = start();
+ready.then(()=>{if(alive)setupSchedule();}).catch(()=>{});
 const stop = () => {
   keepDraft();
   if (wsAPI()?.state) workspaceCapture(wsNow(), wsAPI().state(wsNow()));
   if ($("crew-drawer").open) $("crew-drawer").close();
+  leaveReadVisit();scheduleUI?.destroy();
   alive = false; state.gen++; sends.dispose();
   if (pending.changed === pendingChanged) pending.changed = null;
   if (pending.accepted === pendingAccepted) pending.accepted = null;

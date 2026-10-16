@@ -5,20 +5,20 @@
       "id": "classic",
       "name": "Classic",
       "description": "AgentNet's original interface: your chats in a list on the left and the open conversation on the right, with topics, people, agents, activity and every setting one click away. Plain, familiar and quick on a desktop or a phone, in light and dark.",
-      "version": "1.7.0",
+      "version": "1.8.0",
       "api": 1,
-      "agentnet": "v0.8.32",
-      "digest": "fb5209a6feebbf8e8bbd338a802a65e89ab21bc9681ca7216e5603e17a1c8c40",
+      "agentnet": "v0.8.33",
+      "digest": "361f314f827e47487fb42ab0305a3e512c5e759636ba972ae60260afeb79efbd",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "c2f5a873da1672d9957e16b189f7f2af7eb7c7f7e2c154d210a5a93ac4f27a1a",
-          "size": 617
+          "sha256": "f77c2f276815c77f5b4ebaf824ed34ae2136d1f9d85813af7c44a477119d689e",
+          "size": 806
         },
         {
           "path": "entry.mjs",
-          "sha256": "c22b6793b74e878366f838e9a11794a75d37086ef0c823c1ead0ed10fe7c1311",
-          "size": 400831
+          "sha256": "cb4656c2f2f6594dd4f503deca10188588e058efb334f3be633cc2ae9e45151c",
+          "size": 413946
         },
         {
           "path": "composer-followup.mjs",
@@ -27,13 +27,13 @@
         },
         {
           "path": "manifest.mjs",
-          "sha256": "60fc67cb59d5f14a1e692d80533df86f87eb3f6f632a86560c9b2edc67f63d1f",
-          "size": 633
+          "sha256": "8eb617b557dc098266c61d7604259d95c41c0ad0b518de650646a816040cceac",
+          "size": 822
         },
         {
           "path": "style.css",
-          "sha256": "42e791bcd8788454306c09a031d3a7709f6f9dbabc08f5dd401ee6d711c3c0d4",
-          "size": 55892
+          "sha256": "97d78201645aa837f6817d6979b6a61851f74234a8da58dcb4e4c0cff3aeadb5",
+          "size": 57179
         },
         {
           "path": "template.mjs",
@@ -82,8 +82,8 @@
         },
         {
           "path": "topics.mjs",
-          "sha256": "1bb32bd3d17496a33e19635d2cebf15e170185cb121837b57c5d1b66cada5aaa",
-          "size": 10523
+          "sha256": "a51a9223c8eef95d603adca6311ffa5f519a28ca24d62e434ec6f756e33afbba",
+          "size": 17606
         },
         {
           "path": "person-topics.mjs",
@@ -102,8 +102,8 @@
         },
         {
           "path": "pictures.mjs",
-          "sha256": "6af9fe3af1ff7aba1b3826a5b59a458346819b2f78efb9ff6d762603ccb14eeb",
-          "size": 11919
+          "sha256": "7adee51f9967fe8b1c59fc9f6d7fc444d81d09d96c6362c7c75291f2c9508eec",
+          "size": 12898
         },
         {
           "path": "link-text.mjs",
@@ -119,31 +119,71 @@
           "path": "native-request.mjs",
           "sha256": "bf41ec6576c7e68e2d9415ffe2b0b953f9382fcfb24e45df8af306c678ba7d69",
           "size": 6894
+        },
+        {
+          "path": "visible-rows.mjs",
+          "sha256": "8de9c902ae41032b3b193e5f1ba024e1d0b9e3b47de52867a7452c367e6b7559",
+          "size": 3616
+        },
+        {
+          "path": "native-activity.mjs",
+          "sha256": "cd72f639af72b45d7c487a0510550670ee9fb6ca7bc57031684faa7b700f2596",
+          "size": 2111
+        },
+        {
+          "path": "video-file.mjs",
+          "sha256": "c7d35199028d1066b9f7aa22fb079e75fba0c2d03cc496f2e1609e92ed85cec2",
+          "size": 7025
+        },
+        {
+          "path": "choices.mjs",
+          "sha256": "fbb941bd6937a2d5c63502a269f56973829c615d3ba2579ce3500ec76d61ad15",
+          "size": 4904
+        },
+        {
+          "path": "unread-review.mjs",
+          "sha256": "7b20408a77bdcdf521182ef1b74598d458dab5dc088f30d393d85bbb95fb35a8",
+          "size": 4211
+        },
+        {
+          "path": "schedule.mjs",
+          "sha256": "2e6dd213cf5a5db16931ffed2a4dae63c1a1daf7555e3a6d93b4133a4ee52338",
+          "size": 17255
+        },
+        {
+          "path": "schedule-model.mjs",
+          "sha256": "c41d18edd0742947b1d231268f706994933c4545c2d06ae112820a49c863a73b",
+          "size": 5005
+        },
+        {
+          "path": "schedule-saves.mjs",
+          "sha256": "4fde7b5f552e652a18a3b32efe75bec1bbabcc9ab2a5a58bc2fca63134d3c359",
+          "size": 4887
         }
       ],
       "previews": [
         {
           "path": "previews/desktop-light.png",
-          "sha256": "62a6e56234c593c68a523a9f93544d77b8f02b0c0597e459330313ff07a7e3fc",
-          "size": 143512,
+          "sha256": "52132b676254e0a7a4414a222f8ad506c681e72eb77d70bf35d1ca439751db54",
+          "size": 146161,
           "alt": "Classic on a desktop, light: the chat list beside the open conversation, in a conversation with the fictional Tomasz Reyes"
         },
         {
           "path": "previews/desktop-dark.png",
-          "sha256": "0e5500d9b129afbcf59e03ce0716f8a94cb2533ed1cd6ae4acc386b985bd1a44",
-          "size": 146834,
+          "sha256": "9b964bcbdb8e4dfab10d7409343bed994744b446dbecc2b9f992166839c2bd19",
+          "size": 150572,
           "alt": "Classic on a desktop, dark: the chat list beside the open conversation, in a conversation with the fictional Tomasz Reyes"
         },
         {
           "path": "previews/mobile-light.png",
-          "sha256": "595139fb3bed05ffba3a3b25e8d055504b8210e67e45d11f6c6c77a25135cffa",
-          "size": 54460,
+          "sha256": "7a7d7d6310de7e08a6fd253fb587d38ff8e4087adc4587f7a9d6889dd52685c1",
+          "size": 58390,
           "alt": "Classic on a phone, light: a conversation with the fictional Tomasz Reyes about a glaze test"
         },
         {
           "path": "previews/mobile-dark.png",
-          "sha256": "74fdac6274e9650a8958c6c9131991e7483f36dbf1b8d10f3344071be60124fc",
-          "size": 55890,
+          "sha256": "923186f50daecac09658f9a94c8924735366518f32398503540d6643302b4bee",
+          "size": 59742,
           "alt": "Classic on a phone, dark: a conversation with the fictional Tomasz Reyes about a glaze test"
         }
       ]
@@ -152,20 +192,20 @@
       "id": "holonet",
       "name": "Holonet",
       "description": "A starship comms console for AgentNet: command navigation across the top, a framed transmission display, a crew panel and a command dock for writing. A brief scanner sweep and split shutters mark what you open, and both stay still when your device asks for less motion. Every chat, topic, agent and setting is still there.",
-      "version": "1.7.0",
+      "version": "1.8.0",
       "api": 1,
-      "agentnet": "v0.8.32",
-      "digest": "cb554fa5d8ef542b98546f7f4920031ccd5aad3239d4bcd96fa97f189039a6dc",
+      "agentnet": "v0.8.33",
+      "digest": "dec1042fbc2c53f14e0693401f1f36ed2d67e5818a1a1c2d56895b7dce414bb9",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "33bc71bb1394f71a3a609c4fec209a23e3a125ed8a8dc738d89ebbd584450be1",
-          "size": 554
+          "sha256": "5836eac5e25da70dfbef19cce5a6c2325e0e6e7dfbfcd57c6bf0cc41dfbbc68d",
+          "size": 768
         },
         {
           "path": "entry.mjs",
-          "sha256": "2c7fbc91dc6a5766bb18452d06447fe01105239a540333ae2a2f3d57856bab04",
-          "size": 371324
+          "sha256": "56c316e1a30431fa4b8e2a669d1490e0902f43e94599e994a6f704b088686410",
+          "size": 385836
         },
         {
           "path": "composer-followup.mjs",
@@ -174,13 +214,13 @@
         },
         {
           "path": "manifest.mjs",
-          "sha256": "c7d37ba878964a43784add42a35e6c933b8331d44e5e980773d0fd8251e9e479",
-          "size": 570
+          "sha256": "3dea22477bed64dbc8c31b5e9b00b7fc7692239d130e6925700c43fe7840a542",
+          "size": 784
         },
         {
           "path": "style.css",
-          "sha256": "60af04c03f10db073f413b0c2846264310627465b0bc2b7b3011543fb58076e2",
-          "size": 69777
+          "sha256": "3ea8377279184a91bdc81caf3c88d108cd05653e67d35fb814a0c5478e5479fd",
+          "size": 72038
         },
         {
           "path": "template.mjs",
@@ -229,8 +269,8 @@
         },
         {
           "path": "topics.mjs",
-          "sha256": "9b9c86f5481817820611e3d311f77e6abb9ac1e962dbbe6ebb5ded5e1dfe83d5",
-          "size": 7865
+          "sha256": "235b442c19788d2a700bec8fa70a9d0f5d5508e8df4071d437617da8bb9f5e2a",
+          "size": 17920
         },
         {
           "path": "optimistic.mjs",
@@ -239,8 +279,8 @@
         },
         {
           "path": "pictures.mjs",
-          "sha256": "6af9fe3af1ff7aba1b3826a5b59a458346819b2f78efb9ff6d762603ccb14eeb",
-          "size": 11919
+          "sha256": "7adee51f9967fe8b1c59fc9f6d7fc444d81d09d96c6362c7c75291f2c9508eec",
+          "size": 12898
         },
         {
           "path": "signal.svg",
@@ -256,31 +296,76 @@
           "path": "native-request.mjs",
           "sha256": "bf41ec6576c7e68e2d9415ffe2b0b953f9382fcfb24e45df8af306c678ba7d69",
           "size": 6894
+        },
+        {
+          "path": "visible-rows.mjs",
+          "sha256": "8de9c902ae41032b3b193e5f1ba024e1d0b9e3b47de52867a7452c367e6b7559",
+          "size": 3616
+        },
+        {
+          "path": "native-activity.mjs",
+          "sha256": "cd72f639af72b45d7c487a0510550670ee9fb6ca7bc57031684faa7b700f2596",
+          "size": 2111
+        },
+        {
+          "path": "unread-review.mjs",
+          "sha256": "7b20408a77bdcdf521182ef1b74598d458dab5dc088f30d393d85bbb95fb35a8",
+          "size": 4211
+        },
+        {
+          "path": "choices.mjs",
+          "sha256": "fbb941bd6937a2d5c63502a269f56973829c615d3ba2579ce3500ec76d61ad15",
+          "size": 4904
+        },
+        {
+          "path": "video-file.mjs",
+          "sha256": "c7d35199028d1066b9f7aa22fb079e75fba0c2d03cc496f2e1609e92ed85cec2",
+          "size": 7025
+        },
+        {
+          "path": "schedule.mjs",
+          "sha256": "2e6dd213cf5a5db16931ffed2a4dae63c1a1daf7555e3a6d93b4133a4ee52338",
+          "size": 17255
+        },
+        {
+          "path": "schedule-model.mjs",
+          "sha256": "c41d18edd0742947b1d231268f706994933c4545c2d06ae112820a49c863a73b",
+          "size": 5005
+        },
+        {
+          "path": "schedule-saves.mjs",
+          "sha256": "4fde7b5f552e652a18a3b32efe75bec1bbabcc9ab2a5a58bc2fca63134d3c359",
+          "size": 4887
+        },
+        {
+          "path": "person-topics.mjs",
+          "sha256": "1d80432b0355a36e1da70373ea48011ff040ded2eb10c07cde9631f9aeaf189a",
+          "size": 2922
         }
       ],
       "previews": [
         {
           "path": "previews/desktop-light.png",
-          "sha256": "6544526a3e3888236d0867727b4d8d9b7f3ccb7ba31979d7e8d59955f598e8df",
-          "size": 136618,
+          "sha256": "a6e073bde9dd434a324b82287c376fe687a3b3822580c1b63fb78c9a22924978",
+          "size": 135305,
           "alt": "Holonet on a desktop, light: the framed transmission display, in a conversation with the fictional Tomasz Reyes"
         },
         {
           "path": "previews/desktop-dark.png",
-          "sha256": "358275dd56d0efd850bf702382366fcca64c09de6ce68a47eb320223adba4d27",
-          "size": 138347,
+          "sha256": "251ec766b9d10726315c0eebf82e5518eddd43968048c4748396c069d5159c48",
+          "size": 136775,
           "alt": "Holonet on a desktop, dark: the framed transmission display, in a conversation with the fictional Tomasz Reyes"
         },
         {
           "path": "previews/mobile-light.png",
-          "sha256": "850e227dc225a52aebd1ea59f17db1d9499b8e307849af6873e8210dc58e99be",
-          "size": 54603,
+          "sha256": "3571fea54c32550bb031b9a1f140c321f2bac56f910486565f319055af9610ce",
+          "size": 55146,
           "alt": "Holonet on a phone, light: a conversation with the fictional Tomasz Reyes about a glaze test"
         },
         {
           "path": "previews/mobile-dark.png",
-          "sha256": "e021eb49bf8dfcc144f42596026cbfe997769b72f11161e6c7db93fb8b341600",
-          "size": 54572,
+          "sha256": "f0303426e819bac29037f44bb69febb382b95fe20196a05486283fb947f711de",
+          "size": 55036,
           "alt": "Holonet on a phone, dark: a conversation with the fictional Tomasz Reyes about a glaze test"
         }
       ]
@@ -289,25 +374,25 @@
       "id": "office",
       "name": "Office",
       "description": "A plain workplace messenger: white pages, thin hairlines, a dark neutral rail, the device's own font. Green for what you can do, blue for agents. Flat messages, a bordered composer, hairline request cards with a coloured edge. Everything Comic does, without the stickers.",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "api": 1,
-      "agentnet": "v0.8.32",
-      "digest": "9e2f9609877cb0c24951186e1185fd1a4da8e2cdf0be30529dfc64be2e8d5603",
+      "agentnet": "v0.8.33",
+      "digest": "db0833f6c5caa0d67b4e61009001f1282beaffdf9d47d795769413be8b68c616",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "f0cc250ea291a797c3996511774166756c62b139cab7e9130372aff3f445077f",
+          "sha256": "88ec2ac30e5058fc0028d5ccbae315f5919f1afc2e4f3a581e146578dc97e97e",
           "size": 675
         },
         {
           "path": "entry.mjs",
-          "sha256": "4cd4e86195665fbbe803e140a6feed0335facc403a05d8888ad793ec80bbfa90",
-          "size": 1216400
+          "sha256": "bfe04999da3262528c3b0befba02170a9cd91e66062427a18b07f8ef4586ceac",
+          "size": 1257048
         },
         {
           "path": "style.css",
-          "sha256": "147866e596a5dd0b75fc937b6b1bec07b9beecc24db767574fe5df6c1936fb98",
-          "size": 84370
+          "sha256": "164ab9915abcacecb0269d3ad376eda3f17169dad0f5360ad438f3a45c5e0769",
+          "size": 85431
         },
         {
           "path": "document.css",
@@ -368,26 +453,26 @@
       "previews": [
         {
           "path": "previews/desktop-light.png",
-          "sha256": "515e9dbbb0610217d3f4beaf0ecb4ac4ccdf6fc1e1face83365fd1b4ad69e455",
-          "size": 110739,
+          "sha256": "f8f87e6c8e4e0a7aaf7c88107b2b3fcb1a59aee815a3acfe6362b4aae6426bfd",
+          "size": 108894,
           "alt": "Office on a desktop, light: the chat list beside an open conversation with flat messages"
         },
         {
           "path": "previews/desktop-dark.png",
-          "sha256": "8419e8738d907aa5f9d21119e4b14e20d1dccbb385e6df8fcda749e46ce96409",
-          "size": 113998,
+          "sha256": "d2a0fd4f8bf065c1fbac1abe076c8634a45b1da394823c584d209b9b482eabf2",
+          "size": 111939,
           "alt": "Office on a desktop, dark: the same conversation on dark grey"
         },
         {
           "path": "previews/mobile-light.png",
-          "sha256": "b0351737f374276b85b8432ebb8ce48408b31638707e858d9d8e4748641d889d",
-          "size": 55620,
+          "sha256": "38de34e43e39945917cc6f646a2de55c7b9c36cbb10b5fa5be9576c7c463254d",
+          "size": 55474,
           "alt": "Office on a phone, light: an open conversation and the composer"
         },
         {
           "path": "previews/mobile-dark.png",
-          "sha256": "f6781c9c25d1078a0e815b46f509d625521b50addc99876a38765e1c1632035c",
-          "size": 57906,
+          "sha256": "100cdd173dc2e89ca5407bbe39332623de6da63e1e8737dc1196491b900ef952",
+          "size": 57446,
           "alt": "Office on a phone, dark"
         }
       ]
@@ -396,25 +481,25 @@
       "id": "pulp",
       "name": "Pulp",
       "description": "A 1970s paperback by day and a roadside diner by night. Chats read like a table of contents, every topic opens with a chapter card, requests for your OK arrive as a glowing case, and your agents wear costumes. Everything Comic does, in a new look.",
-      "version": "1.7.0",
+      "version": "1.8.0",
       "api": 1,
-      "agentnet": "v0.8.32",
-      "digest": "e93aa32301f06bf59cb5799dd483c80eeec6b2b3290c7bfed3633c6a5289efc8",
+      "agentnet": "v0.8.33",
+      "digest": "2c4702b1aae63742db03e7c416d4dde7a11ba66c69a00ec1fd6e02632dc1c35f",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "493ebabd4ac201935cede1d1af23788b57a558b395e93612723eb7b1c95c3b1b",
+          "sha256": "7327975a285bd6f186ebdcc9a92c3e6d56f49961081f63f840ea7c7f65695146",
           "size": 1131
         },
         {
           "path": "entry.mjs",
-          "sha256": "a53d9f90ecc8a7f41052bfdb72f85f3d2b4f8d8b9b074f0074162fba130b1274",
-          "size": 1219714
+          "sha256": "3608b98e78472010100ef571c0a090abf39d7909c601fbb6ce98677d95968d1b",
+          "size": 1260362
         },
         {
           "path": "style.css",
-          "sha256": "ce8df83fc85c69e7798e2e44a8b7152e1223a28d824eb5b212bc3386e0aec1ef",
-          "size": 87111
+          "sha256": "d629943d06d4b744136508efb69171429d9c917ff48da860bf08ece91e917955",
+          "size": 88172
         },
         {
           "path": "document.css",
@@ -515,26 +600,26 @@
       "previews": [
         {
           "path": "previews/desktop-light.png",
-          "sha256": "9771ad06411c70a7006414f0a06759a238045440c686c731f1d3f319d218b0bf",
-          "size": 130260,
+          "sha256": "ca422c758e101b18c2192f919912df6d886816ac8987b52a65b5aa897ab370e6",
+          "size": 129683,
           "alt": "Pulp on a desktop, day: the contents list beside a conversation with the fictional Tomasz Reyes"
         },
         {
           "path": "previews/desktop-dark.png",
-          "sha256": "ae623b4432f3027c490a3efc57b8a575465e9f052952aa9b4866872ff9ccff6f",
-          "size": 130484,
+          "sha256": "751659507db20ef8266e44da8a13117b34d0e85ac6091d28392da04863f122e0",
+          "size": 129939,
           "alt": "Pulp on a desktop, night: the same fictional conversation in diner neon"
         },
         {
           "path": "previews/mobile-light.png",
-          "sha256": "2b3d5240aa97222c17c7dad462544dbb842b5ced690634b0826d2e362139c349",
-          "size": 63125,
+          "sha256": "320f864fe48985a63b864f529f665fd7c82090b5ae4d52d493bd3cf8cc039ecd",
+          "size": 62615,
           "alt": "Pulp on a phone, day: a conversation with the fictional Tomasz Reyes about a glaze test"
         },
         {
           "path": "previews/mobile-dark.png",
-          "sha256": "de9b5c265304e0e9a07500d7a0c23717ff379420f2743c5b6010c27df48493ea",
-          "size": 63212,
+          "sha256": "5aa22bc85e0e405845ef3b8960837b49850c970ab329106787b56050f27b6931",
+          "size": 62796,
           "alt": "Pulp on a phone, night: the same fictional conversation and composer"
         }
       ]
@@ -543,20 +628,20 @@
       "id": "zoom",
       "name": "Zoom",
       "description": "Move through your workspace by zooming in: everyone, then one person, then a conversation, then a single message with everything known about it. Esc steps back out. You write in a focused dialog, and every chat, topic, agent and setting is still there.",
-      "version": "1.7.0",
+      "version": "1.8.0",
       "api": 1,
-      "agentnet": "v0.8.32",
-      "digest": "5b959d8388290ab411760ea51eddca4a7dce3413a8664ee4ea8db0360dd501ae",
+      "agentnet": "v0.8.33",
+      "digest": "5eabc2e36b24774201ae6cabc1881b2ead02ad8455d6e1d5372da5cf512e88d5",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "9c8cb0a5a37361ba7036a5fde5a1d2034cc029527b22d9a7eabef74f111d9d94",
-          "size": 611
+          "sha256": "61fc94e8d467fe2001e412f94adc6c1a18654d0474f6b2d20e2ecd610280dd5d",
+          "size": 800
         },
         {
           "path": "entry.mjs",
-          "sha256": "31c6f02efce97b03cf4c6ad54d74e735d8b4400da7374b2cbfe69e8661e2afb9",
-          "size": 431126
+          "sha256": "83fd449978d7aa547db006bbcca4c88c16961e257288b9ef0fd210856d759686",
+          "size": 445547
         },
         {
           "path": "composer-followup.mjs",
@@ -565,13 +650,13 @@
         },
         {
           "path": "manifest.mjs",
-          "sha256": "bed9d13ee54bacd1c900f0b2036a976ac26a930c9823b64160913749e6ac96fe",
-          "size": 627
+          "sha256": "9056b0e5c639602181abafeab9ada312329d7da5a9ad6f1352335ed4f2fa95ba",
+          "size": 816
         },
         {
           "path": "style.css",
-          "sha256": "2648327fe6dae1337ed8e200f5a9702a604aebe253b476c045a2d801ce3d048a",
-          "size": 63976
+          "sha256": "2c44968cd7c6f18c3cd2c85460e67494c9c24a607cd3eb6745bac379f0c4587b",
+          "size": 65263
         },
         {
           "path": "template.mjs",
@@ -620,8 +705,8 @@
         },
         {
           "path": "topics.mjs",
-          "sha256": "1bb32bd3d17496a33e19635d2cebf15e170185cb121837b57c5d1b66cada5aaa",
-          "size": 10523
+          "sha256": "a51a9223c8eef95d603adca6311ffa5f519a28ca24d62e434ec6f756e33afbba",
+          "size": 17606
         },
         {
           "path": "person-topics.mjs",
@@ -640,8 +725,8 @@
         },
         {
           "path": "pictures.mjs",
-          "sha256": "6af9fe3af1ff7aba1b3826a5b59a458346819b2f78efb9ff6d762603ccb14eeb",
-          "size": 11919
+          "sha256": "7adee51f9967fe8b1c59fc9f6d7fc444d81d09d96c6362c7c75291f2c9508eec",
+          "size": 12898
         },
         {
           "path": "link-text.mjs",
@@ -657,31 +742,71 @@
           "path": "native-request.mjs",
           "sha256": "bf41ec6576c7e68e2d9415ffe2b0b953f9382fcfb24e45df8af306c678ba7d69",
           "size": 6894
+        },
+        {
+          "path": "visible-rows.mjs",
+          "sha256": "8de9c902ae41032b3b193e5f1ba024e1d0b9e3b47de52867a7452c367e6b7559",
+          "size": 3616
+        },
+        {
+          "path": "native-activity.mjs",
+          "sha256": "cd72f639af72b45d7c487a0510550670ee9fb6ca7bc57031684faa7b700f2596",
+          "size": 2111
+        },
+        {
+          "path": "video-file.mjs",
+          "sha256": "c7d35199028d1066b9f7aa22fb079e75fba0c2d03cc496f2e1609e92ed85cec2",
+          "size": 7025
+        },
+        {
+          "path": "choices.mjs",
+          "sha256": "fbb941bd6937a2d5c63502a269f56973829c615d3ba2579ce3500ec76d61ad15",
+          "size": 4904
+        },
+        {
+          "path": "unread-review.mjs",
+          "sha256": "7b20408a77bdcdf521182ef1b74598d458dab5dc088f30d393d85bbb95fb35a8",
+          "size": 4211
+        },
+        {
+          "path": "schedule.mjs",
+          "sha256": "2e6dd213cf5a5db16931ffed2a4dae63c1a1daf7555e3a6d93b4133a4ee52338",
+          "size": 17255
+        },
+        {
+          "path": "schedule-model.mjs",
+          "sha256": "c41d18edd0742947b1d231268f706994933c4545c2d06ae112820a49c863a73b",
+          "size": 5005
+        },
+        {
+          "path": "schedule-saves.mjs",
+          "sha256": "4fde7b5f552e652a18a3b32efe75bec1bbabcc9ab2a5a58bc2fca63134d3c359",
+          "size": 4887
         }
       ],
       "previews": [
         {
           "path": "previews/desktop-light.png",
-          "sha256": "7607f961264658e26d3eb78b1e0e9fb88367df51e8a668a05242533732635d36",
-          "size": 90279,
+          "sha256": "31cd2bd0293829ce9bb9dc17ab8cc0f33a790a81d0164bfe2d15e836311765fe",
+          "size": 94190,
           "alt": "Zoom on a desktop, light: the conversation level with its zoom ladder, in a conversation with the fictional Tomasz Reyes"
         },
         {
           "path": "previews/desktop-dark.png",
-          "sha256": "bd0779e78993888ab8bef8519196b6b4676babcdfa960f1ea117f9e9eb266953",
-          "size": 91648,
+          "sha256": "3ccbde2cb2a62265e02be22dc424a996f631bc5b97dfb82b4b8275585739926a",
+          "size": 93621,
           "alt": "Zoom on a desktop, dark: the conversation level with its zoom ladder, in a conversation with the fictional Tomasz Reyes"
         },
         {
           "path": "previews/mobile-light.png",
-          "sha256": "5fa89bbd23823cda09f8bd075b18a11da22dfe0d4f5800c59f0799e50a6e7419",
-          "size": 61712,
+          "sha256": "6f3264e22e0c99fa658b38bdc7cbe37c7b200bda0d610ef693807c3a76f98bf7",
+          "size": 62988,
           "alt": "Zoom on a phone, light: a conversation with the fictional Tomasz Reyes about a glaze test"
         },
         {
           "path": "previews/mobile-dark.png",
-          "sha256": "302ed7d87f4e641cc2392b5262993267c26511fdc7f086f863d2be32ff2cf8e8",
-          "size": 62849,
+          "sha256": "1db3714b84ae13ea23a11bc947b94341475a1118dba6a7b1b913147b12e69aeb",
+          "size": 64158,
           "alt": "Zoom on a phone, dark: a conversation with the fictional Tomasz Reyes about a glaze test"
         }
       ]

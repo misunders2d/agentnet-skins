@@ -2,7 +2,7 @@ export default {
   "api": 1,
   "id": "holonet",
   "name": "Holonet",
-  "agentnet": "v0.8.32",
+  "agentnet": "v0.8.33",
   "entry": "entry.mjs",
   "style": "style.css",
   "files": [
@@ -24,6 +24,15 @@ export default {
     "pictures.mjs",
     "signal.svg",
     "skin-motion.mjs",
-    "native-request.mjs"
+    "native-request.mjs",
+    "visible-rows.mjs",
+    "native-activity.mjs",
+    "unread-review.mjs",
+    "choices.mjs",
+    "video-file.mjs",
+    "schedule.mjs",
+    "schedule-model.mjs",
+    "schedule-saves.mjs",
+    "person-topics.mjs"
   ]
 };

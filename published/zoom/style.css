@@ -939,3 +939,20 @@ button.reaction { cursor: pointer; }
 .markdown-table { max-width:100%; overflow:auto; }
 .markdown-table table { border-collapse:collapse; }
 .markdown-table th, .markdown-table td { border:1px solid currentColor; padding:.25em .5em; }
+
+/* v33 optional shared controls use this skin's existing tokens. */
+.unread-divider {list-style:none;text-align:center;color:var(--accent-text);font-weight:600;padding:12px;flex-shrink:0;}
+.unread-review {margin-top:16px;padding-top:12px;border-top:1px solid var(--line);}
+.unread-review button,.schedule-controls button,.schedule-controls select {min-height:44px;}
+.schedule-controls {display:flex;flex-wrap:wrap;gap:8px;padding:6px 0;}
+.file-video {display:block;max-width:100%;}
+.topic-row > button:last-child { grid-column:2; justify-self:start; max-width:100%; }
+/* agentnet-shared-v33 begin */
+.an-hit { min-height: 44px; min-width: 44px; }
+.an-row-button { width: 100%; text-align: left; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+.an-video-file { max-width: 480px; min-width: 0; overflow-wrap: anywhere; }
+.an-video-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.an-video-file .an-hit { padding: 8px 12px; font: inherit; color: inherit; cursor: pointer; }
+.an-video-player { display: block; width: 100%; max-height: 60vh; object-fit: contain; background: #000; border-radius: 8px; }
+.an-schedule-dialog { max-width: min(42rem, calc(100% - 2rem)); max-height: calc(100% - 2rem); overflow: auto; }
+/* agentnet-shared-v33 end */

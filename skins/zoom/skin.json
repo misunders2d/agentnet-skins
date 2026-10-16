@@ -2,7 +2,7 @@
   "api": 1,
   "id": "zoom",
   "name": "Zoom",
-  "agentnet": "v0.8.32",
+  "agentnet": "v0.8.33",
   "entry": "entry.mjs",
   "style": "style.css",
   "files": [
@@ -26,6 +26,14 @@
     "pictures.mjs",
     "link-text.mjs",
     "reaction-preferences.mjs",
-    "native-request.mjs"
+    "native-request.mjs",
+    "visible-rows.mjs",
+    "native-activity.mjs",
+    "video-file.mjs",
+    "choices.mjs",
+    "unread-review.mjs",
+    "schedule.mjs",
+    "schedule-model.mjs",
+    "schedule-saves.mjs"
   ]
 }

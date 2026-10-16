@@ -33,7 +33,7 @@ messages), Office built from this overlay on AgentNet v0.8.32
 (commit `3ba44749`). Desktop 1440 × 1000 and phone 390 × 844 previews show the
 skin's own area; phone screenshots use Chromium emulation.
 
-The release candidate pin is AgentNet v0.8.32 at `ac98b331`. These inspected previews were rendered on `3ba44749`, whose production, generated and runtime source bytes are identical to this candidate. The full collection gate passed against this exact candidate. Proposed gallery release `v2026.10.16.2` is not published.
+The release candidate pin is AgentNet v0.8.33 at `3454a059`. These four previews were rendered on that exact pin and inspected. The complete collection gate and publication remain pending; earlier v32 qualification does not qualify this candidate.
 
 | Desktop, light | Desktop, dark |
 | --- | --- |

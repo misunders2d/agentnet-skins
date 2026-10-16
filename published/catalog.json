@@ -164,26 +164,26 @@
       "previews": [
         {
           "path": "previews/desktop-light.png",
-          "sha256": "52132b676254e0a7a4414a222f8ad506c681e72eb77d70bf35d1ca439751db54",
-          "size": 146161,
+          "sha256": "f8f147fb10ad413a60c993eeba9ee33fbfeb65d062f44b62033bba9c84ecaa7e",
+          "size": 146819,
           "alt": "Classic on a desktop, light: the chat list beside the open conversation, in a conversation with the fictional Tomasz Reyes"
         },
         {
           "path": "previews/desktop-dark.png",
-          "sha256": "9b964bcbdb8e4dfab10d7409343bed994744b446dbecc2b9f992166839c2bd19",
-          "size": 150572,
+          "sha256": "e892d0fc19e5896d4aa576bda090c40f5bc4571806d68cb49300a911021f1a20",
+          "size": 151461,
           "alt": "Classic on a desktop, dark: the chat list beside the open conversation, in a conversation with the fictional Tomasz Reyes"
         },
         {
           "path": "previews/mobile-light.png",
-          "sha256": "7a7d7d6310de7e08a6fd253fb587d38ff8e4087adc4587f7a9d6889dd52685c1",
-          "size": 58390,
+          "sha256": "ae7a68767b50d50d24bb5f749be4d2f86f692aaa1a2665903780ec21e2b359f1",
+          "size": 58566,
           "alt": "Classic on a phone, light: a conversation with the fictional Tomasz Reyes about a glaze test"
         },
         {
           "path": "previews/mobile-dark.png",
-          "sha256": "923186f50daecac09658f9a94c8924735366518f32398503540d6643302b4bee",
-          "size": 59742,
+          "sha256": "06871589a781cce8e2c11a60c5efe82b0e94b097e939b4ec9eae1c4a6ccaa89b",
+          "size": 59907,
           "alt": "Classic on a phone, dark: a conversation with the fictional Tomasz Reyes about a glaze test"
         }
       ]
@@ -346,26 +346,26 @@
       "previews": [
         {
           "path": "previews/desktop-light.png",
-          "sha256": "a6e073bde9dd434a324b82287c376fe687a3b3822580c1b63fb78c9a22924978",
-          "size": 135305,
+          "sha256": "3333a99e42186e2230e9d46c9b04eece7504e8f10e188d5f65fbcf8dee4598bc",
+          "size": 135664,
           "alt": "Holonet on a desktop, light: the framed transmission display, in a conversation with the fictional Tomasz Reyes"
         },
         {
           "path": "previews/desktop-dark.png",
-          "sha256": "251ec766b9d10726315c0eebf82e5518eddd43968048c4748396c069d5159c48",
-          "size": 136775,
+          "sha256": "2242a47ce8dcd3c5de97f66b755e2385f10cea1a384be85f5fdcf73569eb99cd",
+          "size": 137116,
           "alt": "Holonet on a desktop, dark: the framed transmission display, in a conversation with the fictional Tomasz Reyes"
         },
         {
           "path": "previews/mobile-light.png",
-          "sha256": "3571fea54c32550bb031b9a1f140c321f2bac56f910486565f319055af9610ce",
-          "size": 55146,
+          "sha256": "55f98d97fb77a52ba035838b8ef086c679a002fc5555dd95f146fce01744264a",
+          "size": 55123,
           "alt": "Holonet on a phone, light: a conversation with the fictional Tomasz Reyes about a glaze test"
         },
         {
           "path": "previews/mobile-dark.png",
-          "sha256": "f0303426e819bac29037f44bb69febb382b95fe20196a05486283fb947f711de",
-          "size": 55036,
+          "sha256": "4361b95813eac635c59056addf670dddc0cd499e743c5a791a4aaea0863d7db2",
+          "size": 55054,
           "alt": "Holonet on a phone, dark: a conversation with the fictional Tomasz Reyes about a glaze test"
         }
       ]
@@ -453,26 +453,26 @@
       "previews": [
         {
           "path": "previews/desktop-light.png",
-          "sha256": "f8f87e6c8e4e0a7aaf7c88107b2b3fcb1a59aee815a3acfe6362b4aae6426bfd",
-          "size": 108894,
+          "sha256": "93575d6f4951377171e57c04fc7a3c0264d46cc064561b9fab56144d418c3ae1",
+          "size": 109360,
           "alt": "Office on a desktop, light: the chat list beside an open conversation with flat messages"
         },
         {
           "path": "previews/desktop-dark.png",
-          "sha256": "d2a0fd4f8bf065c1fbac1abe076c8634a45b1da394823c584d209b9b482eabf2",
-          "size": 111939,
+          "sha256": "1e52ced10371d052e76317d50e63489f27e7be396798c00112ee291d9adbf79b",
+          "size": 112478,
           "alt": "Office on a desktop, dark: the same conversation on dark grey"
         },
         {
           "path": "previews/mobile-light.png",
-          "sha256": "38de34e43e39945917cc6f646a2de55c7b9c36cbb10b5fa5be9576c7c463254d",
-          "size": 55474,
+          "sha256": "4d20ae11d16c8a4a0429bc0d093e0b9d34fa9159da4df6212b34a7ec9a7bc49c",
+          "size": 55381,
           "alt": "Office on a phone, light: an open conversation and the composer"
         },
         {
           "path": "previews/mobile-dark.png",
-          "sha256": "100cdd173dc2e89ca5407bbe39332623de6da63e1e8737dc1196491b900ef952",
-          "size": 57446,
+          "sha256": "d9192ca6e650adda7fa95545ca0f67ac204e6d16999a52db5d6e5155ec0c46f5",
+          "size": 57671,
           "alt": "Office on a phone, dark"
         }
       ]
@@ -600,26 +600,26 @@
       "previews": [
         {
           "path": "previews/desktop-light.png",
-          "sha256": "ca422c758e101b18c2192f919912df6d886816ac8987b52a65b5aa897ab370e6",
-          "size": 129683,
+          "sha256": "aff61815828c99b6890b23aa85f07b77bf1768439d924766f0133340cf1e957f",
+          "size": 129816,
           "alt": "Pulp on a desktop, day: the contents list beside a conversation with the fictional Tomasz Reyes"
         },
         {
           "path": "previews/desktop-dark.png",
-          "sha256": "751659507db20ef8266e44da8a13117b34d0e85ac6091d28392da04863f122e0",
-          "size": 129939,
+          "sha256": "4a221e41cb7e84de5e718be8f877108f5bf0a2cc7f77abf507088a7b243786da",
+          "size": 130058,
           "alt": "Pulp on a desktop, night: the same fictional conversation in diner neon"
         },
         {
           "path": "previews/mobile-light.png",
-          "sha256": "320f864fe48985a63b864f529f665fd7c82090b5ae4d52d493bd3cf8cc039ecd",
-          "size": 62615,
+          "sha256": "ba41a7fa1fc00858ac6e937bc56443506037b6303e95994c430e9f50e42d72d9",
+          "size": 63036,
           "alt": "Pulp on a phone, day: a conversation with the fictional Tomasz Reyes about a glaze test"
         },
         {
           "path": "previews/mobile-dark.png",
-          "sha256": "5aa22bc85e0e405845ef3b8960837b49850c970ab329106787b56050f27b6931",
-          "size": 62796,
+          "sha256": "f7de0bfdfa29957cc38a6f43da871bfb7eef7a3ac3b1eaf8d4b5934fb5e447ed",
+          "size": 63038,
           "alt": "Pulp on a phone, night: the same fictional conversation and composer"
         }
       ]
@@ -787,26 +787,26 @@
       "previews": [
         {
           "path": "previews/desktop-light.png",
-          "sha256": "31cd2bd0293829ce9bb9dc17ab8cc0f33a790a81d0164bfe2d15e836311765fe",
-          "size": 94190,
+          "sha256": "6fd2a24a0ca1ac4833e4bffa95605d81a496df024164233abc6cf10943f9c885",
+          "size": 91950,
           "alt": "Zoom on a desktop, light: the conversation level with its zoom ladder, in a conversation with the fictional Tomasz Reyes"
         },
         {
           "path": "previews/desktop-dark.png",
-          "sha256": "3ccbde2cb2a62265e02be22dc424a996f631bc5b97dfb82b4b8275585739926a",
-          "size": 93621,
+          "sha256": "430da86c6e9f59373f8a468b4c780380024647f6828ae6c6e2f54790f53133ab",
+          "size": 93301,
           "alt": "Zoom on a desktop, dark: the conversation level with its zoom ladder, in a conversation with the fictional Tomasz Reyes"
         },
         {
           "path": "previews/mobile-light.png",
-          "sha256": "6f3264e22e0c99fa658b38bdc7cbe37c7b200bda0d610ef693807c3a76f98bf7",
-          "size": 62988,
+          "sha256": "c460098a93fe28ccfa1bfeb7c18adbf6ae5de1d57bcb6194c26ae36c0e565a4b",
+          "size": 62795,
           "alt": "Zoom on a phone, light: a conversation with the fictional Tomasz Reyes about a glaze test"
         },
         {
           "path": "previews/mobile-dark.png",
-          "sha256": "1db3714b84ae13ea23a11bc947b94341475a1118dba6a7b1b913147b12e69aeb",
-          "size": 64158,
+          "sha256": "7a0df2b11b11e176b79ec7d79bab5c05e9cc36ec0ae1476a7f6d941f0b00fbc4",
+          "size": 63963,
           "alt": "Zoom on a phone, dark: a conversation with the fictional Tomasz Reyes about a glaze test"
         }
       ]

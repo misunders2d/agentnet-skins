@@ -8,7 +8,7 @@ Classic was built into AgentNet up to v0.8.24. From v0.8.25 AgentNet keeps only 
 
 Actual AgentNet rendering through the production loader with a disposable fictional company (Brightwater Ceramics: invented people and messages, `npm run previews`); Host API v1 on AgentNet `3ba44749` (v0.8.32). These previews show the skin's own area on a desktop (1440 × 1000) and a phone viewport (390 × 844), with light and dark themes; Host tools are available through Settings. Phone screenshots use Chromium emulation.
 
-The release candidate pin is AgentNet v0.8.32 at `ac98b331`. These inspected previews were rendered on `3ba44749`, whose production, generated and runtime source bytes are identical to this candidate. The full collection gate passed against this exact candidate. Proposed gallery release `v2026.10.16.2` is not published.
+The release candidate pin is AgentNet v0.8.33 at `3454a059`. These four previews were rendered on that exact pin and inspected. The complete collection gate and publication remain pending; earlier v32 qualification does not qualify this candidate.
 
 | Desktop light | Desktop dark |
 | --- | --- |

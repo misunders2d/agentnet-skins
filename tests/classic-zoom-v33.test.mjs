@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';import path from 'node:path';import vm from 'node:vm';import {pathToFileURL} from 'node:url';
 const collection=process.env.AGENTNET_COLLECTION||path.resolve(import.meta.dirname,'..');
 const source=process.env.AGENTNET_ENTRY_SOURCE||path.join(collection,'skins');
-const {nativeActivityDetail}=await import(pathToFileURL(path.join(process.env.AGENTNET_SOURCE||path.resolve(collection,'../agentnet'),'internal/ui/skins/shared/native-activity.mjs')));
+const {nativeActivityDetail}=await import(pathToFileURL(process.env.AGENTNET_SOURCE?path.join(process.env.AGENTNET_SOURCE,'internal/ui/skins/shared/native-activity.mjs'):path.join(collection,'skins/classic/src/native-activity.mjs')));
 function declaration(entry,name){let start=entry.indexOf('function '+name+'(');assert(start>=0,name);if(entry.slice(start-6,start)==='async ')start-=6;let depth=0,end=entry.indexOf('{',start);for(;end<entry.length;end++){if(entry[end]==='{')depth++;else if(entry[end]==='}'&&!--depth){end++;break;}}assert(end>start);return entry.slice(start,end);}
 for(const skin of ['classic','zoom']){
  const entry=fs.readFileSync(path.join(source,skin,'src/entry.mjs'),'utf8'),decl=name=>declaration(entry,name);
@@ -134,7 +134,7 @@ test('standalone current native activity uses existing local/remote Working and 
  });}finally{await browser?.close();server.closeAllConnections();await new Promise(r=>server.close(r));}
 });
 
-test('Classic and Zoom append the exact frozen shared v33 CSS once',()=>{const expected=fs.readFileSync(path.join(process.env.AGENTNET_SOURCE||path.resolve(collection,'../agentnet'),'internal/ui/skins/shared/v33.css'),'utf8');for(const skin of ['classic','zoom']){const css=fs.readFileSync(path.join(collection,'skins',skin,'src/style.css'),'utf8'),at=css.indexOf('/* agentnet-shared-v33 begin */');assert(at>=0);assert.equal(css.indexOf('/* agentnet-shared-v33 begin */',at+1),-1);assert.equal(css.slice(at,at+expected.length),expected);}});
+test('Classic and Zoom append the exact frozen shared v33 CSS once',()=>{const expected=fs.readFileSync(path.join(process.env.AGENTNET_SOURCE||path.join(collection,'.cache/upstream'),'internal/ui/skins/shared/v33.css'),'utf8');for(const skin of ['classic','zoom']){const css=fs.readFileSync(path.join(collection,'skins',skin,'src/style.css'),'utf8'),at=css.indexOf('/* agentnet-shared-v33 begin */');assert(at>=0);assert.equal(css.indexOf('/* agentnet-shared-v33 begin */',at+1),-1);assert.equal(css.slice(at,at+expected.length),expected);}});
 
 test('Classic actual composed commit/Review-close respects wide/phone CSS and nav-Chats visit lifetime',()=>{
  const entry=fs.readFileSync(path.join(source,'classic/src/entry.mjs'),'utf8'),decl=name=>declaration(entry,name);

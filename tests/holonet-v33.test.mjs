@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';import path from 'node:path';import vm from 'node:vm';import {pathToFileURL} from 'node:url';
 const skin=path.join(process.env.AGENTNET_COLLECTION_CANDIDATE||path.resolve(import.meta.dirname,'..'),'skins/holonet'),entry=fs.readFileSync(process.env.AGENTNET_HOLONET_ENTRY||path.join(skin,'src/entry.mjs'),'utf8');
-const shared=path.resolve(process.env.AGENTNET_SOURCE||path.join(import.meta.dirname,'../../agentnet'),'internal/ui/skins/shared/native-activity.mjs');
+const shared=process.env.AGENTNET_SOURCE?path.resolve(process.env.AGENTNET_SOURCE,'internal/ui/skins/shared/native-activity.mjs'):path.join(skin,'src/native-activity.mjs');
 const {nativeActivityDetail}=await import(pathToFileURL(shared));
 function declaration(name){let start=entry.indexOf('function '+name+'(');assert(start>=0,name);if(entry.slice(start-6,start)==='async ')start-=6;let depth=0,end=entry.indexOf('{',start);for(;end<entry.length;end++){if(entry[end]==='{')depth++;else if(entry[end]==='}'&&!--depth){end++;break;}}assert(end>start);return entry.slice(start,end);}
 function readFixture(extra={}){
@@ -15,8 +15,8 @@ test('Holonet only acknowledges current meaningfully visible canonical rows; gen
 test('Holonet hidden, unfocused, native-hidden, Review and modal views never ACK',async()=>{for(const mode of ['page','focus','native','review','modal']){const f=readFixture();if(mode==='page')f.context.document.visibilityState='hidden';if(mode==='focus')f.context.document.hasFocus=()=>false;if(mode==='native')f.context.nativeVisible=false;if(mode==='visitor')f.context.dmVisitor=()=>true;if(mode==='readonly')f.view.read_only=true;if(mode==='review')f.context.$=()=>({hidden:false});if(mode==='modal')f.context.root.querySelector=()=>({});await f.mark();assert.equal(f.calls.length,0,mode);}});
 test('Holonet supports the current bounded Thinking grammar in the existing activity slot',()=>{const ctx={nativeActivityDetail,el:(tag,attrs,...children)=>({tag,attrs,children}),asDate:s=>new Date(s)};vm.createContext(ctx);vm.runInContext(declaration('nativeActivity')+'\nthis.render=nativeActivity;',ctx);assert.equal(ctx.render(),null,'absent optional detail has no activity node');assert.equal(ctx.render(''),null,'empty optional detail has no activity node');assert.equal(ctx.render(null),null,'null optional detail has no activity node');for(const text of ['Thinking: Checking local evidence','Thinking: Checking local evidence\nReported at 2026-10-16T19:00:00Z','Reading files'])assert(ctx.render(text),text);for(const text of ['Thinking: /private/path','Thinking: secret\nPRIVATE','Reading files PRIVATE'])assert.equal(ctx.render(text),null);});
 
-const upstream=path.resolve(process.env.AGENTNET_SOURCE||path.join(import.meta.dirname,'../../agentnet'));
-const model=await import(pathToFileURL(path.join(upstream,'internal/ui/skins/shared/schedule-model.mjs')));
+const upstream=path.resolve(process.env.AGENTNET_SOURCE||path.join(import.meta.dirname,'../.cache/upstream'));
+const model=await import(pathToFileURL(process.env.AGENTNET_SOURCE?path.join(upstream,'internal/ui/skins/shared/schedule-model.mjs'):path.join(skin,'src/schedule-model.mjs')));
 test('Holonet exact unread landing uses physical direction, logical identity, original fingerprint and topic',()=>{
  const state={overview:{me:{fingerprint:'self-key'}}},ctx={state};vm.createContext(ctx);vm.runInContext(declaration('unreadMessage')+'\nthis.find=unreadMessage;',ctx);
  const row={kind:'chat',conv:'chat',id:'physical',lid:'logical',author:'original-fingerprint',dir:'in',topic:'topic'},message={id:'physical',lid:'logical',claimed_key:'original-fingerprint',from:'display/address',dir:'in',topic:'topic'},view={id:'chat',messages:[message,{...message,dir:'out'}]};

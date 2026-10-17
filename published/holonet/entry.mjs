@@ -3776,7 +3776,7 @@ function ago(iso) {
 }
 // Same fixed public grammar as the pinned Comic NativeActivity model.
 function nativeActivity(detail) {
-  const parsed=nativeActivityDetail(detail);if(!parsed)return null;
+  const parsed=nativeActivityDetail(detail || "");if(!parsed)return null;
   const {label,at}=parsed;
   return el("span", {class:"hint", "data-native-activity":""}, label, " · ", at ? ["Native event reported ", el("time", {datetime:at,title:at}, new Date(at).toLocaleTimeString())] : "Native activity");
 }

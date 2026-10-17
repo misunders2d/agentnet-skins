@@ -947,6 +947,7 @@ button.reaction { cursor: pointer; }
 .schedule-controls {display:flex;flex-wrap:wrap;gap:8px;padding:6px 0;}
 .file-video {display:block;max-width:100%;}
 .topic-row > button:last-child { grid-column:2; justify-self:start; max-width:100%; }
+.schedule-controls > .topics-actions { flex: 1 1 100%; min-width: 0; }
 /* agentnet-shared-v33 begin */
 .an-hit { min-height: 44px; min-width: 44px; }
 .an-row-button { width: 100%; text-align: left; display: flex; flex-direction: column; overflow-wrap: anywhere; }

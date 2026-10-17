@@ -33,7 +33,7 @@ for(const skin of ['classic','holonet','zoom']) {
   if(skin!=='holonet'){
    // Execute the production wrapper and onChange, with only observer geometry stubbed.
    ctx.watchVisibleRows=(_root,options)=>{let live=true,ids=new Set(),last='';return {update(_nodes,canonical){ids=new Set(canonical);},evaluate(){if(!live)return;const shown=options.allowed()&&old.scrollHeight-old.scrollTop-old.clientHeight<=40?[...ids]:[],key=JSON.stringify(shown);if(key!==last){last=key;options.onChange(new Set(shown));}},destroy(){live=false;}};};
-   extra=['function attentionKey(','function attentionRows(','function readAllowed(','function currentReadViewShown(','async function markPersonalRead(','function syncVisibleRead(','function retireVisibleRead('].map(extract).join('\n');
+   extra=['function attentionKey(','function attentionRows(','function readAllowed(','function currentReadViewShown(','async function markPersonalRead(','function syncVisibleRead(','function retireVisibleRead(',...(skin==='zoom'?['function placeUnreadDivider(']:[])].map(extract).join('\n');
   }
   vm.runInNewContext(helper+'\n'+extra+'\n'+callback+'\n'+registration,ctx);
   if(skin!=='holonet')ctx.syncVisibleRead();

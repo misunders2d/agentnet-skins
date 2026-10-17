@@ -6232,7 +6232,7 @@ const Zoom = {
           (m.reactions || []).length > 0 && el("span", { class: "mc-files" }, m.reactions.map((r) => r.emoji + " " + (r.by || []).length).join("  ")));
         if (compact) bubble.append(el("button", {type:"button",class:"text-btn",onclick:()=>this.go(3,{msg:m.id},bubble)}, "Message details"));
         else bubble.addEventListener("click", () => this.go(3, { msg: m.id }, bubble));
-        return el("li", { class: "mc " + (mine ? "mine" : "theirs") },
+        return el("li", { class: "mc " + (mine ? "mine" : "theirs"), id: "m-" + m.id },
           avatar(mine ? state.overview.me.address : m.from, "sm"), el("div",{class:"mc-stack"},messageReference(m,t),bubble),
           m.summary && el("p", { class: "narr" }, "Your responder's summary: " + m.summary),
           execLine(m, t),

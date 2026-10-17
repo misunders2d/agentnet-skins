@@ -2,7 +2,7 @@
 
 Holonet baseline: [misunders2d/agentnet v0.8.1](https://github.com/misunders2d/agentnet/tree/daddab38d229f695936a6d975702668b381f3135), commit `daddab38d229f695936a6d975702668b381f3135`. Classic and Zoom: commit `b9c2a6e78be1d34f38f737517a7a5b0fe53a83b6`. All Apache-2.0.
 
-The v0.8.33 verification candidate is `590e4681baa52111c7d99d00c50d4d3a5dc459bf`. Its complete collection gate is pending. The v33 standalone additions reuse AgentNet's shared visibility, activity, unread Review, topic, video and scheduling helpers; Holonet retains its routing and focus adapters. All 20 gallery previews were regenerated on this exact pin and visually inspected in desktop/phone, light/dark pairs. Historical v32 verification at `ac98b331ce11425d7595beceb53f123068ddd705` and its retained `3ba44749` previews do not qualify v33.
+The v0.8.33 verification candidate is `0859f1881762ff29c74d7d3eab4b0dcccfe2808d`. Its complete collection gate is pending. The v33 standalone additions reuse AgentNet's shared visibility, activity, unread Review, topic, video and scheduling helpers; Holonet retains its routing and focus adapters. All 20 gallery previews were regenerated on this exact pin and visually inspected in desktop/phone, light/dark pairs. Historical v32 verification at `ac98b331ce11425d7595beceb53f123068ddd705` and its retained `3ba44749` previews do not qualify v33.
 
 | Local source | Pinned upstream source | Changes |
 | --- | --- | --- |

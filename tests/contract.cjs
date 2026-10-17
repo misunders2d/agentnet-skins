@@ -207,7 +207,7 @@ async function staysModal(page, role, what) {
     if (!where.inside) throw new Error(what + ': ' + key + ' moved focus out of the dialog to ' + where.what);
   }
 }
-let sent = 0;
+let sent = 0, zoomRunText = "";
 // Every package runs in the same company world: sent texts stay unique per run.
 const runTag = crypto.randomBytes(4).toString('hex');
 
@@ -287,12 +287,12 @@ const journeys = {
     await page.evaluate(()=>window.__openDevice());await page.locator('#zoom .zoom-message').waitFor();
     await messageShot(page,'zoom');
     await page.keyboard.press('Escape');await page.locator('#zoom .mini-chat').waitFor();
-    const text='Zoom contract send '+runTag+' '+(++sent);
+    const text='Zoom contract send '+runTag+' '+(++sent);zoomRunText=text;
     await page.locator('#zoom').getByRole('button',{name:/^Write in this (DM|group|conversation)…$/}).click(); // the opened company-world conversation
     await page.locator('#write-body').fill(text);await page.locator('#dialog-ok').click();
     await page.locator('#zoom .mini-chat').getByText(text,{exact:true}).waitFor();
     await messageShot(page,'zoom-chat',{chat:true});
-    await page.locator('#zoom .mc-bubble').filter({hasText:text}).click();
+    await page.locator('#zoom button.mc-bubble').filter({hasText:text}).click();
     await page.waitForFunction(()=>document.querySelector('#skin').shadowRoot.querySelectorAll('#zoom .zoom-layer').length===1);
     await page.locator('#zoom .zoom-message').focus();
     // The ladder's depth follows the opened conversation (a group adds its
@@ -337,6 +337,19 @@ const journeys = {
       const journey = journeys[p.manifest.id] || journeys.classic;
       const runJourney = journey && (async (pg) => {
         try { await journey(pg); } catch (e) {
+          if (p.manifest.id === 'zoom') try {
+            const dom = await pg.evaluate(text => {
+              const sr = document.getElementById('skin').shadowRoot, rungs = [...sr.querySelectorAll('#zoom .rung')];
+              const matches = [...sr.querySelectorAll('#zoom .mc-bubble')].filter(n => text && n.textContent.includes(text));
+              return { rungCount: rungs.length, currentRungIndex: rungs.findIndex(n => n.getAttribute('aria-current') === 'step'), layerCount: sr.querySelectorAll('#zoom .zoom-layer').length, messageCount: sr.querySelectorAll('#zoom .zoom-message').length,
+                storedButtonMatchCount: matches.filter(n => n.tagName === 'BUTTON').length, pendingDivMatchCount: matches.filter(n => n.tagName === 'DIV').length, activeElementTag: sr.activeElement?.tagName || null, errors: (window.__report?.errors || []).slice(-8) };
+            }, zoomRunText);
+            const capturedErrors = [...errors, ...dom.errors].slice(-8).map(value => {
+              const s = String(value);
+              return /^ResizeObserver loop (completed with undelivered notifications\.|limit exceeded)$/.test(s) ? s : s.match(/^(?:TypeError|ReferenceError|SyntaxError|RangeError)\b|^Cannot read properties of (?:undefined|null) \(reading '[A-Za-z_$][A-Za-z0-9_$]*'\)/)?.[0] || 'Other runtime error (details redacted)';
+            });
+            console.error('ZOOM_FAILURE_DOM ' + JSON.stringify({...dom, errors: capturedErrors}));
+          } catch { console.error('ZOOM_FAILURE_DOM capture unavailable'); }
           if (process.env.AGENTNET_SCREENSHOTS) await pg.screenshot({ path: path.join(process.env.AGENTNET_SCREENSHOTS, 'contract-' + p.manifest.id + '-' + w + '-FAIL.png') });
           throw e;
         }

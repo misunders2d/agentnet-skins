@@ -228,7 +228,18 @@ cleanups.push(()=>topicUI.stop());
 
 // A time is an RFC 3339 string, or unix seconds (a host's report and its
 // answers, client.Report, count in seconds).
-let zoomHeaderReserve=0,zoomHeaderReady=true;
+let zoomHeaderReserve=0,zoomHeaderReady=true,zoomHeaderFrame;
+function cancelHeaderSync(){
+ if(zoomHeaderFrame!==undefined)root.ownerDocument.defaultView.cancelAnimationFrame(zoomHeaderFrame);
+ zoomHeaderFrame=undefined;
+}
+function scheduleHeaderSync(content){
+ if(!alive||zoomHeaderFrame!==undefined)return;
+ zoomHeaderFrame=root.ownerDocument.defaultView.requestAnimationFrame(()=>{
+  zoomHeaderFrame=undefined;
+  if(alive&&content===messageScrollRoot()&&zoomHeaderReady)syncVisibleRead();
+ });
+}
 function messageScrollRoot(){return $('zoom').querySelector('.zoom-layer:last-child .zoom-content');}
 function messageTopReserve(){return zoomHeaderReserve;}
 function currentReadViewShown(){return !$('zoom').hidden;}
@@ -239,6 +250,7 @@ let visibleRead = null, nativeVisible = currentHost.android?.visible?.() !== fal
 const videoFiles = new Map(), contentSubscribers = new Set();
 let mediaEpoch = 0, unreadRequest = 0, scheduleUI = null, scheduleContainer = null, scheduleEpoch = 0;
 function retireVisibleRead() {
+ cancelHeaderSync();
  const previous=visibleRead;visibleRead=null;
  if(previous){previous.read.visible=new Set();previous.watcher.destroy();previous.resize.disconnect();previous.scroller.removeEventListener('scroll',previous.scroll);}
 }
@@ -5845,11 +5857,11 @@ function focusZoomLayer(layer) {
 // A chat's header stays at the top of its scrolling history (sticky):
 // keyboard focus and scrolling into view stop below it, never under it.
 const chatHeads = new ResizeObserver((entries) => {
-  for (const e of entries) { const content = e.target.closest(".zoom-content"); if (content) {zoomHeaderReserve=e.target.offsetHeight;zoomHeaderReady=true;content.style.scrollPaddingTop = zoomHeaderReserve + "px";if(visibleRead)visibleRead.watcher.evaluate();else syncVisibleRead();} }
+  for (const e of entries) { const content = e.target.closest(".zoom-content"); if (content) {zoomHeaderReserve=e.target.offsetHeight;zoomHeaderReady=true;content.style.scrollPaddingTop = zoomHeaderReserve + "px";if(visibleRead)visibleRead.watcher.evaluate();else scheduleHeaderSync(content);} }
 });
-cleanups.push(() => chatHeads.disconnect());
+cleanups.push(() => {cancelHeaderSync();chatHeads.disconnect();});
 function watchChatHead(content) {
-  chatHeads.disconnect();
+  cancelHeaderSync();chatHeads.disconnect();
   zoomHeaderReserve=0;zoomHeaderReady=false;content.style.scrollPaddingTop = "";
   const head = content.querySelector(".zoom-chat-head");
   if (head) chatHeads.observe(head);else zoomHeaderReady=true;

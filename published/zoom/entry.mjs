@@ -6025,7 +6025,9 @@ const Zoom = {
       const finish = () => {
         old.remove(); fresh.classList.remove("zoom-arrive-in", "zoom-arrive-out");
         if (generation !== this.generation) return;
-        this.finish = null; this.navigating = null;syncVisibleRead();syncScheduleControls();
+        this.finish = null; this.navigating = null;
+        if (!alive || host !== currentHost) return;
+        syncVisibleRead();syncScheduleControls();
         if (this.dirty) { this.dirty = false; this.refresh(); }
       };
       this.finish = finish;

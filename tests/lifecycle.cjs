@@ -31,7 +31,7 @@ const absentMembers=['drive','manageLocalSkins','gallery','android','onBack','co
 const host=new Proxy(known,{get(t,k){if(absentMembers.includes(k))return undefined;if(k in optional)return window.capabilityMode==='absent'?undefined:optional[k];if(!(k in t))throw Error('Undocumented host member '+String(k));return t[k]}});
 const otherHost=new Proxy({...known,workspace:{id:'other'}},{get(t,k){if(absentMembers.includes(k))return undefined;if(k in optional)return window.capabilityMode==='absent'?undefined:optional[k];if(!(k in t))throw Error('Undocumented host member '+String(k));return t[k]}});
 window.mountOther=()=>mount(box,otherHost);window.view=view;window.unmountClassic=()=>unmount(box);window.mountClassic=()=>mount(box,host);await mount(box,host);window.ready=true;`;
-let server,browser,page;const errors=[];
+let server,browser,page;const errors=[],errorStacks=[];
 (async()=>{
  const urls=JSON.parse(fs.readFileSync(path.join(process.env.AGENTNET_SKIN_WORLD||path.join(evidence,'world'),'urls.json'),'utf8'));const native=new URL(urls.sergey.page);
  assert(native.hostname==='127.0.0.1'&&native.port!=='18990');
@@ -52,7 +52,7 @@ let server,browser,page;const errors=[];
   res.writeHead(200,{'Content-Type':type});res.end(body);
  }catch(e){res.writeHead(500);res.end('Fixture transport failed')}});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
- browser=await chromium.launch({executablePath:process.env.AGENTNET_CHROMIUM||undefined,headless:true,args:['--no-sandbox']});page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));
+ browser=await chromium.launch({executablePath:process.env.AGENTNET_CHROMIUM||undefined,headless:true,args:['--no-sandbox']});page=await browser.newPage();page.on('pageerror',e=>{errors.push(e.message);errorStacks.push(e.stack||e.message);});
  await page.goto('http://127.0.0.1:'+server.address().port);await page.waitForFunction(()=>window.ready);
  if(family==='zoom'){
   // Zoom adapter: the same checks through Zoom's ladder and write dialog
@@ -110,4 +110,4 @@ let server,browser,page;const errors=[];
  await page.evaluate(()=>unmountClassic());assert.deepEqual(errors,[]);assert.deepEqual(await page.evaluate(()=>outside),[]);
  const result={pass:true,host_version:1,adapter:'isolated public host backed by disposable native API',checks:['Copied package at unrelated URL mounts without private globals','Manifest identity works with no optional host.skin and namespaces drafts','All native data/actions/file traffic passes captured public host','No document writes outside owned shadow root','Unmount stops stream/catalog listeners','A/B/A remount restores workspace drafts without crossing identical conversation IDs','Final void reconnect remounts, keeps text, retires staged IDs, rejects send until reattachment and never replays','Pending send remains on captured host and clears accepted draft after remount','Optional app absence/rejection, replacement cancel/confirm with partial status merge, update preparation and native text-paste callback guards','No page errors'],limits:['Google provider consent and native OS integration not exercised','Does not certify arbitrary skins or sandbox full-trust code']};
  fs.writeFileSync(path.join(evidence,'contract-result.json'),JSON.stringify(result,null,2),{mode:0o600});console.log('PASS '+manifest.id+' skin runtime contract and lifecycle');
-})().catch(async e=>{await page?.screenshot({path:path.join(evidence,'screenshots',manifest.id+'-lifecycle-FAIL.png')}).catch(()=>{});console.error('FAIL skin contract: '+e.stack+'; page errors: '+errors.join('; '));process.exitCode=1;}).finally(async()=>{await browser?.close();server?.closeAllConnections();server?.close();});
+})().catch(async e=>{await page?.screenshot({path:path.join(evidence,'screenshots',manifest.id+'-lifecycle-FAIL.png')}).catch(()=>{});console.error('FAIL skin contract: '+e.stack+'; page errors: '+errors.join('; ')+'; page error stacks: '+errorStacks.join('\n'));process.exitCode=1;}).finally(async()=>{await browser?.close();server?.closeAllConnections();server?.close();});

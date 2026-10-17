@@ -628,10 +628,10 @@
       "id": "zoom",
       "name": "Zoom",
       "description": "Move through your workspace by zooming in: everyone, then one person, then a conversation, then a single message with everything known about it. Esc steps back out. You write in a focused dialog, and every chat, topic, agent and setting is still there.",
-      "version": "1.8.0",
+      "version": "1.8.1",
       "api": 1,
       "agentnet": "v0.8.33",
-      "digest": "a259cda1ef423051d2e5030e734058dd92adfddd2783e2db65f260b2a3cba4a8",
+      "digest": "19ea14c3c21ca6c18a3de819f6495d31b51fc675a7a1c141d406a6510e8ac87f",
       "files": [
         {
           "path": "skin.json",
@@ -640,8 +640,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "64802b081bdbaceb8e5bb930b4c803b092a2964268eb760f21201d310e983bcc",
-          "size": 446089
+          "sha256": "1064be2b16e03e15f4c461b1ada31861bf784c10bc4a56639209f2ff89e5ac68",
+          "size": 446150
         },
         {
           "path": "composer-followup.mjs",

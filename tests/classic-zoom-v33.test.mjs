@@ -221,3 +221,39 @@ test('Zoom existing dialog form bounds its scroll body while actions remain outs
  assert.equal(rule('#dialog-form').get('display'),'grid');assert.equal(rule('#dialog-form').get('grid-template-rows'),'auto minmax(0, 1fr) auto auto');assert.equal(rule('#dialog-form').get('max-height'),'calc(100dvh - 32px)');assert.equal(rule('#dialog-body').get('min-height'),'0');assert.equal(rule('#dialog-body').get('overflow-y'),'auto');assert.equal(rule('#dialog-error').get('overflow-y'),'auto');assert.equal(rule('#dialog .dialog-actions').get('margin'),'0');
  assert.match(template,/<form method="dialog" id="dialog-form">\s*<h2 id="dialog-title"><\/h2>\s*<div id="dialog-body"><\/div>\s*<p id="dialog-error"[^>]*><\/p>\s*<div class="dialog-actions">/);assert.match(css,/@media \(max-width: 760px\) \{ \.dialog-actions \.btn \{ min-height: 44px; \} \}/);
 });
+
+function unfinishedZoomMotion() {
+ const entry=fs.readFileSync(path.join(source,'zoom/src/entry.mjs'),'utf8');
+ const method='  async go(level, patch, from, localView, readEntry = true, freshEntryView = false) {';
+ assert.equal(entry.split(method).length,2,'extract the actual Zoom.go method once');
+ const go=declaration(entry.replace(method,method.replace('  async go(','async function go(')),'go');
+ const events=[],host={},state={gen:7,readVisit:null},ctx={state,currentHost:host,alive:true};
+ let release,cancel,surface;const completions=[];
+ const finished=new Promise((resolve,reject)=>{release=resolve;cancel=reject;});
+ // Use native settlement; retain the actual .then completion to assert errors
+ // deterministically without leaking an unhandled rejection into other cases.
+ ctx.Promise={allSettled:values=>{const settled=Promise.allSettled(values);return{then:fn=>{const completion=settled.then(fn);completions.push(completion);completion.catch(()=>{});return completion;}};}};
+ const old={style:{},classList:{add:()=>events.push('old class add')},remove:()=>events.push('old remove')};
+ const fresh={style:{},classList:{add:()=>events.push('fresh class add'),remove:()=>events.push('fresh class remove')},getAnimations:()=>[{finished}]};
+ const makeSurface=()=>({children:[old],lastElementChild:old,getBoundingClientRect:()=>({left:0,top:0,width:800,height:600}),append:()=>events.push('append'),querySelector:()=>{events.push('scroller query');return{};}});
+ surface=makeSurface();
+ const Zoom={level:1,generation:4,navigating:null,origins:{},finish:null,dirty:true,layer:()=>fresh,refresh:()=>events.push('refresh')};
+ Object.assign(ctx,{Zoom,$:id=>{assert.equal(id,'zoom');return surface;},retireVisibleRead:()=>events.push('retire read'),retireViewMedia:()=>events.push('retire media'),retireSchedule:()=>events.push('retire schedule'),toggleReview:()=>events.push('Review'),motion:()=>true,focusZoomLayer:()=>events.push('focus'),syncScheduleControls:()=>events.push('schedule'),markPersonalRead:()=>events.push('ACK'),reportSeen:()=>events.push('seen')});
+ vm.createContext(ctx);
+ vm.runInContext(['messageScrollRoot','syncVisibleRead'].map(name=>declaration(entry,name)).join('\n')+'\n'+go+'\nthis.go=go;this.actualSync=syncVisibleRead;',ctx);
+ ctx.syncVisibleRead=()=>{events.push('read');ctx.actualSync();};
+ return{ctx,Zoom,state,events,async start(){await ctx.go.call(Zoom,2,{});assert.equal(typeof Zoom.finish,'function');assert.equal(Zoom.navigating,5);assert.equal(completions.length,1);events.length=0;},unmount(){ctx.alive=false;state.gen++;surface=null;},replaceHost(){ctx.currentHost={};surface=makeSurface();},async settle(reject=false){reject?cancel(Error('Animation cancelled')):release();await Promise.all(completions);}};
+}
+
+test('Zoom actual unfinished go cleans owned layers without late read/schedule effects after unmount',async()=>{
+ for(const rejected of [false,true]){const f=unfinishedZoomMotion();await f.start();f.unmount();await f.settle(rejected);assert.deepEqual(f.events,['old remove','fresh class remove']);assert.equal(f.Zoom.finish,null);assert.equal(f.Zoom.navigating,null);assert.equal(f.Zoom.dirty,true);}
+});
+
+test('Zoom actual unfinished go ignores superseded generation and host',async()=>{
+ for(const mode of ['generation','host']){const f=unfinishedZoomMotion();await f.start();const finish=f.Zoom.finish;if(mode==='generation')f.Zoom.generation++;else f.replaceHost();await f.settle();assert.deepEqual(f.events,['old remove','fresh class remove'],mode);assert.equal(f.Zoom.finish,mode==='generation'?finish:null,mode);assert.equal(f.Zoom.navigating,mode==='generation'?5:null,mode);assert.equal(f.Zoom.dirty,true,mode);}
+});
+
+test('Zoom actual live go completes once and preserves new-go finish cleanup',async()=>{
+ const f=unfinishedZoomMotion();await f.start();await f.settle();assert.deepEqual(f.events,['old remove','fresh class remove','read','scroller query','retire read','schedule','refresh']);assert.equal(f.Zoom.finish,null);assert.equal(f.Zoom.navigating,null);assert.equal(f.Zoom.dirty,false);
+ const next=unfinishedZoomMotion();await next.start();const first=next.Zoom.finish;await next.ctx.go.call(next.Zoom,2,{});assert.notEqual(next.Zoom.finish,first);assert.equal(next.Zoom.navigating,6);assert.equal(next.events.filter(e=>e==='old remove').length,1,'new go completes the prior owned layers synchronously');assert.equal(next.events.filter(e=>e==='refresh').length,1);next.events.length=0;await next.settle();assert.deepEqual(next.events,['old remove','fresh class remove','read','scroller query','retire read','schedule'],'only the newest finish runs after both held animations settle');assert.equal(next.Zoom.finish,null);assert.equal(next.Zoom.navigating,null);
+});

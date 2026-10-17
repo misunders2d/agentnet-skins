@@ -130,7 +130,7 @@ const ui=family==='zoom'?zoom:classic;
   // shows A, and B's draft and target stay. B is a synthetic second assistant
   // added to this DM's view; every ask is stopped at the network.
   if(family!=='zoom'){
-   const B={...agent,pid:'b'.repeat(32),pids:[]},addB=async r=>{const res=await r.fetch(),j=await res.json();if(j.id===seed.dm_vitalii&&!j.agents.some(a=>a.pid===B.pid))j.agents.push(B);return r.fulfill({response:res,json:j});};
+   const B={...agent,pid:'b'.repeat(32),pids:[]},addB=async r=>{const res=await r.fetch(),j=await res.json();if(j.id===seed.dm_vitalii&&!j.agents.some(a=>a.pid===B.pid))j.agents.push(B);return r.fulfill({response:res,json:j}).catch(e=>{if(!/(^|: )Route is already handled!$/.test(e.message))throw e;});};
    await page.route(/\/api\/dm\?id=/,addB);let release,held=new Promise(r=>release=r),posted=[];
    const hold=async r=>{posted.push(r.request().postDataJSON());if(posted.length===1)await held;return r.abort().catch(()=>{}); /* a cancelled request is already handled */};await page.route('**/api/dm/agent/ask',hold);
    try{await page.reload();await page.locator(rootClass).waitFor();await ui.list();await ui.thread();const b=page.locator('#body'); /* reloaded: the DM view now includes B */

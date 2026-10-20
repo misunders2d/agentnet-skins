@@ -862,12 +862,71 @@ function alertsDialog() {
   });
 }
 
+// Resources are optional human-member metadata, never a separate lookup.
+function resourceMember(t) {
+  return humanGroup(t) && t.role === "member" && !!t.resources &&
+    (t.members || []).some(p => p.person === state.overview?.person?.person);
+}
+function resourcesDialog(t) {
+  if (!resourceMember(t)) return;
+  const host = currentHost, gen = state.gen, ws = wsNow();
+  const { rev, writer } = t.resources;
+  const editable = !t.frozen, rows = [];
+  const list = el("div", { class: "shared-resource-editor" });
+  const safeURL = value => {
+    const u = new URL(value);
+    if (!["http:", "https:"].includes(u.protocol) || !u.hostname || u.username || u.password) throw Error("Use an absolute HTTP(S) URL without credentials.");
+    return value;
+  };
+  const add = (link = { name: "", url: "" }) => {
+    const name = el("input", { type: "text", value: link.name, "aria-label": "Link name", disabled: !editable });
+    const url = el("input", { type: "text", inputmode: "url", value: link.url, "aria-label": "Link URL", disabled: !editable });
+    const row = { name, url };
+    row.node = el("fieldset", { class: "shared-resource-row" }, el("legend", {}, "Shared link"),
+      el("label", { class: "field-label" }, "Name", name),
+      el("label", { class: "field-label" }, "URL", url),
+      editable && el("button", { type: "button", class: "text-btn", onclick: () => { rows.splice(rows.indexOf(row), 1); row.node.remove(); } }, "Remove"));
+    rows.push(row); list.append(row.node);
+  };
+  const links = el("ul", { class: "shared-resource-links" });
+  for (const link of t.resources.links) {
+    try { links.append(el("li", {}, el("a", { href: safeURL(link.url), target: "_blank", rel: "noopener noreferrer", referrerpolicy: "no-referrer" }, link.name))); }
+    catch { links.append(el("li", {}, link.name + " · Invalid URL")); }
+    if (editable) add(link);
+  }
+  dialog({ title: "Shared links", ok: editable ? "Save links" : "Close",
+    body: [el("p", { class: "hint" }, "Named links shared with group members. Opening a link leaves AgentNet. No content is fetched automatically."),
+      t.resources.links.length ? links : el("p", { class: "hint" }, "No shared links."),
+      !editable && el("p", { class: "hint" }, "This conversation is frozen; links are read-only."),
+      editable && list,
+      editable && el("button", { type: "button", class: "text-btn", onclick: () => add() }, "Add link"),
+      editable && el("button", { type: "button", class: "text-btn", onclick: () => { rows.splice(0); list.replaceChildren(); } }, "Clear links")],
+    run: async () => {
+      if (!editable) return;
+      const latest = state.dmData;
+      if (host !== currentHost || gen !== state.gen || ws !== wsNow() || state.dm !== t.id || latest?.id !== t.id) throw Error("Conversation or workspace changed. Reopen shared links there.");
+      if (!resourceMember(latest) || latest.frozen) throw Error("Shared links are no longer editable here. Your draft has not been saved.");
+      if (latest.resources.rev !== rev || latest.resources.writer !== writer) throw Error("Shared links changed. Your draft is retained; cancel and reopen to review the current links. Nothing was overwritten.");
+      const values = rows.map(({ name, url }) => ({ name: name.value.trim(), url: url.value.trim() }));
+      for (const link of values) {
+        if (!link.name || /[\u0000-\u001f\u007f-\u009f]/u.test(link.name)) throw Error("Give every link a name without control characters.");
+        safeURL(link.url);
+      }
+      const result = await api("/api/dm/resources", { conv: t.id, links: values, rev, writer }, host);
+      if (host === currentHost && gen === state.gen && ws === wsNow() && state.dmData?.id === t.id) {
+        state.dmData.resources = result;
+        await loadDM(false);
+      }
+    } });
+}
+
 // dmNotifyChips are a DM's mute, and whether its person may alert you.
 function dmNotifyChips(t) {
+  const resource = resourceMember(t) ? [el("button", { type: "button", class: "peer-chip", onclick: () => setTimeout(() => { if (state.dmData?.id === t.id) resourcesDialog(state.dmData); }, 0) }, "Shared links · " + t.resources.links.length)] : [];
   const n = state.overview && state.overview.notify;
-  if (!n || !n.available || !t.id) return [];
+  if (!n || !n.available || !t.id) return resource;
   const muted = (n.mutes || []).includes(t.id);
-  return [el("button", { type: "button", class: "peer-chip" + (muted ? "" : " on"), onclick: () => notifyAct("/api/notify/mute", { conv: t.id, muted: !muted }),
+  return [...resource, el("button", { type: "button", class: "peer-chip" + (muted ? "" : " on"), onclick: () => notifyAct("/api/notify/mute", { conv: t.id, muted: !muted }),
     title: muted ? "This chat is muted" : "New activity in this chat notifies you when device alerts are on" }, muted ? "Unmute chat" : "Mute chat")];
 }
 
@@ -5178,6 +5237,7 @@ async function reconnect() {
 // in memory until the person sends or clears it, including other workspaces,
 // and every send until it is stored (its draft is cleared as it begins).
 function hasUnsentDrafts() {
+  if ($("dialog").open && $("dialog-body").querySelector(".shared-resource-editor")) return true;
   if(state.scheduleBlocking)return true;
   const pending = (d) => d && (d.text || d.answering || d.reply || d.agent || d.agent_id || d.reply_receiver || d.reply_receiver_host || d.typedFor || (d.files && d.files.length));
   if (sends.unsent() || $("body").value || state.answering || state.dmReply || state.dmAgent || state.deviceAgentID || state.replyReceiver || state.replyReceiverHost || state.typedFor || state.files.length ||

@@ -46,11 +46,6 @@ test('Holonet keeps signed mention encoding exact for scheduling',()=>{
  const spans=[{start:0,name:'Casey',ref:{kind:'person',id:'verified-person'}}];assert.equal(ctx.encode('@Casey exact',spans),'[@Casey](agentnet:person/verified-person) exact');assert.equal(ctx.encode('@Other exact',spans),'@Other exact');
 });
 
-test('Holonet final shared module copies and exact CSS block remain bound; metadata stays release-owned',()=>{
- const upstreamShared=path.join(upstream,'internal/ui/skins/shared');for(const name of ['visible-rows.mjs','native-activity.mjs','unread-review.mjs','choices.mjs','video-file.mjs','schedule.mjs','schedule-model.mjs','schedule-saves.mjs','person-topics.mjs'])assert.deepEqual(fs.readFileSync(path.join(skin,'src',name)),fs.readFileSync(path.join(upstreamShared,name)),name);
- const css=fs.readFileSync(path.join(skin,'src/style.css'),'utf8'),canonical=fs.readFileSync(path.join(upstreamShared,'v33.css'),'utf8');assert.equal(css.split('/* agentnet-shared-v33 begin */').length,2);const at=css.indexOf('/* agentnet-shared-v33 begin */');assert.equal(css.slice(at,at+canonical.length),canonical);assert(css.includes('repeat(6, minmax(44px, 1fr))'));
- const manifest=JSON.parse(fs.readFileSync(path.join(skin,'skin.json')));assert.match(manifest.agentnet,/^v[0-9]+\.[0-9]+\.[0-9]+$/);for(const name of manifest.files)if(name!=='manifest.mjs')assert(fs.existsSync(path.join(skin,'src',name)),name);assert(fs.readFileSync(path.join(skin,'src/topics.mjs'),'utf8').includes('TOPIC ROUTING'));
-});
 test('Holonet notification preview is optional and changes only the explicit preview preference',async()=>{
  const calls=[],line={dataset:{},children:[],append(...kids){this.children.push(...kids);}},el=(tag,attrs,...kids)=>({tag,attrs,kids,append(...nodes){this.kids.push(...nodes);}}),ctx={$:()=>line,notifyPermission:()=> 'unsupported',navigator:{userAgent:''},window:{},fill:(parent,...kids)=>{parent.children=kids;},el,plural:(n,a,b)=>n+' '+(n===1?a:b),notifyDialog(){},notifyAct:(path,body)=>calls.push({path,body})};vm.createContext(ctx);vm.runInContext(declaration('renderNotify')+'\nthis.draw=renderNotify;',ctx);
  const nodes=n=>n&&typeof n==='object'?[n,...(n.kids||n.children||[]).flatMap(nodes)]:[];

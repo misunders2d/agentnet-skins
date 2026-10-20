@@ -376,6 +376,8 @@ dialog .quote { white-space: pre-wrap; overflow-wrap: break-word; background: va
 dialog dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; margin: 10px 0; font-size: 14px; }
 dialog dt { color: var(--muted); }
 dialog dd { margin: 0; overflow-wrap: anywhere; }
+dialog .shared-resource-row { min-inline-size: 0; border: 1px solid var(--line); margin: 12px 0; }
+dialog .shared-resource-links { overflow-wrap: anywhere; }
 dialog .field-label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 0; }
 dialog input[type="text"], dialog select {
   width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--canvas); margin-top: 6px;
@@ -843,4 +845,9 @@ button.reaction { cursor: pointer; }
 .an-video-file .an-hit { padding: 8px 12px; font: inherit; color: inherit; cursor: pointer; }
 .an-video-player { display: block; width: 100%; max-height: 60vh; object-fit: contain; background: #000; border-radius: 8px; }
 .an-schedule-dialog { max-width: min(42rem, calc(100% - 2rem)); max-height: calc(100% - 2rem); overflow: auto; }
+.an-schedule-dialog article { margin-block: 16px; padding-block: 12px; border-block-start: 1px solid currentColor; overflow-wrap: anywhere; }
+.an-schedule-dialog label { display: block; min-width: 0; }
+.an-schedule-dialog input:not([type="checkbox"]), .an-schedule-dialog textarea { display: block; box-sizing: border-box; width: 100%; min-width: 0; min-height: 44px; padding: 8px; font: inherit; }
+.an-schedule-time { min-width: 0; margin-block: 12px; padding: 0; border: 0; }
+.an-schedule-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: 12px; }
 /* agentnet-shared-v33 end */

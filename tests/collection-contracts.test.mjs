@@ -129,3 +129,77 @@ test('retained lists and actual Zoom message menus', {skip:!process.env.AGENTNET
   });
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
 });
+
+test('phone group details hands off to an editable shared-links dialog', {skip:!process.env.AGENTNET_CHROMIUM},async t=>{
+ const {chromium}=require(process.env.AGENTNET_PLAYWRIGHT||'playwright');
+ const server=http.createServer((req,res)=>{
+  const p=new URL(req.url,'http://fixture').pathname;
+  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'none'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'");
+  if(p==='/'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/fixture.css"><link rel="icon" href="data:,"><div id="skin"></div>');return;}
+  if(p==='/fixture.css'){res.setHeader('Content-Type','text/css');res.end('html,body{margin:0;height:100%}#skin{height:100vh}.skin-root{height:100%}');return;}
+  const m=/^\/(classic|zoom|holonet)\/([^/]+)$/.exec(p);
+  if(!m){res.writeHead(404).end();return;}
+  try{
+   const bytes=m[2]==='manifest.mjs'?'export default '+fs.readFileSync(path.join(root,'skins',m[1],'skin.json'),'utf8')+';':source(m[1],m[2]);
+   res.setHeader('Content-Type',m[2].endsWith('.css')?'text/css':m[2].endsWith('.png')?'image/png':m[2].endsWith('.svg')?'image/svg+xml':'text/javascript');res.end(bytes);
+  }catch{res.writeHead(404).end();}
+ });
+ let browser;
+ try{
+  await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port;
+  browser=await chromium.launch({headless:true,executablePath:process.env.AGENTNET_CHROMIUM});
+  for(const skin of ['classic','zoom','holonet'])await t.test(skin,async()=>{
+   const context=await browser.newContext({viewport:{width:390,height:844},reducedMotion:'reduce'}),page=await context.newPage(),errors=[];
+   page.on('pageerror',e=>errors.push(e.message));
+   try{
+    await page.goto(origin);
+    await page.evaluate(async skin=>{
+     window.violations=[];document.addEventListener('securitypolicyviolation',e=>violations.push(e.violatedDirective));
+     const shadow=document.querySelector('#skin').attachShadow({mode:'open'}),sheet=new CSSStyleSheet();
+     sheet.replaceSync(await(await fetch('/'+skin+'/style.css')).text());shadow.adoptedStyleSheets=[sheet];
+     const app=document.createElement('div');app.className='skin-root';shadow.append(app);
+     const me={address:'atlas/desk',fingerprint:'1'.repeat(64),agent:false},person={person:'atlas',label:'Atlas',address:me.address,state:'self',devices:[]},peer={person:'briar',label:'Briar',address:'briar/phone',state:'pinned',devices:[]};
+     const dm={id:'c'.repeat(64),kind:'group',role:'member',title:'Shared notebook',peer,members:[person,peer],agents:[],guests:[],topics:[],messages:[],created:'2026-10-19T10:00:00Z',resources:{links:[{name:'Notebook',url:'https://example.invalid/notebook'}],rev:4,writer:'verified-writer',lid:'4'.repeat(32)}};
+     const overview={me,person,people:[peer],peers:[],dms:[dm],threads:[],review:[],quarantine:[],needs_you:[],held:[],agent_devices:[],agents:false,files:{max_file:1048576,max_count:8},notify:{available:false},groups:true,group_invitations:[],links:[],schedules:true,topic_list:true,seq:1,version:'v0.9.0-working-tree'};
+     let open;
+     const host={version:1,platform:'daemon',workspace:{id:'fixture',handle:'9'.repeat(32)},workspaces:null,skins:[],onSkinsChange:()=>()=>{},listen:()=>()=>{},onOpen:fn=>{open=fn;},api:async(p,b)=>{
+      if(b!==undefined){if(['/api/refresh','/api/typing','/api/act'].includes(p))return{};throw Error('Unexpected write '+p);}
+      if(p.startsWith('/api/overview'))return structuredClone(overview);
+      if(p.startsWith('/api/dm?id='))return structuredClone(dm);
+      if(p.startsWith('/api/schedules'))return[{id:'5'.repeat(32),rev:7,conv:dm.id,topic:'',body:'Scheduled reference '.repeat(20),due:'2030-04-05T15:30:00Z',timezone:'UTC',state:'pending',audience:{conv:dm.id,topic:'',persons:['atlas','briar'],pids:[]},files:[]}];
+      if(p.startsWith('/api/agents'))return{host:me.address,agents:[]};
+      if(p.startsWith('/api/typing'))return{enabled:false,people:[]};
+      if(p==='/api/workspace')return{can_rename:false};
+      if(p==='/api/teams')return{status:'available',current:true,teams:[]};
+      throw Error('Unexpected read '+p);
+     }};
+     window.skinModule=await import('/'+skin+'/entry.mjs');await skinModule.mount(app,host);await open(dm.id,'conversation');
+    },skin);
+    await page.getByRole('button',{name:'Conversation details',exact:true}).click();
+    await page.locator('#dialog').getByRole('button',{name:'Shared links · 1',exact:true}).click();
+    const field=page.getByRole('textbox',{name:'Link name',exact:true});
+    await field.fill('Local draft stays editable');
+    assert.equal(await field.inputValue(),'Local draft stays editable');
+    assert.equal(await page.getByRole('button',{name:'Save links',exact:true}).isVisible(),true);
+    const box=await field.boundingBox();assert(box.x>=0&&box.x+box.width<=390);
+    await page.keyboard.press('Escape');
+    if(skin==='zoom')await page.getByRole('button',{name:/^Write in this/}).click();
+    await page.getByRole('button',{name:'Scheduled messages',exact:true}).filter({visible:true}).click();
+    await page.getByRole('button',{name:'Edit schedule',exact:true}).click();
+    const date=page.getByLabel('Reschedule date',{exact:true}),time=page.getByLabel('Reschedule time',{exact:true});
+    const originalDate=await date.inputValue();
+    await time.fill('14:45');
+    assert.equal(await date.inputValue(),originalDate,'Time-only editing must not change the date');
+    assert.equal(await time.inputValue(),'14:45');
+    for(const field of [date,time,page.getByRole('textbox',{name:'Scheduled message text',exact:true})]){
+     const bounds=await field.boundingBox();
+     assert(bounds.x>=0&&bounds.x+bounds.width<=390&&bounds.height>=44,'Scheduled fields must fit the phone and remain touch-sized under CSP');
+    }
+    assert.deepEqual(await page.evaluate(()=>violations),[]);assert.deepEqual(errors,[]);
+   }finally{
+    await page.evaluate(async()=>{const app=document.querySelector('#skin')?.shadowRoot?.querySelector('.skin-root');if(app&&window.skinModule)await skinModule.unmount(app);}).catch(()=>{});
+    await context.close();
+   }
+  });
+ }finally{await browser?.close();server.closeAllConnections();await new Promise(r=>server.close(r));}
+});

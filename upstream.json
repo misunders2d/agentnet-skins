@@ -1,7 +1,7 @@
 {
   "repository": "https://github.com/misunders2d/agentnet.git",
-  "version": "v0.8.33",
-  "commit": "1800d7dcde713299d4fd0e5e334a4045e620785b",
-  "candidate": "v0.8.33",
+  "version": "v0.9.0",
+  "commit": "6bd64377db879e7e61596cd7f084bcda080a1034",
+  "candidate": "v0.9.0",
   "hostApi": 1
 }

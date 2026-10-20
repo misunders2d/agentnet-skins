@@ -64,7 +64,7 @@ test('standalone natural tagged corrections preserve exact attempts, files and d
      if(p.startsWith('/api/thread?id='))return structuredClone(window.direct);
      if(p.startsWith('/api/dm?id='))return structuredClone(dm);
      if(p.startsWith('/api/overview'))return structuredClone(overview);
-     if(p.startsWith('/api/agents'))return{host:me.address,agents:[]};
+     if(p.startsWith('/api/agents')){const address=new URL(p,'http://fixture').searchParams.get('host')||me.address;return{host:address,agents:address===window.directRecord?.host?[{record:structuredClone(window.directRecord),enabled:true}]:[]};}
      if(p.startsWith('/api/typing'))return{enabled:false,people:[]};
      if(p==='/api/workspace')return{can_rename:false};
      throw Error('Unexpected fixture read '+p);
@@ -245,7 +245,8 @@ test('standalone natural tagged corrections preserve exact attempts, files and d
      fixture.sends.merge(id,[]).forEach(m=>fixture.sends.remove(m.id));
      const source={id,dir:'out',kind:'task',from:'atlas/linked',from_key:author,to:peer,author:{label:'Atlas',agent:false},body:'Direct original',at:'2026-10-14T10:00:00Z',actions:[],can:[],attachments:[],exec:{state:'running',host:peer,attempt:7,stale:false},...(named?{target:{address:peer,fingerprint:fp,agent_id:agent}}:{})};
      window.direct={id,peer,key:{pinned:fp,pending:false},messages:[source]};window.directHostPin=fp;window.directAgent=named?agent:'';window.effects=[];
-     Object.assign(fixture.state,{dm:null,dmData:null,thread:null,data:structuredClone(direct),draftKey:id,deviceAgentID:named?agent:'',dmReply:null,answering:null,files:[],targetCatalog:{host:peer,agents:[{id:agent,host:peer,label:'Named fixture'}]}});
+     window.directRecord={v:1,id:agent,host:peer,host_key:fp,label:'Briar Pi',harness:'pi',ts:1791972000};
+     Object.assign(fixture.state,{dm:null,dmData:null,thread:null,data:structuredClone(direct),draftKey:id,deviceAgentID:named?agent:'',dmReply:null,answering:null,files:[],targetCatalog:{host:peer,agents:[structuredClone(directRecord)]}});
      fixture.topicFresh[id]=false;fixture.state.overview.agent_devices=[peer];for(const radio of root.querySelectorAll('input[name="kind"]'))radio.checked=radio.value==='question';root.querySelector('#body').value='Exact direct correction';fixture.syncComposer();fixture.renderPending();window.calls=[];window.posts=[];
     };
    });
@@ -267,8 +268,25 @@ test('standalone natural tagged corrections preserve exact attempts, files and d
      assert.equal(await page.evaluate(()=>posts.filter(p=>p.path==='/api/request/followup').length),1,skin+' authority refusal '+change);assert.equal(await page.evaluate(()=>effects.length),0,'refusal has zero accepted effect');assert.equal(await page.evaluate(()=>posts.some(p=>p.path==='/api/send')),false,'refusal never falls back');assert.equal(await page.evaluate(()=>calls.filter(c=>c.path.startsWith('/api/thread?')).length),0,'refusal adds no preflight GET');
      assert.match(await page.locator('#compose-error').textContent(),/exact request|changed/);
     }
-    await page.evaluate(named=>{resetDirect(named);direct.messages[0].exec.state='completed';fixture.state.data=structuredClone(direct);fixture.state.deviceAgentID='';},named);
-    await page.evaluate(()=>fixture.send());assert.equal(await page.evaluate(()=>posts.some(p=>p.path==='/api/send'&&p.body.kind==='question')),true,'no active work stays an ordinary question');
+    activeCapture.stage='direct '+(named?'named terminal ordinary question':'legacy terminal requires configured agent');
+    await page.evaluate(named=>{
+     resetDirect(named);direct.messages[0].exec.state='completed';fixture.state.data=structuredClone(direct);
+     const file=new File(['terminal draft bytes'],'terminal.txt');fixture.state.files=[{key:'terminal',name:file.name,size:file.size,file}];fixture.renderPending();
+     window.terminalDraft={text:document.getElementById('skin').shadowRoot.querySelector('#body').value,file};
+    },named);
+    await page.evaluate(()=>fixture.send());
+    if(named){
+     const ordinary=await page.evaluate(()=>posts.find(p=>p.path==='/api/send'));
+     assert(ordinary,'a selected concrete agent receives new work after its earlier request finishes');
+     assert.equal(ordinary.body.kind,'question');assert.equal(ordinary.body.agent_id,'b'.repeat(32));assert.equal(ordinary.body.to,'briar/phone');assert.equal(ordinary.body.body,'Exact direct correction');assert.equal(ordinary.body.files.length,1);
+     assert.equal(await page.evaluate(()=>posts.some(p=>p.path==='/api/request/followup')),false,'terminal work never receives a correction');
+     assert.deepEqual(await page.evaluate(()=>calls.filter(c=>c.path==='stage').map(c=>[c.name,c.bytes])),[['terminal.txt','terminal draft bytes']]);
+    }else{
+     assert.equal(await page.evaluate(()=>posts.length),0,'terminal legacy work cannot select the current default');
+     assert.equal(await page.evaluate(()=>calls.some(c=>c.path==='stage')),false,'legacy refusal keeps files unstaged');
+     assert.equal(await page.evaluate(()=>{const root=document.getElementById('skin').shadowRoot;return root.querySelector('#body').value===terminalDraft.text&&fixture.state.files.length===1&&fixture.state.files[0].file===terminalDraft.file;}),true,'legacy refusal retains the exact text and File');
+     assert.match(await page.locator('#compose-error').textContent(),/Choose a configured agent/);
+    }
     await page.evaluate(named=>{resetDirect(named);window.failNext=true;const f=new File(['retry direct bytes'],'retry.txt');fixture.state.files=[{key:'retry-direct',name:f.name,size:f.size,file:f}];fixture.renderPending();},named);
     await page.evaluate(()=>fixture.send());const first=await page.evaluate(()=>structuredClone(posts.find(p=>p.path==='/api/request/followup')));
     assert.match(await page.locator('#compose-error').textContent(),/exact follow-up/);

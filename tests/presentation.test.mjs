@@ -37,7 +37,7 @@ test('private runtime targets and Zoom Markdown use the current presentation', {
     await(await import('/'+skin+'/entry.mjs')).mount(app,{version:1,workspace:{id:'fixture'},listen(){return()=>{}},onOpen(){},api:async(p,body)=>{calls++;if(body!==undefined){writes++;throw Error('Presentation wrote to API');}if(catalogView&&p.startsWith('/api/agents'))return {...catalogView,local:p==='/api/agents'};throw Error('Unexpected presentation API call');}});
     for(const child of app.children)child.hidden=true;
     const view=document.createElement('section');view.className='presentation-fixture';app.append(view);
-    const ids=['a'.repeat(32),'b'.repeat(32)],host='atlas/desk',key='current-key';
+    const ids=['a'.repeat(32),'b'.repeat(32)],host='atlas/desk',key='11111111-11111111-11111111-11111111';
     const own={person:'atlas',label:'Atlas',address:host,state:'self',devices:[{address:host,fingerprint:key}]};
     const overview={agents:true,me:{address:host,fingerprint:key,agent:true},person:own,people:[],threads:[],dms:[],review:[],agent_devices:[host],model_reports:[{host,host_key:key,agent_id:'',model:'DEFAULT_ONLY',reasoning:'low',at:1791709352},...ids.map((id,i)=>({host,host_key:key,agent_id:id,model:i?'quill-model':'ledger-model',reasoning:i?'medium':'xhigh',at:1791709352})),{host:'outside/desk',host_key:'foreign-key',agent_id:'',model:'PRIVATE_FOREIGN',at:1791709352}]};
     fixture.state.overview=overview;
@@ -58,12 +58,13 @@ test('private runtime targets and Zoom Markdown use the current presentation', {
     overview.model_reports.find(r=>r.agent_id===ids[1]).host_key='old-key';fixture.refreshModelReports();const oldKey=targets.textContent;
     own.devices=[];fixture.refreshModelReports();const removed=targets.querySelectorAll('[data-agent-model]').length;
     own.devices=[{address:host,fingerprint:key}];overview.model_reports[2].host_key=key;
-    const aggregate=fixture.ownModelReports();const privateText=aggregate.textContent;
+    const aggregate=fixture.ownModelReports();const privateText=aggregate.textContent,reportedIDs=[...aggregate.querySelectorAll('[data-agent-model]')].map(n=>n.getAttribute('data-agent-model'));
+    const reports=overview.model_reports;overview.model_reports=[];const noInventedReport=fixture.ownModelReports()===null;overview.model_reports=reports;
     own.state='listed';const notSelf=fixture.ownModelReport(host,ids[0]);own.state='self';
     delete overview.model_reports[1].reasoning;const noEffort=fixture.ownModelReport(host,ids[0]).textContent;
     overview.model_reports[1].at=9007199254740991;const invalidTime=fixture.ownModelReport(host,ids[0]).textContent;
     fixture.state.dm=null;fixture.state.dmData=null;fixture.state.dmAgent=null;fixture.state.deviceAgentID=ids[0];
-    fixture.state.targetCatalog={host,agents:ids.map((id,i)=>({id,host,host_key:key,label:i?'Quill':'Ledger'}))};
+    fixture.state.targetCatalog={host,agents:ids.map((id,i)=>({v:1,id,host,host_key:key,label:i?'Quill':'Ledger',harness:i?'claude':'pi'}))};
     const source='**Harbor order**\n\n- **Stock:** Ready\n- *Invoice:* Sent\n\n[Order](https://example.invalid/order) [unsafe](javascript:alert(1)) ![image](https://example.invalid/picture) `literal_*`\n\n<script>globalThis.BAD=1</script>';
     const m={id:'d'.repeat(32),dir:'in',from:host,kind:'answer',body:source,at:'2026-10-11T09:02:32Z',state:'answered',author:{label:'Atlas'},actions:[],can:['edit']};
     fixture.state.data={id:'f'.repeat(32),peer:host,key:{pinned:key},messages:[m]};
@@ -72,11 +73,12 @@ test('private runtime targets and Zoom Markdown use the current presentation', {
     fixture.state.deviceAgentID='';fixture.renderAgentTarget();const defaultTarget=targets.textContent;
     fixture.state.deviceAgentID='e'.repeat(32);fixture.renderAgentTarget();const missingTarget=targets.textContent;
     const row=fixture.threadRow({id:'f'.repeat(32),title:'**Automatic title**',last_at:m.at,count:2},()=>{},false),renamed=fixture.threadRow({id:'f'.repeat(32),title:'**Literal custom title**',renamed:true,last_at:m.at,count:2},()=>{},false);
-    view.append(row,renamed);const observed={groupRows,secondSelected,dmRows,revised,unknown,oldKey,removed,privateText,notSelf:!!notSelf,noEffort,invalidTime,direct,defaultTarget,missingTarget,preview:fixture.firstLine(source,120),autoTitle:row.textContent,renamedTitle:renamed.textContent,calls};
+    view.append(row,renamed);const observed={groupRows,secondSelected,dmRows,revised,unknown,oldKey,removed,privateText,reportedIDs,noInventedReport,notSelf:!!notSelf,noEffort,invalidTime,direct,defaultTarget,missingTarget,preview:fixture.firstLine(source,120),autoTitle:row.textContent,renamedTitle:renamed.textContent,calls};
     // Actual target picker rows, including an unknown named selection.
     app.querySelector('#dialog').hidden=false;
     targets.querySelector('button').click();
     observed.pickerRows=app.querySelector('#dialog').querySelectorAll('[data-agent-model]').length;
+    observed.pickerAgents=[...app.querySelector('#dialog').querySelectorAll('[data-agent-model]')].map(n=>n.getAttribute('data-agent-model'));observed.pickerDefault=app.querySelector('#dialog').textContent.includes('DEFAULT_ONLY');
     observed.nestedModel=!!app.querySelector('[data-agent-model]')?.closest('button,select');app.querySelector('#dialog').close();
     if(skin==='zoom'){
      const scene=fixture.Zoom.thread();view.append(scene);fixture.Zoom.msg=m.id;const full=fixture.Zoom.message();view.append(full);
@@ -89,12 +91,13 @@ test('private runtime targets and Zoom Markdown use the current presentation', {
      observed.bodyFits=full.querySelector('.body').getBoundingClientRect().right<=innerWidth+1;
 
     }
-    catalogView={host,local:true,harnesses:[],agents:ids.map((id,i)=>({record:{id,host,host_key:key,label:i?'Quill':'Ledger'},enabled:true,responder:{harness:'fixture',dir:'/fixture',ready:true}}))};
+    catalogView={host,local:true,default_agent_id:ids[0],harnesses:[],agents:ids.map((id,i)=>({record:{v:1,id,host,host_key:key,label:i?'Quill':'Ledger',harness:i?'claude':'pi'},enabled:true,responder:{harness:i?'claude':'pi',dir:'/fixture',ready:true}}))};
     await fixture.renderNamedAgents();observed.detailsRows=app.querySelector('#named-agents').querySelectorAll('[data-agent-model]').length;
     fixture.state.dm=d.id;fixture.state.dmData=d;d.kind='group';fixture.inviteDialog(d);
     const pick=app.querySelector('input[name="agent-host"][value="atlas/desk"]');pick.checked=true;pick.dispatchEvent(new Event('change'));
     await new Promise(r=>setTimeout(r,0));const named=app.querySelector('#invite-agent');named.value=ids[1];named.dispatchEvent(new Event('change'));
-    observed.inviteNamed=app.querySelector('#dialog').textContent;named.value='';named.dispatchEvent(new Event('change'));observed.inviteDefault=app.querySelector('#dialog').textContent;
+    observed.inviteNamed=app.querySelector('#dialog').textContent;observed.inviteOptions=[...named.options].map(n=>n.value);named.value='';named.dispatchEvent(new Event('change'));
+    app.querySelector('#dialog-ok').click();await new Promise(r=>setTimeout(r,0));observed.inviteUnselected=app.querySelector('#dialog-error').textContent;
     observed.inviteNested=!!app.querySelector('#dialog [data-agent-model]')?.closest('select,button');app.querySelector('#dialog').close();
     observed.writes=writes;observed.catalogReads=calls;
     // Leave the own targets visible for a bounded desktop/phone screenshot.
@@ -103,8 +106,8 @@ test('private runtime targets and Zoom Markdown use the current presentation', {
     return observed;
    },{skin});
    assert.equal(result.groupRows.length,skin==='holonet'?1:2,skin+' selected group targets');assert.match(result.groupRows[0],/ledger-model.*Reasoning: xhigh/);assert.match(result.secondSelected,/quill-model/);assert.equal(result.dmRows,skin==='holonet'?1:2);
-   assert.match(result.revised,/quill-model.*Reasoning: high/);assert(!result.revised.includes('DEFAULT_ONLY'));assert.match(result.unknown,/not reported/);assert(!result.oldKey.includes('quill-model'));assert.equal(result.removed,0);assert(!result.privateText.includes('PRIVATE_FOREIGN'));assert.equal(result.notSelf,false);assert.match(result.noEffort,/Reasoning: not reported/);assert.match(result.invalidTime,/Timestamp unavailable/);
-   assert.match(result.direct,/ledger-model/);assert(!result.direct.includes('DEFAULT_ONLY'));assert.match(result.defaultTarget,/DEFAULT_ONLY/);assert(!result.missingTarget.includes('DEFAULT_ONLY'));assert.equal(result.pickerRows,3);assert.equal(result.nestedModel,false);assert.equal(result.calls,0);assert.equal(result.targetFits,true);assert.equal(result.detailsRows,2);assert.match(result.inviteNamed,/quill-model.*Reasoning: high/);assert.match(result.inviteDefault,/DEFAULT_ONLY/);assert.equal(result.inviteNested,false);assert.equal(result.writes,0);assert.equal(result.catalogReads,2);
+   assert.match(result.revised,/quill-model.*Reasoning: high/);assert(!result.revised.includes('DEFAULT_ONLY'));assert.match(result.unknown,/not reported/);assert(!result.oldKey.includes('quill-model'));assert.equal(result.removed,0);assert(!result.privateText.includes('PRIVATE_FOREIGN'));assert.match(result.privateText,/Earlier default · identity unknown/);assert.deepEqual(result.reportedIDs,['atlas/desk#','atlas/desk#'+'a'.repeat(32),'atlas/desk#'+'b'.repeat(32)]);assert.equal(result.noInventedReport,true);assert.equal(result.notSelf,false);assert.match(result.noEffort,/Reasoning: not reported/);assert.match(result.invalidTime,/Timestamp unavailable/);
+   assert.match(result.direct,/ledger-model/);assert(!result.direct.includes('DEFAULT_ONLY'));assert.match(result.defaultTarget,/DEFAULT_ONLY/);assert(!result.missingTarget.includes('DEFAULT_ONLY'));assert.equal(result.pickerRows,2);assert.deepEqual(result.pickerAgents,['atlas/desk#'+'a'.repeat(32),'atlas/desk#'+'b'.repeat(32)]);assert.equal(result.pickerDefault,false);assert.equal(result.nestedModel,false);assert.equal(result.calls,0);assert.equal(result.targetFits,true);assert.equal(result.detailsRows,2);assert.match(result.inviteNamed,/quill-model.*Reasoning: high/);assert.deepEqual(result.inviteOptions,['','a'.repeat(32),'b'.repeat(32)]);assert.match(result.inviteUnselected,/Choose a configured agent/);assert.equal(result.inviteNested,false);assert.equal(result.writes,0);assert.equal(result.catalogReads,2);
    assert.equal(result.preview,'Harbor order');assert.match(result.autoTitle,/Automatic title/);assert(!result.autoTitle.includes('**'));assert(result.renamedTitle.includes('**Literal custom title**'));
    if(skin==='zoom'){assert(result.bubbleStrong>=2);assert.equal(result.bubbleLinks,0);assert.equal(result.listItems,2);assert.equal(result.strong,2);assert.equal(result.code,'literal_*');assert.equal(result.active,0);assert.equal(result.href,'https://example.invalid/order');assert.equal(result.literalHTML,true);assert.equal(result.copyText,result.original);assert.equal(result.editorOriginal,result.original);assert.equal(result.restoredFormatted,2);assert.equal(result.literalCode,'raw_* &amp;');assert(result.literalText.includes('*literal*'));assert.equal(result.bodyFits,true);}
    assert.deepEqual(errors,[]);

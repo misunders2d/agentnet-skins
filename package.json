@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "check": "node scripts/check.mjs && node --test tests/*.test.mjs",
+    "check": "node scripts/check.mjs && node --test --test-concurrency=1 tests/*.test.mjs",
     "test": "npm run build && npm run check && node scripts/test.mjs",
     "new-skin": "node scripts/new-skin.mjs",
     "previews": "node scripts/previews.mjs",

@@ -40,7 +40,7 @@ export function topicControls(root,{api,choose,chooseRoot,fresh,changed,announce
   const page=pagedChoices({key:t=>t.id,onChange:()=>render(),pageSize:TOPIC_UI.pageSize,load:async(before,limit,query)=>{
    const captured=JSON.parse(query);
    if(flat){const p=await flatPage(captured.state,captured.q);return {rows:p.topics,total:p.topics.length,next:''};}
-   const q=new URLSearchParams({...scope,...(captured.q?{q:captured.q}:{state:captured.state}),limit:String(limit),...(before?{before}:{})});
+   const q=new URLSearchParams({...scope,...(meta.binding?.agent?{agent_host:meta.binding.host,agent_key:meta.binding.key,agent_id:meta.binding.id}:{}),...(captured.q?{q:captured.q}:{state:captured.state}),limit:String(limit),...(before?{before}:{})});
    const p=await api('/api/topics?'+q);return{rows:p.topics||[],total:p.matched,next:p.next,content:p.content,seq:p.seq};
   }});
   const filterButtons=['active','done','archived'].map(f=>{const b=control(f[0].toUpperCase()+f.slice(1),()=>{filter=f;reset();});filters.append(b);return b;});
@@ -130,7 +130,7 @@ export function topicControls(root,{api,choose,chooseRoot,fresh,changed,announce
   for(const id of barNodes.keys())if(!keep.has(id))barNodes.delete(id);placeChoices(bar,nodes);
  }
  function update(nextScope,nextTopics,id,nextPerson=null,nextMeta={}){
-  if(dead)return;const scopeChanged=JSON.stringify(scope)!==JSON.stringify(nextScope)||person?.main!==nextPerson?.main;if(scopeChanged){close();barStable.reset();}
+  if(dead)return;const scopeChanged=JSON.stringify([scope,meta.binding])!==JSON.stringify([nextScope,nextMeta.binding])||person?.main!==nextPerson?.main;if(scopeChanged){close();barStable.reset();}
   scope={...nextScope};topics=nextTopics||[];current=id||'';person=nextPerson;meta=nextMeta;
   const stamp=person?JSON.stringify([person.main,person.roots.map(r=>[r.id,r.count,r.last_at,r.unread]),person.view?.topics,person.view?.main_topic]):'';
   if(person){views[scope.conv]=person.view;if(stamp!==personStamp){personStamp=stamp;personReady=false;personSeq++;}}

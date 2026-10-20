@@ -9,8 +9,10 @@ const collection=process.env.AGENTNET_COLLECTION_CANDIDATE||path.resolve(import.
 const require=createRequire(import.meta.url);
 test('actual addB tolerates only late fulfillment of an already handled real route',{skip:!process.env.AGENTNET_CHROMIUM,timeout:60000},async()=>{
  const {chromium}=require(process.env.AGENTNET_PLAYWRIGHT||'playwright');
- const line=fs.readFileSync(path.join(collection,'tests/browser.cjs'),'utf8').split('\n').find(s=>s.includes('},addB=async r=>{'));
- assert(line);const expression=line.slice(line.indexOf('addB=')+5,line.lastIndexOf(';'));
+ const declarations=fs.readFileSync(path.join(collection,'tests/browser.cjs'),'utf8').split('\n')
+  .map(line=>line.match(/\baddB\s*=\s*(async r=>\{.*\});\s*$/)).filter(Boolean);
+ assert.equal(declarations.length,1,'Exactly one actual addB handler assignment ends on its source line');
+ const expression=declarations[0][1];
  const guard='.catch(e=>{if(!/(^|: )Route is already handled!$/.test(e.message))throw e;})';
  assert.equal(expression.split(guard).length,2);
  const seed={dm_vitalii:'fixture'},B={pid:'b'.repeat(32)},actual=vm.runInNewContext('('+expression+')',{seed,B});

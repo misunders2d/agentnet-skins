@@ -8,9 +8,9 @@ Complete Classic-derived interface, not a chat demo: people and groups, agents, 
 
 ## Preview
 
-Actual AgentNet rendering through the production loader with a disposable fictional company (Brightwater Ceramics: invented people and messages, `npm run previews`); Host API v1 on AgentNet `3ba44749` (v0.8.32). These previews show the skin's own area on a desktop (1440 × 1000) and a phone viewport (390 × 844), with light and dark themes; Host tools are available through Settings. Phone screenshots use Chromium emulation.
+The retained images below are historical production-loader renderings with a disposable fictional company (Brightwater Ceramics: invented people and messages), at desktop 1440 × 1000 and phone 390 × 844 in light/dark themes. Phone screenshots use Chromium viewport emulation. The v0.9.0 preview-regeneration and qualification record is preserved in [PROVENANCE.md](../../PROVENANCE.md).
 
-The release candidate pin is AgentNet v0.8.33 at `0859f188`. These four previews were rendered on that exact pin and inspected. The complete collection gate and publication remain pending; earlier v32 qualification does not qualify this candidate.
+The current source candidate targets AgentNet v0.9.1 at [`d5318cd92ccd48ebdc5caf771c409b2beb0104b4`](https://github.com/misunders2d/agentnet/tree/d5318cd92ccd48ebdc5caf771c409b2beb0104b4). Complete exact-pin qualification, candidate preview refresh and gallery publication are pending; these retained images do not qualify v0.9.1.
 
 | Desktop dark | Desktop light |
 | --- | --- |
@@ -24,7 +24,7 @@ The release candidate pin is AgentNet v0.8.33 at `0859f188`. These four previews
 
 Build: `node scripts/build.mjs holonet` from repository root. Install/import `dist/holonet/` as described in the [main README](../../README.md).
 
-Targets Host API v1; `"agentnet": "v0.8.32"`, built for AgentNet v0.8.32 pinned in `upstream.json`. No code, images or imports require a sibling skin, CDN or external network service. Holonet always starts with its dark direction for System mode; explicit Light and Dark choices remain available. Unsent drafts are namespaced by manifest identity and workspace; staged files are retired after reconnect rather than replayed.
+Targets Host API v1; `"agentnet": "v0.9.1"`, targeting the v0.9.1 candidate pinned in `upstream.json`. No code, images or imports require a sibling skin, CDN or external network service. Holonet always starts with its dark direction for System mode; explicit Light and Dark choices remain available. Unsent drafts are namespaced by manifest identity and workspace; staged files are retired after reconnect rather than replayed.
 
 ## v0.8.26 usability corrections
 

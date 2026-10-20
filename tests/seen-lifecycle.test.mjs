@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import {pathToFileURL} from 'node:url';
 
 const root=process.env.AGENTNET_COLLECTION_CANDIDATE||path.resolve(import.meta.dirname,'..');
 for(const skin of ['classic','holonet','zoom']) {
@@ -60,6 +61,7 @@ for(const skin of ['classic','holonet','zoom']) {
 // Execute the actual legacy device-thread loader, with only its UI dependencies stubbed.
 for(const skin of ['classic','holonet','zoom']) {
  const source=fs.readFileSync(path.join(root,'skins',skin,'src/entry.mjs'),'utf8');
+ const {directBinding,directChatKey,directTopicQuery}=await import(pathToFileURL(path.join(root,'skins',skin,'src/composer-followup.mjs')).href);
  const start=source.indexOf('async function loadThread(scrollToEnd, localView, freshEntryView = false) {'),end=source.indexOf('\n}',start)+2;
  assert(start>=0&&end>start);
  const extract=name=>{const start=source.indexOf(name),lineEnd=source.indexOf('\n',start),end=source.slice(start,lineEnd).trimEnd().endsWith('}')?lineEnd:source.indexOf('\n}',start)+2;assert(start>=0&&end>start);return source.slice(start,end);};
@@ -69,7 +71,7 @@ for(const skin of ['classic','holonet','zoom']) {
   let releaseTopics,releaseRead,failRead=false,holdTopics=false,holdRead=false;
   const messages=[{id:'question',dir:'out',kind:'question',body:'What CPU?'},{id:'answer',dir:'in',kind:'answer',unread:true}];
   const state={thread:'current-topic',gen:1,dm:null,draftKey:'current-topic',deviceAgentID:null};
-  const ctx={alive:true,currentHost:originalHost,state,topicSelections:{},topicFresh:{},topicUI:{update(){}},
+  const ctx={directBinding,directChatKey,directTopicQuery,alive:true,currentHost:originalHost,state,topicSelections:{},topicFresh:{},topicUI:{update(){}},
    $:id=>id==='review'?{hidden:true}:id==='zoom'?{hidden:false}:node,fill(){},who:x=>x,firstLine:x=>x,avatar:()=>({}),peerPresence:()=>'',
    renderPeerChips(){},renderNotice(){},showPane(){},setHubBack(){},renderBody(){if(state.readVisit){const ids=new Set(messages.slice(0,2).map(m=>m.id));state.readVisit.visibleIDs=ids;state.readVisit.visible=ids;}},restoreDraft(){},
    syncComposer(){},commitConversation(){},refreshTyping:async()=>{},announce(){},

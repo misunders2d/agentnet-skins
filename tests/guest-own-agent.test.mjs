@@ -33,13 +33,14 @@ test('standalone topic guests invite only their own agents with admitted context
     await page.evaluate(async({skin,group})=>{
      const shadow=document.querySelector('#skin').attachShadow({mode:'open'}),style=new CSSStyleSheet();style.replaceSync(await(await fetch('/'+skin+'/style.css')).text());shadow.adoptedStyleSheets=[style];
      const root=document.createElement('div');root.className='skin-root';shadow.append(root);
-     const me={person:'atlas',label:'Atlas',state:'self',address:'atlas/browser',fingerprint:'browser-key',devices:[{address:'atlas/browser',fingerprint:'browser-key'},{address:'atlas/host',fingerprint:'host-key'},{address:'atlas/phone',fingerprint:'phone-key'}]},peer={person:'briar',label:'Briar',state:'pinned',address:'briar/host',fingerprint:'peer-key',devices:[]};
+     const keys={'atlas/browser':'11111111-11111111-11111111-11111111','atlas/host':'22222222-22222222-22222222-22222222','atlas/phone':'33333333-33333333-33333333-33333333','briar/host':'44444444-44444444-44444444-44444444'};
+     const me={person:'atlas',label:'Atlas',state:'self',address:'atlas/browser',fingerprint:keys['atlas/browser'],devices:[{address:'atlas/browser',fingerprint:keys['atlas/browser']},{address:'atlas/host',fingerprint:keys['atlas/host']},{address:'atlas/phone',fingerprint:keys['atlas/phone']}]},peer={person:'briar',label:'Briar',state:'pinned',address:'briar/host',fingerprint:keys['briar/host'],devices:[]};
      window.topic='a'.repeat(32);window.agentID='b'.repeat(32);window.posts=[];window.reads=[];window.failPost=false;
      window.view={id:'c'.repeat(64),kind:group?'group':'dm',title:'Topic guests',peer,role:'human_guest',guests:[{pid:'parent-guest',host:me,inviter:peer,host_here:true,state:'active',can_send:true,topic,shared:['excerpt']}],agents:[],members:[peer],topics:[],messages:[{id:'excerpt',lid:'original',excerpt_pid:'parent-guest',from:peer.address,kind:'message',body:'Selected admitted excerpt',topic,attachments:[{name:'selected.txt',size:5}]},{id:'live',from:peer.address,kind:'message',body:'Current topic message',topic},{id:'other',from:peer.address,body:'Other topic',topic:'d'.repeat(32)},{id:'deleted',body:'Deleted',topic,deleted:true},{id:'main',body:'Main history',topic:''}]};
      window.overview={me:{address:me.address,fingerprint:me.fingerprint,agent:false},person:me,agents:true,agent_devices:['atlas/host','briar/host'],people:[peer],peers:[],dms:[],threads:[],review:[],links:[],needs_you:[],held:[],reminders:[],device:{},directory:{current:true,members:[{address:'outsider/host'}]}};
      const host={version:1,platform:'browser',workspace:{id:'default'},listen:()=>()=>{},onOpen(){},api:async(p,body)=>{
       if(body!==undefined){posts.push({p,body:structuredClone(body)});if(failPost){failPost=false;throw Error('Synthetic response uncertain');}return {};}
-      reads.push(p);if(p.startsWith('/api/dm?'))return structuredClone(view);if(p.startsWith('/api/overview'))return structuredClone(overview);if(p.startsWith('/api/agents')){const address=new URL('http://fixture'+p).searchParams.get('host')||'atlas/host';return {host:address,agents:[{enabled:true,record:{host:address,id:agentID,name:'Own assistant'}}]};}if(p.startsWith('/api/typing'))return {current:false,supported:false,send:false,scopes:[]};if(p==='/api/teams')return {teams:[]};if(p==='/api/workspace')return {};throw Error('Unexpected read '+p);
+      reads.push(p);if(p.startsWith('/api/dm?'))return structuredClone(view);if(p.startsWith('/api/overview'))return structuredClone(overview);if(p.startsWith('/api/agents')){const address=new URL('http://fixture'+p).searchParams.get('host')||'atlas/host';return {host:address,agents:[{enabled:true,record:{v:1,host:address,host_key:keys[address],id:agentID,label:'Pi',harness:'pi'}}]};}if(p.startsWith('/api/typing'))return {current:false,supported:false,send:false,scopes:[]};if(p==='/api/teams')return {teams:[]};if(p==='/api/workspace')return {};throw Error('Unexpected read '+p);
      }};
      window.fixtureHost=host;await(await import('/'+skin+'/entry.mjs')).mount(root,host);
      for(const child of root.children)child.hidden=true;root.querySelector('#dialog').hidden=false;root.style.visibility='visible';
@@ -56,7 +57,8 @@ test('standalone topic guests invite only their own agents with admitted context
     assert.deepEqual(await page.locator('input[name="agent-host"]').evaluateAll(ns=>ns.map(n=>n.value)),['atlas/host']);
     assert.deepEqual(await page.locator('input[name="agent-share"]').evaluateAll(ns=>ns.map(n=>n.value)),['excerpt','live']);
     assert.equal(await page.locator('input[name="agent-tasks"]').count(),0);
-    await page.locator('input[name="agent-host"]').check();await page.waitForFunction(()=>!document.querySelector('#skin').shadowRoot.querySelector('#invite-agent').disabled);await page.locator('#invite-agent').selectOption('b'.repeat(32));
+    const chooseAgent=async()=>{await page.waitForFunction(()=>!document.querySelector('#skin').shadowRoot.querySelector('#invite-agent').disabled);await page.locator('#invite-agent').selectOption('b'.repeat(32));assert.equal(await page.locator('#invite-agent').inputValue(),'b'.repeat(32));};
+    await page.locator('input[name="agent-host"]').check();await chooseAgent();
     await page.locator('input[name="agent-share"][value="excerpt"]').check();await page.locator('#dialog-ok').click();await page.locator('#dialog-error').filter({hasText:'Confirm file access'}).waitFor();assert.equal(await page.evaluate(()=>posts.length),0);
     await page.locator('input[name="agent-file-consent"]').check();
     const box=await page.locator('#dialog').boundingBox();assert.ok(box.x>=0&&box.x+box.width<=width+1,'dialog fits viewport');
@@ -69,14 +71,15 @@ test('standalone topic guests invite only their own agents with admitted context
      await page.evaluate(()=>fixture.inviteDialog(fixture.state.dmData));assert.equal(await page.evaluate(()=>posts.length),0,bad);
     }
     for(const bad of ['navigation','workspace','ended','owner','key','capable','topic','deleted']){
-     await page.evaluate(()=>{reset();fixture.inviteDialog(fixture.state.dmData);});await page.locator('input[name="agent-host"]').check();
+     await page.evaluate(()=>{reset();fixture.inviteDialog(fixture.state.dmData);});await page.locator('input[name="agent-host"]').check();await chooseAgent();
      await page.evaluate(bad=>{window.restore={view:structuredClone(view),overview:structuredClone(overview)};if(bad==='navigation')fixture.state.dm='other';if(bad==='workspace')fixtureHost.workspace.id='other-workspace';if(bad==='ended')view.guests[0].can_send=false;if(bad==='owner')overview.person.devices=[];if(bad==='key')overview.person.devices.find(d=>d.address==='atlas/host').fingerprint='changed-key';if(bad==='capable')overview.agent_devices=[];if(bad==='topic')view.guests[0].topic='e'.repeat(32);if(bad==='deleted')view.messages.find(m=>m.id==='live').deleted=true;},bad);
      if(bad==='deleted')await page.locator('input[name="agent-share"][value="live"]').check();await page.locator('#dialog-ok').click();await page.waitForFunction(()=>!document.querySelector('#skin').shadowRoot.querySelector('#dialog-ok').disabled);assert.match(await page.locator('#dialog-error').textContent(),/Reopen|reopen|no longer/,bad);assert.equal(await page.evaluate(()=>posts.length),0,bad);
      await page.evaluate(()=>{window.view=restore.view;window.overview=restore.overview;fixture.state.overview=overview;fixtureHost.workspace.id='default';});
     }
     await page.evaluate(()=>{reset();fixture.state.dmData.role='member';fixture.state.dmData.guests=[];fixture.state.dmData.members.push(overview.person);fixture.inviteDialog(fixture.state.dmData);});
     assert.ok(await page.locator('input[name="agent-host"]').count()>1,'member retains other-host choices');assert.ok(await page.locator('input[name="agent-tasks"]').count()>0,'member retains task choices');
-    await page.locator('input[name="agent-host"]').first().check();await page.locator('#dialog-ok').click();await page.waitForFunction(()=>posts.length===1);
+    const selectedHost=await page.locator('input[name="agent-host"]').first().inputValue();await page.locator('input[name="agent-host"]').first().check();await chooseAgent();await page.locator('#dialog-ok').click();await page.waitForFunction(()=>posts.length===1);
+    assert.deepEqual(await page.evaluate(()=>({host:posts[0].body.host,agent_id:posts[0].body.agent_id})),{host:selectedHost,agent_id:'b'.repeat(32)},'member invitation retains exact configured agent');
     assert.equal(await page.evaluate(()=>Object.hasOwn(posts[0].body,'topic')),false,'ordinary member payload unchanged');
     assert.deepEqual(errors,[]);await page.evaluate(()=>reset());
    }finally{await context.close();}

@@ -4,7 +4,7 @@ import {mountVideoFile,videoFileName} from './video-file.mjs';
 import {sniffVideo} from './pictures.mjs';
 import {unreadReview} from './unread-review.mjs';
 import {mountSchedule} from './schedule.mjs';
-import { composerFollowup, currentComposerFollowup, composerReplyFollowup, currentDirectComposerFollowup, sameFollowup } from "./composer-followup.mjs";
+import { composerFollowup, currentComposerFollowup, composerReplyFollowup, currentDirectComposerFollowup, sameFollowup, concreteAgentLabel, directBinding, directChatKey, sameDirectAgent, ComposerRecovery, directTopicQuery, directAgentKey } from "./composer-followup.mjs";
 import { nativeRequestItem } from "./native-request.mjs";
 import { reactionChoices, recordReaction, humanReactionOrder } from "./reaction-preferences.mjs";
 import {collectiveOptions, parseCollective, collectiveHref} from './collective-mentions.mjs';
@@ -223,7 +223,7 @@ function el(tag, attrs, ...kids) {
 
 // Every operation keeps the host it started with.
 async function api(path, body, host = currentHost) { return host.api(path, body); }
-const topicUI=topicControls(root,{api,isFresh:()=>!!topicFresh[state.dm||state.thread],chooseRoot:choosePersonTopic,announce:text=>announce(text),choose:id=>{state.messageOpening=null;if(state.dm){topicSelections[state.dm]=id;topicFresh[state.dm]=false;selectReadTopic();setDMReply(null);renderDMBody(false);markDMRead();if(Zoom.level===3)void Zoom.go(2,{});}else if(id!==state.thread)void openThread(id);},fresh:()=>{state.messageOpening=null;const id=state.dm||state.thread;topicFresh[id]=true;if(state.dm){topicSelections[id]='';selectReadTopic();renderDMBody(false);markDMRead();}announce('New topic: your next message starts a separate flow.');topicUI.repaint();syncComposer();if(state.dm)dmWriteDialog(state.dmData);else writeDialog(state.data,null);},changed:async()=>{await loadOverview();state.dm?await loadDM(false):await loadThread(false);}});
+const topicUI=topicControls(root,{api,isFresh:()=>!!topicFresh[state.dm||state.thread],chooseRoot:choosePersonTopic,announce:text=>announce(text),choose:id=>{state.messageOpening=null;clearNotificationStatus();if(state.dm){topicSelections[state.dm]=id;topicFresh[state.dm]=false;selectReadTopic();setDMReply(null);renderDMBody(false);markDMRead();if(Zoom.level===3)void Zoom.go(2,{});}else if(id!==state.thread)void openThread(id);},fresh:()=>{state.messageOpening=null;clearNotificationStatus();const id=state.dm||state.thread;topicFresh[id]=true;if(state.dm){topicSelections[id]='';selectReadTopic();renderDMBody(false);markDMRead();}announce('New topic: your next message starts a separate flow.');topicUI.repaint();syncComposer();if(state.dm)dmWriteDialog(state.dmData);else writeDialog(state.data,null);},changed:async()=>{await loadOverview();state.dm?await loadDM(false):await loadThread(false);}});
 cleanups.push(()=>topicUI.stop());
 
 // A time is an RFC 3339 string, or unix seconds (a host's report and its
@@ -266,7 +266,7 @@ function readAllowed(read,t,kind) {
  return !!(alive&&read&&state.readVisit===read&&read.host===currentHost&&read.kind===kind&&t&&read.id===t.id&&currentReadViewShown()&&read.fresh===t&&!read.entering&&!read.loading&&!state.reviewOpen&&!state.messageOpening&&nativeVisible&&root.ownerDocument.visibilityState==='visible'&&root.ownerDocument.hasFocus()&&!root.querySelector('dialog[open], [role="dialog"][aria-modal="true"]'));
 }
 function returnToUnreadReview(){if(!state.reviewReturn||state.reviewReturn!==state.readVisit)return false;state.reviewReturn=null;showList();toggleReview(true);return true;}
-function topicMetadata(t) {return {revision:state.contentRevision||0,seq:state.overview?.seq||0,mainUnread:t?.main_topic?.unread||0,unreadTotal:state.overview?.unread_total};}
+function topicMetadata(t) {return {binding:!state.dm&&directBinding(t).agent?directBinding(t):null,revision:state.contentRevision||0,seq:state.overview?.seq||0,mainUnread:t?.main_topic?.unread||0,unreadTotal:state.overview?.unread_total};}
 function placeUnreadDivider(scroller,read,t,kind) {
  const previous=scroller.querySelector('[data-unread-divider]');
  const first=read?.host===currentHost&&read.kind===kind&&read.id===t?.id&&read.fresh===t&&read.firstUnread
@@ -320,7 +320,7 @@ function syncScheduleControls(parent) {
  if(!state.scheduleReady)return;
  if(!scheduleUI){
   const host=currentHost,epoch=scheduleEpoch; scheduleContainer=el('div',{class:'schedule-controls'});(parent||$('composer')).append(scheduleContainer);
-  scheduleUI=mountSchedule({root:scheduleContainer,host,owner:skinKey,context:()=>{const t=state.dmData,conv=state.readVisit?.kind==='dm'&&state.readVisit.id===state.dm?state.dm:'',d=scheduleDraft(conv);return {supported:state.overview?.schedules===true,conv,ordinary:!!t&&!!conv&&!state.dmAgent&&!selectedAgentPIDs().length&&!state.answering&&kindValue()==='message',frozen:!!t?.frozen,visitor:!!t&&dmVisitor(t),newTopic:!!d.newTopic,missing:!!d.topic&&!(t?.topics||[]).some(x=>x.id===d.topic)||!!d.replyTo&&!(t?.messages||[]).some(x=>x.id===d.replyTo),followup:false,fileReason:state.files.length?overLimit(state.files):''};},capture:conv=>{const draft=scheduleDraft(conv);return {body:encodeMentions(draft.text,validMentions(state.mentions,draft.text)),draft};},getDraft:scheduleDraft,setDraft:applyScheduleDraft,subscribe:fn=>{contentSubscribers.add(fn);return()=>contentSubscribers.delete(fn);},isCurrent:()=>alive&&host===currentHost&&epoch===scheduleEpoch,onBlockingChange:value=>{state.scheduleBlocking=value;}});
+  scheduleUI=mountSchedule({...outboxOptions(),root:scheduleContainer,host,owner:skinKey,topicText:id=>(state.dmData?.topics||[]).find(t=>t.id===id)?.title||'Named topic',context:()=>{const t=state.dmData,conv=state.readVisit?.kind==='dm'&&state.readVisit.id===state.dm?state.dm:'',d=scheduleDraft(conv);return {supported:state.overview?.schedules===true,conv,ordinary:!!t&&!!conv&&!state.dmAgent&&!selectedAgentPIDs().length&&!state.answering&&kindValue()==='message',frozen:!!t?.frozen,visitor:!!t&&dmVisitor(t),newTopic:!!d.newTopic,missing:!!d.topic&&!(t?.topics||[]).some(x=>x.id===d.topic)||!!d.replyTo&&!(t?.messages||[]).some(x=>x.id===d.replyTo),followup:false,fileReason:state.files.length?overLimit(state.files):''};},capture:conv=>{const draft=scheduleDraft(conv);return {body:encodeMentions(draft.text,validMentions(state.mentions,draft.text)),draft};},getDraft:scheduleDraft,setDraft:applyScheduleDraft,subscribe:fn=>{contentSubscribers.add(fn);return()=>contentSubscribers.delete(fn);},isCurrent:()=>alive&&host===currentHost&&epoch===scheduleEpoch,onBlockingChange:value=>{state.scheduleBlocking=value;}});
  }else if(parent&&!parent.contains(scheduleContainer))parent.append(scheduleContainer);
  scheduleUI.update();
 }
@@ -394,7 +394,7 @@ async function loadOverview() {
   const gen = state.gen;
   const o = await api("/api/overview");
   if (gen !== state.gen) return o; // answered for a workspace no longer shown: nothing of it is drawn
-  state.overview = o;
+  state.overview = o;updateOutboxBadge();
   for (const id of ["profile-btn", "new-btn", "conversation-details"]) $(id).disabled = false;
   if (!state.version) state.version = o.version;
   else if (o.version && o.version !== state.version) updated(o.version);
@@ -414,6 +414,7 @@ async function loadOverview() {
   renderProfile(o);
   renderReview(o.review);
   renderThreads(o.threads);
+  void loadContactNames(o);
   renderQuarantine(o.quarantine);
   if (state.dm || state.data) setHubBack();
   else if (state.hub && !$("hub").hidden) renderHub();
@@ -762,28 +763,65 @@ function remindDialog(m, r) {
 
 // openReminder opens the message a reminder is about.
 async function openReminder(r) {
-  if (r.conv) {
-    await openDM(r.conv);
-    flash(r.message);
-  } else {
-    await openThread(r.message, r.message);
-  }
+  return openMessage({id:r.message,conv:r.conv});
 }
 
-// remindersSection lists the pending reminders at the top of the list,
-// overdue ones first (they stay until they end).
-function remindersSection() {
-  const rs = canRemind() ? state.overview.reminders || [] : [];
-  if (!rs.length) return [];
-  const sorted = [...rs].sort((a, b) => (b.overdue - a.overdue) || a.due.localeCompare(b.due));
-  const overdue = rs.filter((r) => r.overdue).length;
-  return [el("li", { class: "result-head" }, "Reminders" + (overdue ? " · " + overdue + " due" : "")),
-    ...sorted.map((r) => el("li", {}, el("button", { type: "button", class: "conv-item reminder-item" + (r.overdue ? " overdue" : ""), onclick: () => openReminder(r) },
-      el("span", { class: "conv-main" },
-        el("span", { class: "conv-top" }, el("span", { class: "conv-name" }, r.title || "A message"),
-          el("span", { class: "conv-time" }, (r.overdue ? "due " : "") + dueText(r.due))),
-        el("span", { class: "conv-sub" }, "From " + r.from)))))];
+// Outbox adapts only this skin's existing drafts, reminder actions and host.
+function outboxChatText(conv) {
+ const d=(state.overview?.dms||[]).find(d=>d.id===conv);
+ return d?.title||d?.peer?.label||(state.dmData?.id===conv?(state.dmData.title||state.dmData.peer?.label):'')||'Chat unavailable';
 }
+function outboxDrafts() {
+ return Object.entries(state.drafts).filter(([,d])=>d.text?.trim()||(d.files||[]).some(f=>f.file||f.bytes)).map(([key,d])=>{
+  const dm=key.startsWith('dm:'),id=dm?key.slice(3):key,summary=(state.overview?.threads||[]).find(t=>t.id===id),origin=d.origin;
+  const title=dm?outboxChatText(id):(summary?.title||firstLine(summary?.last||summary?.first||'',60)||summary?.peer||'Original conversation');
+  const topic=d.topic??(Object.hasOwn(topicSelections,id)?topicSelections[id]:undefined);
+  return {key,record:d,title,text:d.text||'',files:(d.files||[]).filter(f=>f.file||f.bytes),detail:dm?(d.newTopic?'New topic':topic?(state.dmData?.id===id?state.dmData.topics?.find(t=>t.id===topic)?.title:'')||'Named topic':topic===''?'Main flow':'Original topic unavailable'):(origin?.binding?.id||d.agent_id?namedAgentLabel(origin?.binding?.id||d.agent_id,origin?.binding?.host||summary?.agent_host||summary?.peer||''):'Original thread')};
+ });
+}
+async function resumeOutboxDraft(key,draft) {
+ const host=currentHost,gen=state.gen,dm=key.startsWith('dm:'),id=dm?key.slice(3):key;
+ if(!(/^[0-9a-f]{64}$/.test(id)&&dm||/^[0-9a-f]{32}$/.test(id)&&!dm)||state.drafts[key]!==draft)throw Error('The original draft changed.');
+ const view=await api((dm?'/api/dm?id=':'/api/thread?id=')+encodeURIComponent(id),undefined,host);
+ if(!alive||host!==currentHost||gen!==state.gen||state.drafts[key]!==draft||view.id!==id)throw Error('The original destination changed.');
+ if(dm){
+  const topic=draft.topic??(Object.hasOwn(topicSelections,id)?topicSelections[id]:undefined);
+  if(topic===undefined||topic&&!(view.topics||[]).some(t=>t.id===topic))throw Error('The original topic is unavailable.');
+  topicSelections[id]=topic;topicFresh[id]=!!draft.newTopic;
+  scheduleUI?.close();await openDM(id,view,true,true);
+ }else{
+  const binding=directBinding(view),original=draft.origin?.binding;
+  if(original&&(binding.host!==original.host||binding.key!==original.key||binding.id!==original.id)||draft.agent_id&&binding.id&&draft.agent_id!==binding.id)throw Error('The original agent binding changed.');
+  scheduleUI?.close();await openThread(id,undefined,view,true,true);
+ }
+ if(!alive||host!==currentHost||gen!==state.gen||(dm?state.dm!==id:state.thread!==id))return;
+ // Navigation already saved the chat being left; never clear or re-create files.
+ restoreDraft(key,view);state.draftKey=key;syncComposer();$('body').focus();
+}
+function outboxReminders() {
+ return [...(canRemind()?state.overview?.reminders||[]:[])].sort((a,b)=>(Number(b.overdue)-Number(a.overdue))||a.due.localeCompare(b.due)).map(r=>({id:r.message,title:r.title||'A message',chat:r.conv?outboxChatText(r.conv):whoText(r.from),when:dueText(r.due),detail:'From '+whoText(r.from),overdue:r.overdue,open:()=>openReminder(r),change:()=>remindDialog({id:r.message,body:r.title||''},r),done:()=>remindAct('/api/remind/done',r.message),cancel:()=>remindAct('/api/remind/cancel',r.message)}));
+}
+function outboxChanged(open) {
+ const nav=$('nav-outbox');if(nav){nav.classList.toggle('selected',open);nav.setAttribute('aria-current',open?'page':'false');}
+ if(!alive)return;
+ if(open){if(typeof retireViewMedia==='function')retireViewMedia();else releaseVideos();}
+ if(typeof visibleRead!=='undefined')visibleRead?.watcher.evaluate();
+ state.readVisit?.watcher?.evaluate();
+ if(!open&&state.dm)void markDMRead();
+}
+function outboxOptions() {
+ return {outboxRoot:root,onOutboxChange:outboxChanged,chatText:outboxChatText,getDrafts:outboxDrafts,resumeDraft:resumeOutboxDraft,getReminders:outboxReminders,openOriginalSave:async conv=>{const host=currentHost,gen=state.gen;await openDM(conv);if(!alive||host!==currentHost||gen!==state.gen||state.dm!==conv)return;if(typeof syncScheduleControls==='function')syncScheduleControls();await scheduleUI?.openCreate();}};
+}
+function updateOutboxBadge() {
+ const button=$('nav-outbox'),badge=$('outbox-due');if(!button||!badge)return;
+ const count=(state.overview?.reminders||[]).filter(r=>r.overdue).length;badge.hidden=!count;badge.textContent=String(count);button.setAttribute('aria-label','Outbox'+(count?', '+count+' reminders due':''));
+}
+function setupOutboxNav() {
+ if($('nav-outbox'))return;
+ const button=el('button',{type:'button',id:'nav-outbox',class:'nav-item','aria-current':'false',onclick:()=>{keepDraft();if(typeof syncScheduleControls==='function')syncScheduleControls();else if(!scheduleUI)setupSchedule();void scheduleUI?.openOutbox('scheduled');}},el('span',{class:'nav-label'},'Outbox'),el('span',{id:'outbox-due',class:'an-outbox-due',hidden:true}));
+ ($('review-btn').closest('.review-wrap') || $('review-btn')).before(button);updateOutboxBadge();
+}
+
 
 // ---- notifications (browser device) -----------------------------------------------------
 //
@@ -1099,11 +1137,12 @@ function machineLines(o) {
 function contactsOf(threads) {
   const by = new Map();
   for (const t of threads) {
-    let c = by.get(t.peer);
+    const key = directChatKey(t);
+    let c = by.get(key);
     if (!c) {
-      c = { peer: t.peer, conversations: [], singles: [], reports: [], review: 0, unread: 0, running: 0, notices: 0,
+      c = { key, peer: t.peer, binding: directBinding(t), conversations: [], singles: [], reports: [], review: 0, unread: 0, running: 0, notices: 0,
         waiting: false, keyChanged: false, lastAt: t.last_at, last: "" };
-      by.set(t.peer, c);
+      by.set(key, c);
     }
     c.keyChanged ||= t.key_changed;
     if (new Date(t.last_at) > new Date(c.lastAt)) c.lastAt = t.last_at;
@@ -1357,7 +1396,7 @@ async function dismissReports(peer, button) {
 // contactBody is what a contact opens into in the sidebar:
 // its reports, its conversations, and its single messages folded away.
 function contactBody(c, open) {
-  const singlesOpen = !!state.singlesOpen[c.peer];
+  const singlesOpen = !!state.singlesOpen[c.key];
   const unreadSingles = c.singles.reduce((n, t) => n + t.unread, 0);
   return [
     reportLine(c),
@@ -1365,15 +1404,15 @@ function contactBody(c, open) {
       c.conversations.map((t) => threadRow(t, open, false))),
     c.singles.length > 0 && el("button", { type: "button", class: "singles-toggle", "aria-expanded": String(singlesOpen),
       onclick: () => {
-        state.singlesOpen[c.peer] = !singlesOpen;
+        state.singlesOpen[c.key] = !singlesOpen;
         rerenderContacts();
-        if (!$("hub").hidden && sameHub(state.hub, { kind: "device", key: c.peer })) renderHub();
+        if (!$("hub").hidden && sameHub(state.hub, { kind: "device", key: c.key })) renderHub();
       } },
       (singlesOpen ? "Hide " : "") + plural(c.singles.length, "single message", "single messages") +
       (unreadSingles && !singlesOpen ? " · " + unreadSingles + " new" : "") + (singlesOpen ? "" : " (not linked to a conversation)")),
     singlesOpen && el("ul", { class: "thread-list singles", "aria-label": "Single messages from " + c.peer }, c.singles.map((t) => threadRow(t, open, true))),
     !c.conversations.length && !c.singles.length && !c.reports.length && el("p", { class: "hint" }, "No messages yet."),
-    el("button", { type: "button", class: "text-btn new-conv", onclick: () => newConversationDialog(c.peer) }, "New conversation with " + c.peer),
+    el("button", { type: "button", class: "text-btn new-conv", onclick: () => newConversationDialog(c.binding.agent ? {host:c.binding.host,id:c.binding.id} : c.peer) }, "New conversation with " + contactName(c)),
   ];
 }
 
@@ -1832,7 +1871,7 @@ function choosePerson(p) {
 function ownerOf() {
   if (humanGroup()) return null;
   if (state.dm) return state.dmData ? { kind: "person", key: personKey(state.dmData.peer) } : null;
-  return state.data ? { kind: "device", key: state.data.peer } : null;
+  return state.data ? { kind: "device", key: directChatKey(state.data) } : null;
 }
 
 const sameHub = (a, b) => !!(a && b && a.kind === b.kind && a.key === b.key);
@@ -1851,13 +1890,20 @@ function hubOf(h) {
     const p = (o.people || []).find((x) => personKey(x) === h.key) || (dms[0] && dms[0].peer);
     return p ? { label: p.label, person: p, dms, count: dms.length } : null;
   }
-  const c = contactsOf(o.threads || []).find((x) => x.peer === h.key);
-  return c ? { label: c.peer, contact: c, count: c.conversations.length + c.singles.length } : null;
+  const c = contactsOf(o.threads || []).find((x) => x.key === h.key);
+  return c ? { label: contactName(c), contact: c, count: c.conversations.length + c.singles.length } : null;
 }
 
 // openHub shows a person's or device's conversations, leaving the open
 // one (its draft stays with it).
-function openHub(h) { if (h.kind === 'team') void Zoom.go(1, {team:h.key,person:null,peer:null,dm:null}); else if (h.kind === 'person') void Zoom.go(1, {person: h.key, peer: null}); else if (h.kind === 'device') void Zoom.go(1, {peer: h.key, person: null}); }
+function exactDeviceHub(h) {
+ if(h.kind!=='device'||h.key.startsWith('['))return h;
+ const contacts=contactsOf(state.overview?.threads||[]).filter(c=>c.peer===h.key);
+ if(contacts.length===1)return {...h,key:contacts[0].key};
+ if(!contacts.length){newConversationDialog(h.key);return null;}
+ dialog({title:'Choose a conversation',body:contacts.map(c=>el('button',{type:'button',class:'btn',onclick:()=>{$('dialog').close();openHub({kind:'device',key:c.key});}},contactName(c))),ok:'Close',run:async()=>{}});return null;
+}
+function openHub(h) { h=exactDeviceHub(h);if(!h)return; if (h.kind === 'team') void Zoom.go(1, {team:h.key,person:null,peer:null,dm:null}); else if (h.kind === 'person') void Zoom.go(1, {person: h.key, peer: null}); else if (h.kind === 'device') {const c=contactsOf(state.overview.threads).find(c=>c.key===h.key);if(c)void Zoom.go(1,{peer:c.peer,contactKey:c.key,person:null});} }
 
 // showPane shows a person's or device's conversations ("hub") or the open
 // conversation ("conv") in the main pane.
@@ -1914,7 +1960,7 @@ function renderHub() {
   }
   const c = x.contact;
   const owner = deviceOwner(c.peer);
-  fill($("conv-name"), who(c.peer));
+  fill($("conv-name"), contactName(c));
   // Back to the person whose device it is; yours has no page of its own
   // (you are no DM partner): back goes to the list.
   const up = owner && owner.state !== "self";
@@ -2260,6 +2306,7 @@ function newDMDialog(p) {
 // ---- a DM ---------------------------------------------------------------------------
 
 function beginDM(id, readEntry = true) {
+  clearNotificationStatus();
   enterReadVisit("dm",id,readEntry);
   // A pending jump to a message survives only the open it started itself:
   // opening the conversation again (by hand) cancels it, so the view never
@@ -2541,7 +2588,7 @@ const copyWord = { delivered: "delivered", custody: "on your server", queued: "S
 // in DMs here. The link is the invitation's host: that person and device.
 function agentLinkText(a, p) {
   const active = a.dms.filter((d) => d.state === "active").length;
-  return (a.agent_id ? namedAgentOn(a.agent_id, a.address, isMe(p) ? "Your" : p && p.label ? p.label + "'s" : "") : (isMe(p) ? "Your agent" : "Their agent") + " on " + a.address) + " · " + plural(a.dms.length, "DM", "DMs") +
+  return (a.agent_id ? namedAgentOn(a.agent_id, a.address, isMe(p) ? "Your" : p && p.label ? p.label + "'s" : "") : "Earlier default on " + deviceWords(a.address)) + " · " + plural(a.dms.length, "DM", "DMs") +
     (active ? " (" + active + " active)" : "");
 }
 
@@ -2554,12 +2601,20 @@ const agentOf = (pid) => state.dmData && (state.dmData.agents || []).find((a) =>
 const askGone = () => selectedAgentPIDs().length > 0 && !selectedAgentPIDs().some(pid => agentOf(pid)?.can_ask);
 // agentName names an agent by the person whose installation runs it.
 // Labels come only from records already read for this exact host and ID.
-const catalogRecords = host => state.dm && state.dmNames?.[host] || (state.targetCatalog && state.targetCatalog.host === host ? state.targetCatalog.agents || [] : []);
+const catalogRecords = host => state.dmNames?.[host] || (state.targetCatalog && state.targetCatalog.host === host ? state.targetCatalog.agents || [] : []);
 // A named agent's own name is only its verified catalog record's, read here
 // for that exact host and ID; without it, the text says whose assistant it
 // is and that its name is unavailable. IDs stay in titles and details, never
 // in the text people read; two agents with one name stay two (by their keys).
-const catalogName = (id, host, records = catalogRecords(host)) => (records.find(a => a.host === host && a.id === id && a.label) || {}).label || "";
+const catalogName = (id, host, records = catalogRecords(host)) => {const record=records.find(a=>a.host===host&&a.id===id);return record?concreteAgentLabel(record,records):"";};
+function contactName(c) {return c.binding?.agent ? c.binding.id ? namedAgentOn(c.binding.id,c.binding.host) : "Earlier default on "+deviceWords(c.binding.host) : whoText(c.peer);}
+async function loadContactNames(o) {
+ state.dmNames ||= {};const gen=state.gen,host=currentHost;
+ for(const address of new Set((o.threads||[]).filter(t=>directBinding(t).agent).map(t=>directBinding(t).host))){
+  if(state.dmNames[address])continue;state.dmNames[address]=[];
+  readAgentCatalog(address,host).then(records=>{if(!alive||gen!==state.gen||host!==currentHost)return;state.dmNames[address]=records;renderThreads(state.overview.threads);if(state.data)renderBody(false);}).catch(()=>{});
+ }
+}
 const unnamedAgent = (whose, host) => (whose ? whose + " assistant" : "Assistant on " + host) + " · name unavailable";
 function namedAgentLabel(id, host, records = catalogRecords(host), whose = "") {
   const name = catalogName(id, host, records);
@@ -2583,17 +2638,28 @@ async function validateCapturedFollowup(followup,t,host,me){
 
 // whoseAgent: a participation's host as the owner of its agent ("Your", "Bob's").
 const whoseAgent = (a) => !a ? "" : (a.host_here || isMe(a.host)) ? "Your" : a.host && a.host.label ? a.host.label + "'s" : "";
-const agentName = (a) => a.agent_id ? namedAgentLabel(a.agent_id, a.host.address, undefined, whoseAgent(a)) : (isMe(a.host) ? "Your agent" : a.host.label + "'s agent");
-const namedAuthor = (m) => namedAgentOn(m.agent_id, m.from, whoseAgent(m.pid && agentOf(m.pid)));
+const agentName = (a) => a.agent_id ? namedAgentLabel(a.agent_id, a.host.address, undefined, whoseAgent(a)) : "Earlier default on " + deviceWords(a.host.address);
+const namedAuthor = (m, records=catalogRecords(m.from)) => {
+ const record=records.find(a=>a.id===m.agent_id),name=m.author?.label||record?.label||'Agent '+m.agent_id.slice(0,8);
+ return name+(records.some(a=>a.id!==m.agent_id&&a.label===name)?' · '+m.agent_id.slice(0,8):'');
+};
+
+// A historical request keeps its original target/key. Current programs and
+// the default setting do not identify the executor of an older run.
+function historicalTargetLabel(target) {
+  const address=target?.address;
+  const records=catalogRecords(address).filter(a=>a.host===address&&(!target.fingerprint||a.host_key===target.fingerprint));
+  const name=target?.agent_id?namedAuthor({from:address,agent_id:target.agent_id},records):"Earlier default · identity unknown";
+  return name+(address?" on "+deviceWords(address):"");
+}
+function agentNeedsYouHeading(target, interrupted=false) {
+  return historicalTargetLabel(target)+(interrupted?" was interrupted — run it again if needed":" couldn’t finish — it needs your attention");
+}
+
 // catalogLabel names a record in a picker: the same catalog name, plus a short
 // ID only where one host offers two agents of one name (to choose between).
-function catalogLabel(a, records) {
-  const sameHost = records.filter(x => x.host === a.host);
-  if (!a.label || !sameHost.some(x => x.id !== a.id && x.label === a.label)) return (a.label || unnamedAgent("", a.host)) + " · " + a.host;
-  let length = 8;
-  while (length < a.id.length && sameHost.some(x => x.id !== a.id && x.id.slice(0, length) === a.id.slice(0, length))) length++;
-  return a.label + " · " + a.id.slice(0, length) + " · " + a.host;
-}
+function catalogLabel(a, records) {return concreteAgentLabel(a,records)+" · "+deviceWords(a.host);}
+
 const namedProvenance = (m) => "Agent " + m.agent_id + " on " + m.from + " (host assertion)";
 function namedDetails(m) {
   return [m.agent_id && [el("dt", {}, "Agent author"), el("dd", {}, namedProvenance(m))],
@@ -3030,8 +3096,7 @@ function ownModelReports() {
   const o=state.overview,targets=new Map();
   if(o?.person?.state!=="self")return null;
   const own=host=>o.person.devices?.find(d=>d.address===host);
-  for(const host of o.agent_devices||[])if(own(host))targets.set(host+"#",{host,id:"",label:"Default agent"});
-  for(const report of o.model_reports||[])if(own(report.host)?.fingerprint===report.host_key)targets.set(report.host+"#"+report.agent_id,{host:report.host,id:report.agent_id,label:report.agent_id?namedAgentLabel(report.agent_id,report.host):"Default agent"});
+  for(const report of o.model_reports||[])if(own(report.host)?.fingerprint===report.host_key)targets.set(report.host+"#"+report.agent_id,{host:report.host,id:report.agent_id,label:report.agent_id?namedAgentLabel(report.agent_id,report.host):"Earlier default · identity unknown"});
   return targets.size ? el("section",{"aria-label":"Your agents’ reported models"},el("h3",{},"Your agents’ reported models"),[...targets.values()].map(t=>el("div",{},el("strong",{},t.label+" · "+deviceWords(t.host)),ownModelReport(t.host,t.id)))) : null;
 }
 function refreshModelReports() {
@@ -3094,8 +3159,8 @@ function inviteDialog(t) {
   const me = state.overview.person;
   const transport = currentHost, gen = state.gen, ws = wsNow();
   let catalogHost = "", catalog = [], catalogError = "", catalogSeq = 0;
-  const named = el("select", { id: "invite-agent", "aria-label": "Agent on selected host" }, el("option", { value: "" }, "Device default agent"));
-  const catalogStatus = el("p", { class: "hint", role: "status" }, "Choose a computer to see its agents. You can also choose its default agent.");
+  const named = el("select", { id: "invite-agent", "aria-label": "Agent on selected host" }, el("option", { value: "" }, "Choose a configured agent"));
+  const catalogStatus = el("p", { class: "hint", role: "status" }, "Choose a computer, then a configured agent.");
   const modelStatus=el("div");
   const showModel=()=>fill(modelStatus,ownModelReport(catalogHost,named.value));
   named.addEventListener("change",showModel);
@@ -3103,16 +3168,16 @@ function inviteDialog(t) {
   const loadCatalog = async address => {
     const seq = ++catalogSeq;
     catalogHost = address; catalog = []; catalogError = ""; named.disabled = true;
-    fill(named, el("option", { value: "" }, "Device default agent"));
+    fill(named, el("option", { value: "" }, "Choose a configured agent"));
     showModel();
     catalogStatus.textContent = "Loading agents on " + address + "…";
     try {
       const records = await readAgentCatalog(address, transport);
       if (!current() || seq !== catalogSeq) return;
       catalog = records;
-      fill(named, el("option", { value: "" }, "Device default agent"), records.map(a => el("option", { value: a.id, title: a.id + " · " + a.host }, catalogLabel(a, records))));
+      fill(named, el("option", { value: "" }, "Choose a configured agent"), records.filter(a=>a.harness).map(a => el("option", { value: a.id, title: a.id + " · " + a.host }, catalogLabel(a, records))));
       catalogStatus.textContent = "Agent names are supplied by this computer. Its owner still decides which tasks may run. Only the earlier messages you choose are shared.";
-    } catch (e) { if (current() && seq === catalogSeq) { catalogError = e.message; catalogStatus.textContent = "Named agents unavailable: " + e.message + " Device default can still be chosen."; } }
+    } catch (e) { if (current() && seq === catalogSeq) { catalogError = e.message; catalogStatus.textContent = "Named agents unavailable: " + e.message + " Update or configure an agent on this device."; } }
     finally { if (current() && seq === catalogSeq) {named.disabled = false;showModel();} }
   };
   // A browser device runs no agent. External hosts come from this workspace's
@@ -3160,15 +3225,17 @@ function inviteDialog(t) {
       if (!host) throw new Error("Choose whose agent to invite.");
       if (!current()) throw new Error("This invitation belongs to another conversation or workspace. Reopen it there.");
       const agentID = named.value;
+      if(!agentID)throw Error("Choose a configured agent. No invitation was sent.");
       if (external.has(host)) {
         if (!directory().current || !directory().members.some(m => m.address === host)) throw new Error("This external host is no longer in the current workspace directory. Reopen the invitation.");
         if (!agentID) throw new Error("Choose an exact named agent on this external host.");
       }
       if (agentID) {
-        if (host !== catalogHost || named.disabled || catalogError || !catalog.some(a => a.id === agentID)) throw new Error("Load and choose an agent on this computer first.");
+        if (host !== catalogHost || named.disabled || catalogError || !catalog.some(a => a.id === agentID && a.harness)) throw new Error("Load and choose an agent on this computer first.");
         const fresh = await readAgentCatalog(host, transport);
         if (!current()) throw new Error("Workspace changed. Reopen this invitation in its workspace.");
-        if (!fresh.some(a => a.id === agentID)) throw new Error("That agent is no longer available on this computer. Nothing was invited.");
+        const selected=catalog.find(a=>a.id===agentID);
+        if (!fresh.some(a => a.id === agentID && a.harness === selected.harness && a.host_key === selected.host_key)) throw new Error("That agent or host key changed. Refresh agents; nothing was invited.");
       }
       if (t.messages.some(m => picked(share).includes(m.id) && (m.attachments || []).length) && !fileConsent.input.checked) throw new Error("Selected messages include files. Confirm file access, or deselect those messages.");
       if (guest) {
@@ -3432,7 +3499,7 @@ function renderReview(items) {
   fill($("review-list"), ...invitations.map(guestInvitationRow), ...conversations.map(c => {
     const chat = (state.overview.dms || []).find(d => d.id === c.conv);
     return el("li", {}, el("button", {type:"button", onclick:()=>{ toggleReview(false); openMessage({id:c.id,conv:c.conv}); }},
-      el("strong", {}, c.reason === "agent_interrupted" ? "Your agent was interrupted — run it again if needed" : "Your agent couldn’t finish — it needs your attention"),
+      el("strong", {}, agentNeedsYouHeading(c.target,c.reason==="agent_interrupted")),
       el("span", {class:"review-why"}, "In " + (chat?.title || (chat?.peer ? "your chat with " + (chat.peer.label || "this person") : "a chat")))),
       c.why && el("details", {}, el("summary", {}, "Read the agent’s whole message"), el("p", {class:"agent-detail"}, c.why)),
       c.decide_on && el("p", {class:"hint"}, "Open it on " + deviceWords(c.decide_on)));
@@ -3452,7 +3519,7 @@ function renderReview(items) {
         await act({do:"resolve",id:c.id},host); if(host===currentHost)await loadOverview();
       }});
     }}, "Mark as handled")));
-  fill($("activity-extra"), remindersSection(), ...held, ...working.map(it => el("li", {},
+  fill($("activity-extra"), ...held, ...working.map(it => el("li", {},
     el("button", {type:"button", onclick:()=>{ toggleReview(false); openThread(it.id, it.id); }},
       el("strong", {}, "Working · ", who(it.peer)),
       nativeActivity(it.why) || el("span", {class:"review-why"}, it.why),
@@ -3512,7 +3579,7 @@ function sidebarEntries(threads) {
       unread: chats.reduce((n, d) => n + (d.unread || 0), 0) + devices.reduce((n, c) => n + c.unread, 0) };
   });
   for (const c of contacts.filter((c) => !deviceOwner(c.peer) || (state.contactView !== "people" && deviceOwner(c.peer) === o.person))) {
-    entries.push({ contact: c, label: c.peer, at: c.lastAt, unread: c.unread });
+    entries.push({ contact: c, label: contactName(c), at: c.lastAt, unread: c.unread });
   }
   return entries.filter((e) => state.contactView === "people" || (state.contactView === "unread" ? e.unread > 0 : !!e.at))
     .sort(state.contactView === "people" ? (a, b) => a.label.localeCompare(b.label)
@@ -3558,7 +3625,7 @@ function searchItems(q, threads, open) {
         el("span", { class: "hint" }, "with " + d.peer.label + " · " + when(d.last_at))), dmFlags(d)))),
     agents.length + listed.length > 0 && el("li", { class: "result-head" }, plural(agents.length + listed.length, "device", "devices")),
     ...agents.map((c) => el("li", {}, el("button", { type: "button", class: "result", onclick: (e) => open.contact(c, e.currentTarget) },
-      el("span", { class: "result-kind" }, runsAgent(c.peer) ? "Agent" : "Person"), el("span", { class: "result-main" }, who(c.peer),
+      el("span", { class: "result-kind" }, runsAgent(c.peer) ? "Agent" : "Person"), el("span", { class: "result-main" }, contactName(c),
         el("span", { class: "hint" }, " · " + plural(c.conversations.length, "conversation", "conversations"))), presenceBadge(c.peer), counts(c)))),
     ...listed.map(memberRow),
     conversations.length > 0 && el("li", { class: "result-head" }, plural(conversations.length, "conversation or message", "conversations or messages")),
@@ -3574,7 +3641,7 @@ function renderSearch(threads) {
   fill($("conv-list"), ...searchItems(state.query, threads, {
     person: (p) => choosePerson(p),
     dm: (d) => { clearSearch(); openDM(d.id); },
-    contact: (c) => { clearSearch(); openHub({ kind: "device", key: c.peer }); },
+    contact: (c) => { clearSearch(); openHub({ kind: "device", key: c.key }); },
     conversation: (t) => { clearSearch(); openThread(t.id); },
   }));
 }
@@ -3636,6 +3703,7 @@ function renderQuarantine(items) {
 // nothing can be sent until the new one has loaded. It reports whether the
 // conversation changed.
 function beginThread(id, readEntry = true) {
+  clearNotificationStatus();
   enterReadVisit("thread",id,readEntry);
   state.messageOpening = null;
   closeMentions();
@@ -3695,13 +3763,21 @@ async function loadThread(scrollToEnd, localView, freshEntryView = false) {
     if(!t)t = await api("/api/thread?id=" + encodeURIComponent(id), undefined, host);
   } catch (e) {
     if(visit)visit.loading--;
-    if (current()) announce(e.message);
+    if (current()) {
+      const previous=state.data;
+      // Undo can empty a synthetic topic: its originals now live in their
+      // restored topics. Keep its draft and return to this exact agent chat.
+      if(previous?.topic?.id===id&&!previous.messages.some(m=>m.id===id)&&state.overview&&!state.overview.threads.some(t=>t.id===id)&&(e.status===404||/no message with that id/i.test(e.message))){
+        openHub({kind:'device',key:directChatKey(previous)});
+        announce('This topic is empty after organization. Its unsent draft is kept.');
+      }else announce(e.message);
+    }
     return;
   }
   if(visit)visit.loading--;
   if (!current()) return; // another thread or workspace was opened meanwhile
   state.data = t;
-  fill($("conv-name"), who(t.peer));
+  fill($("conv-name"), directBinding(t).agent ? contactName({peer:t.peer,binding:directBinding(t)}) : who(t.peer));
   $("conv-topic").textContent = firstLine(t.messages[0].body, 90);
   $("conv-avatar").replaceWith(Object.assign(avatar(t.peer), { id: "conv-avatar" }));
   $("conv-presence").textContent = peerPresence(t.peer);
@@ -3710,12 +3786,12 @@ async function loadThread(scrollToEnd, localView, freshEntryView = false) {
   showPane("conv");
   $("composer").hidden = false;
   setHubBack();
-  const page=localView ? {topics:t.topic?[t.topic]:[]} : t.topic ? await api("/api/topics?peer="+encodeURIComponent(t.peer)+"&limit=200", undefined, host) : {topics:[]};
+  const page=localView ? {topics:t.topic?[t.topic]:[]} : t.topic ? await api("/api/topics?"+directTopicQuery(t,{limit:"200"}), undefined, host) : {topics:[]};
   if(!current())return;
   topicUI.update({peer:t.peer},page.topics,t.topic?.id||id,null,topicMetadata(t));
   commitReadView(visit,t,"thread",!localView||freshEntryView);
   renderBody(scrollToEnd);
-  const key = t.messages[0].id; // a conversation's first message names its draft
+  const key = t.topic?.id || t.messages[0].id; // the stable topic owns its draft
   if (state.draftKey === null) restoreDraft(key, t); // just switched here (beginThread)
   state.draftKey = key;
   if (state.deviceAgentID && !state.targetCatalog) loadTargetCatalog();
@@ -4101,51 +4177,60 @@ function resumeMessageFocus(t) {
   if (!pending?.waiting || pending.conv !== t.id) return "";
   const message = messageTarget(t.messages, pending.ref);
   if (!message) return "";
-  state.messageOpening = null;
+  state.messageOpening = null;clearNotificationStatus();
   topicSelections[t.id] = message.topic || "";
   topicFresh[t.id] = false;
   selectReadTopic();
-  return pending.chat ? "" : message.id; // a list row stays in the chat: no message level
+  return pending.chat ? "" : message.id;
 }
-// chat: open the conversation at that message's topic and stay on the chat
-// level (a list row), instead of zooming to the message (a notification).
-async function openDMMessage(conv, ref, chat = false, readEntry = true) {
-  const pending = {conv, ref, waiting:false, own:true, chat}; state.messageOpening = pending;
-  try {
-    const opening = openDM(conv,undefined,readEntry), gen = state.gen, host = currentHost;
-    const selected = topicSelections[conv]; const generation = Zoom.generation;
-    await opening;
-    if (!alive || state.messageOpening !== pending || host !== currentHost || gen !== state.gen || state.dm !== conv || topicSelections[conv] !== selected || generation !== Zoom.generation) return;
-    const message = messageTarget(state.dmData?.messages || [], ref);
-    if (!message) { pending.waiting = true; announce("That message is not on this device yet. It will open when its history arrives."); return; }
-    topicSelections[conv] = message.topic || "";
-    topicFresh[conv] = false;
-    selectReadTopic();
-    if (chat) Zoom.revealEnd = true;
-    renderDMBody(false);
-    if (!chat) flash(message.id);
-    if (state.messageOpening === pending) { state.messageOpening = null; void markDMRead(); }
-  } finally {
-    if (state.messageOpening === pending && !pending.waiting) state.messageOpening = null;
-  }
+function clearNotificationStatus(){root.querySelector('[data-notification-landing]')?.remove();}
+function notificationMissing(pending) {
+ pending.waiting=true;
+ const host=currentHost,gen=state.gen;
+ clearNotificationStatus();const status=el('p',{class:'hint',role:'status','data-notification-landing':''});($('zoom')||$('timeline')).before(status);
+ fill(status,'That exact message is not on this device yet. Retry when its history arrives. ',el('button',{type:'button',class:'text-btn',onclick:()=>{if(alive&&host===currentHost&&gen===state.gen&&state.messageOpening===pending)void (pending.conv?openDMMessage(pending.conv,pending.ref,pending.chat,true,false):openMessage(pending.ref,pending.chat));}},'Retry message'));
+}
+async function openDMMessage(conv, ref, chat = false, readEntry = true, localView) {
+ const cached=localView===false?null:localView||(state.dmData?.id===conv?state.dmData:null);
+ const pending={conv,ref,waiting:false,own:true, chat};state.messageOpening=pending;
+ const host=currentHost,gen=state.gen;
+ try{
+  // Reuse a loaded exact conversation before any network or overview work.
+  const view=cached||await api('/api/dm?id='+encodeURIComponent(conv),undefined,host);
+  if(view.id!==conv)throw Error('The exact notification conversation is unavailable.');
+  if(!alive||host!==currentHost||gen!==state.gen||state.messageOpening!==pending)return;
+  // Startup owns the initial overview; retain this exact request while it arrives.
+  if(!state.overview){state.clickedAtStart={msg:ref.id,...ref};return;}
+  pending.own=true;
+  await openDM(conv,view,readEntry,!cached||!!localView);
+  if(!alive||host!==currentHost||gen!==state.gen||state.dm!==conv||state.messageOpening!==pending)return;
+  const message=messageTarget(state.dmData?.messages||[],ref);
+  if(!message){notificationMissing(pending);return;}
+  topicSelections[conv]=message.topic||'';topicFresh[conv]=false;selectReadTopic();
+  renderDMBody(false);if(!chat)flash(message.id);
+  if(state.messageOpening===pending){state.messageOpening=null;clearNotificationStatus();void markDMRead();}
+ }catch(e){if(state.messageOpening===pending)notificationMissing(pending);}
+ finally{if(state.messageOpening===pending&&!pending.waiting)state.messageOpening=null;}
 }
 async function openMessage(ref, chat = false) {
-  if (!ref || !ref.id) return;
-  if (ref.conv && (state.overview.dms || []).some(d => d.id === ref.conv)) return openDMMessage(ref.conv, ref, chat);
-  if (!ref.conv) {
-    try { await openThread(ref.id, ref.id); if (state.data && state.data.messages.some(m => m.id === ref.id)) return; } catch (e) { /* not a device thread here */ }
-  }
-  const gen = state.gen, host = currentHost;
-  for (const d of state.overview.dms || []) {
-    try {
-      const v = await api("/api/dm?id=" + encodeURIComponent(d.id));
-      if (!alive || gen !== state.gen || host !== currentHost) return;
-      if (messageTarget(v.messages, ref)) return openDMMessage(d.id, ref, chat);
-    } catch (e) { /* next */ }
-  }
-  if (alive && gen === state.gen && host === currentHost) showList("That message is not on this device.");
+ if(!ref?.id)return;
+ if(!state.overview){state.clickedAtStart={msg:ref.id,...ref};return;}
+ if(ref.conv)return openDMMessage(ref.conv,ref, chat);
+ if(state.dmData&&messageTarget(state.dmData.messages||[],ref))return openDMMessage(state.dmData.id,ref, chat);
+ if(state.data){const message=messageTarget(state.data.messages||[],ref);if(message)return openThread(state.data.id,message.id,state.data);}
+ const host=currentHost,gen=state.gen,pending={conv:"",ref,waiting:false,chat};state.messageOpening=pending;
+ try{const view=await api('/api/thread?id='+encodeURIComponent(ref.id),undefined,host);
+  if(!alive||host!==currentHost||gen!==state.gen||state.messageOpening!==pending)return;
+  const message=messageTarget(view.messages||[],ref);if(message)return openThread(view.id,message.id,view);
+ }catch{}
+ for(const d of state.overview?.dms||[]){
+  try{const view=await api('/api/dm?id='+encodeURIComponent(d.id),undefined,host);
+   if(!alive||host!==currentHost||gen!==state.gen||state.messageOpening!==pending)return;
+   if(messageTarget(view.messages||[],ref))return openDMMessage(d.id,ref,chat,true,view);
+  }catch{}
+ }
+ if(alive&&host===currentHost&&gen===state.gen&&state.messageOpening===pending)notificationMissing(pending);
 }
-
 // Message/list presentation belongs to Zoom below.
 
 function details(m) {
@@ -4195,8 +4280,8 @@ function agentDetailFor(m, t) {
 }
 
 function agentNeedsYouTurn(m, t) {
-  return el("section", {class:"agent-turn", "aria-label":"Your agent says"},
-    el("strong", {}, (m.exec?.state || m.state) === "interrupted" ? "Your agent was interrupted — run it again if needed" : "Your agent couldn’t finish — it needs your attention"),
+  return el("section", {class:"agent-turn", "aria-label":historicalTargetLabel(m.target)+" says"},
+    el("strong", {}, agentNeedsYouHeading(m.target,(m.exec?.state||m.state)==="interrupted")),
     el("p", {class:"agent-detail"}, agentDetailFor(m, t)),
     (m.actions || []).length ? el("div", {class:"acts"}, m.actions.map((a,i)=>actionButton(a,m,t,i===0)))
       : m.target && el("p", {class:"hint"}, "Open it on " + deviceWords(m.target.address)));
@@ -4223,7 +4308,7 @@ function decide(a, m, t) {
         : await act({do:"continue",id:c.id,key:c.key,attempt:c.attempt,body:text.value.trim(),send_id:id},host);
       announce(result.note || "Answer submitted."); await refetch(false);
     };
-    dialog({title:"Answer your agent",ok:"Send answer",focus:text,body:[
+    dialog({title:"Answer "+historicalTargetLabel(m.target),ok:"Send answer",focus:text,body:[
       el("p",{class:"agent-detail"},m.job_detail || m.detail || ""),
       el("p",{class:"hint"},"Reply supplies missing information for this request. If the agent reports a permission or environment problem, resolve it in the native agent on its host computer first. Reply and retry keep the same permissions."),
       el("label",{for:"agent-answer",class:"field-label"},"Your answer"),text],run:send});
@@ -4351,25 +4436,36 @@ function dialog({ title, body, ok, run, gate, focus }) {
 }
 
 function newConversationDialog(prefill) {
-  const to = el("input", { id: "new-to", type: "text", placeholder: "person/agent, e.g. bob/desk", autocomplete: "off", spellcheck: "false" });
-  if (typeof prefill === "string") to.value = prefill;
-  const kind = el("select", { id: "new-kind" }, ["message", "question", "task"].map((k) => el("option", { value: k }, k[0].toUpperCase() + k.slice(1))));
-  const body = el("textarea", { id: "new-body", rows: "4", placeholder: "What do you want to say?" });
-  dialog({
-    title: "New conversation",
-    body: [el("label", { for: "new-to", class: "field-label" }, "To"), to,
-      el("label", { for: "new-kind", class: "field-label" }, "Send as"), kind,
-      el("label", { for: "new-body", class: "field-label" }, "Message"), body,
-      el("p", { class: "hint" }, "A message never runs anything. A question may be answered by their responder if they approved you. A task runs only if they accept it, once or by standing permission for your key.")],
-    ok: "Send",
-    focus: typeof prefill === "string" ? body : to,
-    run: async () => {
-      const r = await api("/api/send", { to: to.value.trim(), kind: kind.value, body: body.value });
-      announce(r.state === "queued" ? "Sending…" : "Sent.");
-      openThread(r.id);
-    },
-  });
-  state.dialogRestore = { type: "new", prefill: typeof prefill === "string" ? prefill : undefined };
+  const host=currentHost,gen=state.gen,ws=wsNow(),current=()=>alive&&host===currentHost&&gen===state.gen&&ws===wsNow();
+  const to=el("input",{id:"new-to",type:"text",placeholder:"person/device",autocomplete:"off",spellcheck:"false"});
+  to.value=typeof prefill==='string'?prefill:prefill?.host||'';
+  const kind=el("select",{id:"new-kind"},["message","question","task"].map(k=>el("option",{value:k},k[0].toUpperCase()+k.slice(1))));
+  const agent=el('select',{id:'new-agent','aria-label':'Configured agent'}),note=el('p',{class:'hint',role:'status'});let records=[],checked='',request=0;
+  const draw=()=>{agent.hidden=kind.value==='message';agent.disabled=!records.some(a=>a.harness);};
+  const load=async()=>{const address=to.value.trim(),seq=++request;checked='';records=[];fill(agent,el('option',{value:''},'Choose a configured agent'));note.textContent='Loading configured agents…';draw();
+   try{const found=await readAgentCatalog(address,host);if(!current()||seq!==request||to.value.trim()!==address)return;records=found.filter(a=>a.harness);checked=address;
+    fill(agent,el('option',{value:''},'Choose a configured agent'),records.map(a=>el('option',{value:a.id},catalogLabel(a,records))));if(prefill?.host===address&&records.some(a=>a.id===prefill.id))agent.value=prefill.id;
+    note.textContent=records.length?'Choose the exact program for a question or task.':'No configured agents are available. Update or configure an agent on this device.';
+   }catch(e){if(current()&&seq===request)note.textContent=e.message;}draw();};
+  to.addEventListener('input',()=>{request++;checked='';records=[];fill(agent,el('option',{value:''},'Choose a configured agent'));draw();});
+  kind.addEventListener('change',()=>{draw();if(kind.value!=='message'&&checked!==to.value.trim())void load();});
+  if(prefill?.id)kind.value='question';
+  const body=el('textarea',{id:'new-body',rows:'4',placeholder:'What do you want to say?'});
+  dialog({title:'New conversation',body:[el('label',{for:'new-to',class:'field-label'},'To'),to,el('label',{for:'new-kind',class:'field-label'},'Send as'),kind,
+   el('label',{for:'new-agent',class:'field-label'},'Configured agent'),agent,el('button',{type:'button',class:'text-btn',onclick:()=>void load()},'Refresh agents'),note,
+   el('label',{for:'new-body',class:'field-label'},'Message'),body],ok:'Send',focus:to.value?body:to,run:async()=>{
+    if(!current())throw Error('Workspace changed. Reopen this conversation.');
+    const address=to.value.trim(),selected=records.find(a=>a.id===agent.value),draft={to:address,kind:kind.value,body:body.value};
+    if(kind.value!=='message'){
+     if(checked!==address||!selected?.harness)throw Error('Choose a configured agent. Your text is kept.');
+     const fresh=await readAgentCatalog(address,host);
+     if(!current()||to.value.trim()!==address||agent.value!==selected.id)throw Error('Destination changed. Review the selected agent.');
+     if(!fresh.some(a=>a.id===selected.id&&a.harness===selected.harness&&a.host_key===selected.host_key))throw Error('Selected agent or key changed. Refresh agents; nothing sent.');
+     draft.agent_id=selected.id;
+    }
+    const result=await api('/api/send',draft,host);if(current()){announce(result.state==='queued'?'Sending…':'Sent.');void openThread(result.id);}
+   }});
+  state.dialogRestore={type:'new',prefill};draw();if(to.value)void load();
 }
 
 // ---- composer ------------------------------------------------------------------
@@ -4417,22 +4513,25 @@ function targetId() {
 }
 
 const deviceAgentMissing = () => !!state.deviceAgentID && !state.answering && kindValue() !== "message" &&
-  (!state.targetCatalog || state.targetCatalog.loading || state.targetCatalog.error || !(state.targetCatalog.agents || []).some(a => a.id === state.deviceAgentID));
+  (!state.targetCatalog || state.targetCatalog.loading || state.targetCatalog.error || !(state.targetCatalog.agents || []).some(a => a.id === state.deviceAgentID && a.harness && (!directBinding(state.data).key || a.host_key === directBinding(state.data).key)));
 function chooseDeviceAgent(id) {
   if (state.sending) return;
+  const binding=directBinding(state.data);
+  if(id!==binding.id){newConversationDialog({host:binding.host,id});return false;}
   state.deviceAgentID = id;
   keepDraft(); syncComposer(); kindHint();
 }
 async function loadTargetCatalog() {
   const t = state.data, gen = state.gen, key = state.draftKey, host = currentHost;
   if (!t || state.dm) return;
+  const address=directBinding(t).host;
   const seq = state.targetCatalogSeq = (state.targetCatalogSeq || 0) + 1;
-  const current = () => gen === state.gen && key === state.draftKey && state.data && state.data.peer === t.peer && seq === state.targetCatalogSeq;
-  state.targetCatalog = { host: t.peer, loading: true, agents: [] }; syncComposer(); kindHint();
+  const current = () => gen === state.gen && key === state.draftKey && state.data && directBinding(state.data).host === address && seq === state.targetCatalogSeq;
+  state.targetCatalog = { host: address, loading: true, agents: [] }; syncComposer(); kindHint();
   try {
-    const agents = await readAgentCatalog(t.peer, host);
-    if (current()) state.targetCatalog = { host: t.peer, agents };
-  } catch (e) { if (current()) state.targetCatalog = { host: t.peer, agents: [], error: e.message }; }
+    const agents = await readAgentCatalog(address, host);
+    if (current()) state.targetCatalog = { host: address, agents };
+  } catch (e) { if (current()) state.targetCatalog = { host: address, agents: [], error: e.message }; }
   if (current()) { syncComposer(); kindHint(); renderBody(false); }
 }
 function renderAgentTarget() {
@@ -4456,14 +4555,14 @@ function renderAgentTarget() {
     box.append(...selectedModelReports());
     return;
   }
-  const catalog = state.targetCatalog, selected = state.deviceAgentID || "", agents = catalog && catalog.host === t.peer ? catalog.agents || [] : [];
+  const catalog = state.targetCatalog, selected = state.deviceAgentID || "", agents = catalog && catalog.host === directBinding(t).host ? catalog.agents || [] : [];
   fill(box, el("button", {type: "button", class: "text-btn", disabled: state.sending,
-    title: selected || "Device default responder", onclick: () => {
+    title: selected || "Choose a configured agent", onclick: () => {
       const gen = state.gen, key = state.draftKey;
-      const choose = id => { if (gen !== state.gen || key !== state.draftKey) return; chooseDeviceAgent(id); $("dialog").close(); $("body").focus(); };
+      const choose = id => { if (gen !== state.gen || key !== state.draftKey) return; if(chooseDeviceAgent(id)===false)return; $("dialog").close(); $("body").focus(); };
       dialog({title: "Address an assistant on " + t.peer, body: [
-        el("div",{},el("button", {type: "button", class: "btn", onclick: () => choose("")}, "Device default responder"),ownModelReport(t.peer)),
-        agents.map(a => el("div",{},el("button", {type: "button", class: "btn", title: a.id + " · " + a.host, onclick: () => choose(a.id)}, catalogLabel(a, agents)),ownModelReport(a.host,a.id))),
+        !agents.some(a=>a.harness) && el("p",{class:"hint"},"No configured agents are available. Update or configure an agent on this device."),
+        agents.filter(a=>a.harness).map(a => el("div",{},el("button", {type: "button", class: "btn", title: a.id + " · " + a.host, onclick: () => choose(a.id)}, catalogLabel(a, agents)),ownModelReport(a.host,a.id))),
         el("button", {type: "button", class: "text-btn", disabled: catalog?.loading, onclick: async () => { await loadTargetCatalog(); $("dialog").close(); }}, "Refresh agents"),
         catalog?.error && el("p", {class: "error"}, catalog.error)], ok: "Close", run: async () => {}});
     }}, selected ? "@" + namedAgentLabel(selected, t.peer) + (deviceAgentMissing() && catalogName(selected, t.peer) ? " · unavailable" : "") : "Address assistant…"), ownModelReport(t.peer,selected), catalog?.error && el("p", {class: "error", role: "alert"}, catalog.error));
@@ -4791,7 +4890,7 @@ function keepDraft() {
   if (state.draftKey === null) return;
   const text = $("body").value;
   if (text || state.answering || state.dmReply || state.dmAgent || state.deviceAgentID || state.replyReceiver || state.replyReceiverHost || state.files.length) {
-    state.drafts[state.draftKey] = { text, kind: kindValue(), answering: state.answering, reply: state.dmReply, agent: state.dmAgent, agent_id: state.dm ? "" : state.deviceAgentID || "", files: state.files, typedFor: state.typedFor, mentions: validMentions(state.mentions, text), reply_receiver: state.replyReceiver, ...(state.replyReceiverHost ? { reply_receiver_host: state.replyReceiverHost } : {}) };
+    state.drafts[state.draftKey] = { text, origin:state.dm?{kind:"dm",id:state.dm}:{kind:"thread",id:state.thread,binding:state.data?directBinding(state.data):undefined}, ...(state.dm?{topic:topicSelections[state.dm]||"",newTopic:!!topicFresh[state.dm]}:{}), kind: kindValue(), answering: state.answering, reply: state.dmReply, agent: state.dmAgent, agent_id: state.dm ? "" : state.deviceAgentID || "", files: state.files, typedFor: state.typedFor, mentions: validMentions(state.mentions, text), reply_receiver: state.replyReceiver, ...(state.replyReceiverHost ? { reply_receiver_host: state.replyReceiverHost } : {}) };
   }
   else delete state.drafts[state.draftKey];
 }
@@ -4807,10 +4906,10 @@ function restoreDraft(key, t) {
   state.replyReceiverHost = d && d.reply_receiver_host || null;
   state.receiverCatalog = null;
   state.files = (d && d.files) || [];
-  state.deviceAgentID = !state.dm && d && d.agent_id || "";
+  state.deviceAgentID = !state.dm ? directBinding(t).id || d?.agent_id || "" : "";
   renderPending();
   grow();
-  setKind(d ? d.kind : "message");
+  setKind(d ? d.kind : !state.dm&&directBinding(t).agent ? "question" : "message");
   // Answer only what can still be answered by hand.
   const m = d && d.answering && t.messages.find((x) => x.id === d.answering.id && (x.actions || []).includes("reply"));
   setAnswering(m || null);
@@ -4864,7 +4963,7 @@ function syncComposer() {
   const t = state.data;
   // Question and Task only toward a device that runs an agent: a phone or a
   // browser is its person, who gets a message.
-  const asks = !!t && runsAgent(t.peer);
+  const asks = !!t && (directBinding(t).agent || runsAgent(t.peer));
   for (const r of root.querySelectorAll('input[name="kind"]')) { const l = r.closest && r.closest("label"); if (l) l.hidden = r.value !== "message" && !asks; }
   if (t && !asks && kindValue() !== "message" && !state.answering) setKind("message");
   const blocked = !t || !!t.key.pending;
@@ -4884,7 +4983,7 @@ function grow() {
 async function send(ev, retry) {
   ev?.preventDefault();
   if (!retry && state.dm) { await sendDM(); return; }
-  const t = retry?.t || state.data;
+  let t = retry?.t || state.data;
   if (state.sending || !t || t.key.pending) return; // only a loaded conversation with its trusted device key
   // Everything this send needs is fixed now: switching conversation or a
   // refresh while it is on its way changes none of it.
@@ -4894,14 +4993,26 @@ async function send(ev, retry) {
   const newTopic = retry ? retry.newTopic : !!topicFresh[t.id];
   const last = sends.merge(key, t.messages).at(-1);
   const topicRoot = retry ? retry.topicRoot : newTopic ? id : last?._topicRoot || "";
-  const draft = retry?.draft ? {...retry.draft,id} : { id, to: t.peer, kind: kindValue(), body: text, reply_to: newTopic?"":last ? last.id : "" };
+  const draft = retry?.draft ? {...retry.draft,id} : { id, to: directBinding(t).host, kind: kindValue(), body: text, reply_to: newTopic?"":last ? last.id : "" };
   const agentID = retry ? draft.agent_id || "" : !answering && draft.kind !== "message" ? state.deviceAgentID || "" : "";
   if (agentID) draft.agent_id = agentID;
-  if (!retry && agentID && deviceAgentMissing()) { $("compose-error").textContent = "Selected agent unavailable. Refresh agents or choose the device default; your draft stays here."; return; }
+  if (!retry && agentID && deviceAgentMissing()) { $("compose-error").textContent = "Selected agent unavailable. Refresh agents or choose a configured agent; your draft stays here."; return; }
   let followup=retry?.followup;
   if(!retry&&!answering&&!newTopic&&draft.kind!=="message"){
-    try{followup=currentDirectComposerFollowup(t,agentID,state.overview?.me);}catch(e){$("compose-error").textContent=e.message;return;}
+    try{followup=currentDirectComposerFollowup(t,agentID,state.overview?.me);}catch(e){
+      if(!(e instanceof ComposerRecovery)){ $("compose-error").textContent=e.message;return; }
+      const captured=t,host=currentHost,gen=state.gen,thread=state.thread;
+      const current=()=>alive&&host===currentHost&&gen===state.gen&&thread===state.thread&&!state.dm&&sameDirectAgent(captured,state.data)&&state.draftKey===key;
+      try{const fresh=await api('/api/thread?id='+encodeURIComponent(thread),undefined,host);
+        if(!current())return;
+        if(!sameDirectAgent(captured,fresh)||directAgentKey(fresh).pending||directAgentKey(fresh).pinned!==directAgentKey(captured).pinned)throw e;
+        followup=currentDirectComposerFollowup(fresh,agentID,state.overview?.me);t=fresh;
+      }catch(reason){if(current())fill($("compose-error"),reason.message,el('button',{type:'button',class:'text-btn',onclick:()=>void loadThread(false)},'Refresh work status'));return;}
+    }
   }
+  if(!answering&&draft.kind!=="message"&&!followup&&!agentID){$("compose-error").textContent="Choose a configured agent for new work. Earlier default history stays here; your text and files are kept.";return;}
+  const binding=directBinding(t);
+  if(!answering&&binding.agent&&(draft.kind!=="message"&&agentID!==binding.id||binding.key!==directAgentKey(t).pinned||directAgentKey(t).pending)){ $("compose-error").textContent="This conversation's original agent or key is unavailable. Start a conversation with a current configured agent; your draft stays here.";return; }
   if(followup)draft.kind=followup.kind;
   const elsewhere = retry ? "" : boundElsewhere();
   if (elsewhere) { $("compose-error").textContent = elsewhere; return; }
@@ -4926,9 +5037,9 @@ async function send(ev, retry) {
       announce(r.detail);
     } else {
       if (agentID) {
-        const agents = await readAgentCatalog(t.peer, host);
-        if (!agents.some(a => a.id === agentID)) {
-          if (alive && wsNow() === ws && state.draftKey === key) state.targetCatalog = { host: t.peer, agents };
+        const agents = await readAgentCatalog(draft.to, host);
+        if (!agents.some(a => a.id === agentID && a.harness && (!binding.key || a.host_key === binding.key))) {
+          if (alive && wsNow() === ws && state.draftKey === key) state.targetCatalog = { host: draft.to, agents };
           throw new Error("Selected agent is no longer available on this computer. Nothing sent; no default was chosen.");
         }
       }
@@ -4970,7 +5081,7 @@ function kindHint() {
     return;
   }
   if (state.deviceAgentID && !state.answering && kindValue() !== "message") {
-    $("compose-hint").textContent = deviceAgentMissing() ? "Selected agent unavailable. Your draft stays here; refresh agents or choose the device default."
+    $("compose-hint").textContent = deviceAgentMissing() ? "Selected agent unavailable. Your draft stays here; refresh agents or choose a configured agent."
       : kindValue() === "task" ? "Its owner accepts the task first, unless they already allow tasks from you." : "This agent may answer automatically if its owner approved you.";
     return;
   }
@@ -5208,13 +5319,17 @@ async function refetch(first) {
     do {
       again = false;
       const gen = state.gen;
+      const landing=state.messageOpening?.waiting&&state.dm?loadDM(false):null;
       const o = await loadOverview();
+      if(landing)await landing;
       if (gen !== state.gen) break; // the workspace changed: its own switch loads the next view
       if (mentionView || state.contactView === "people" || (state.hub && state.hub.kind === "team")) await loadTeams(); // the change stream said something changed; teams are read again, never polled
       if (state.thread) await loadThread(false);
-      else if (state.dm) await loadDM(false);
+      else if (state.dm&&!landing) await loadDM(false);
       Zoom.refresh();
-      announceChanges(o, first);
+            const pending=state.messageOpening;
+      if(pending?.waiting&&!pending.conv&&((state.dmData&&messageTarget(state.dmData.messages||[],pending.ref))||(state.data&&messageTarget(state.data.messages||[],pending.ref))))void openMessage(pending.ref,pending.chat);
+announceChanges(o, first);
       first = false;
     } while (again);
   } catch (e) { /* the next change or the person's return tries again */ }
@@ -5776,7 +5891,7 @@ function start() {
     }
     if (await restoreAfterReload()) return; // back after an update, with what was unsent
     Zoom.refresh();
-  }).catch(() => { if (alive) $("lost").hidden = false; }).then(()=>{if(alive){state.scheduleReady=true;syncScheduleControls();}});
+  }).catch(() => { if (alive) $("lost").hidden = false; }).then(()=>{if(alive){state.scheduleReady=true;setupOutboxNav();syncScheduleControls();}});
   listen();
 }
 function revealZoomContent(content) {
@@ -5874,10 +5989,7 @@ function dmWriteDialog(d) {
 }
 
 // zoomReminders are the pending reminders on the everyone level.
-function zoomReminders() {
-  const items = remindersSection();
-  return items.length ? el("section", { class: "zoom-reminders" }, el("ul", { class: "thread-list" }, items)) : null;
-}
+function zoomReminders() { return null; }
 
 // agentNodes are a person's agents, each joined to them by a line: the
 // device that runs it and the DMs it was invited into here (open picks one).
@@ -5948,7 +6060,8 @@ const Zoom = {
       return ["Everyone", p ? p.label : "Person", d && this.level >= 2 ? selected?.title || "Main" : "Chat", "Message"];
     }
     const t = state.data;
-    return ["Everyone", this.level >= 1 ? this.peer : "Contact", t && this.level >= 2 ? firstLine(t.messages[0].body, 40) : "Conversation", "Message"];
+    const contact=contactsOf(state.overview?.threads||[]).find(c=>c.key===this.contactKey);
+    return ["Everyone", this.level >= 1 ? contact ? contactName(contact) : this.peer : "Contact", t && this.level >= 2 ? firstLine(t.messages[0].body, 40) : "Conversation", "Message"];
   },
 
   // refresh redraws the current level after new data, without motion.
@@ -6003,7 +6116,7 @@ const Zoom = {
     return el("div", { class: "zoom-results" }, el("ul", { class: "conv-list" }, searchItems(this.query, state.overview.threads, {
       person: (p, from) => pick(1, { person: personKey(p), peer: null }, from),
       dm: (d, from) => pick(2, { dm: d.id }, from),
-      contact: (c, from) => pick(1, { peer: c.peer, person: null }, from),
+      contact: (c, from) => pick(1, { peer: c.peer, contactKey:c.key, person: null }, from),
       conversation: (t, from) => pick(2, { thread: t.id, peer: t.peer, person: null }, from),
     })));
   },
@@ -6059,6 +6172,7 @@ const Zoom = {
       this.person = null;
       await loadThread(true,localView,freshEntryView);
       this.peer = state.data?.peer || this.peer;
+      this.contactKey = state.data ? directChatKey(state.data) : this.contactKey;
       if (changed&&!localView) refreshThread();
     }
     if (dm) {
@@ -6149,8 +6263,8 @@ const Zoom = {
     return el("div", { class: "zoom-people" }, contactControls(), zoomReminders(), this.people(shown),
       list.length > 0 && el("h3", { class: "zoom-group" }, "Devices and services"),
       el("ul", { class: "thread-list" }, list.map((c) => el("li", {},
-        el("button", { type: "button", class: "thread-row", onclick: () => this.go(1, { peer: c.peer, person: null }) },
-          avatar(c.peer, "sm"), el("span", { class: "thread-title" }, who(c.peer)), counts(c))))),
+        el("button", { type: "button", class: "thread-row", onclick: () => this.go(1, { peer: c.peer, contactKey:c.key, person: null }) },
+          avatar(c.peer, "sm"), el("span", { class: "thread-title" }, contactName(c)), counts(c))))),
       !entries.length && el("p", { class: "hint" }, state.contactView === "unread" ? "No unread conversations." : "No activity yet. People lists everyone."),
       moreContacts(entries.length), state.contactView === "people" && zoomDirectory(o.threads),
       el("ul", {class:"thread-list"}, groupsSection((id,from)=>this.go(2,{dm:id},from))),
@@ -6277,10 +6391,10 @@ const Zoom = {
   // Level 1 for a device contact: its reports and its separate
   // conversations, as a compact list (the same one the sidebar shows).
   person_() {
-    const c = contactsOf(state.overview.threads).find((x) => x.peer === this.peer);
+    const c = contactsOf(state.overview.threads).find((x) => this.contactKey ? x.key === this.contactKey : x.peer === this.peer);
     if (!c) return el("p", { class: "hint" }, "No conversations with " + this.peer + ".");
     return el("div", { class: "zoom-person" },
-      el("header", { class: "zoom-head" }, avatar(this.peer), el("div", {}, el("h2", {}, who(this.peer)),
+      el("header", { class: "zoom-head" }, avatar(this.peer), el("div", {}, el("h2", {}, contactName(c)),
         el("p", { class: "hint" }, peerPresence(this.peer) || plural(c.conversations.length, "conversation", "conversations")),
         el("div", { class: "zoom-counts" }, counts(c)))),
       el("div", { class: "zoom-contact" }, contactBody(c, (id, from) => this.go(2, { thread: id }, from))));

@@ -7,7 +7,16 @@ const family=process.env.AGENTNET_SKIN_FAMILY||m.id,rootClass='.'+family+'-root'
 const urls=JSON.parse(fs.readFileSync(path.join(world,'urls.json'))),seed=JSON.parse(fs.readFileSync(path.join(world,'seed.json'))),origin=new URL(urls.sergey.page).origin;
 const runID=Date.now().toString(36);
 const result={skin:m.id,family,pass:false,checks:[],failures:[],screenshots:[],limitations:['Viewport emulation, not physical phones or OS keyboard','No live Google account, real model or remote deployment','Classic-family and Zoom interaction adapters, not arbitrary skin certification']};
-let browser,page;const errors=[];
+let browser,page,ownAgent;const errors=[],fixtureAgentNames=new Map();
+// The verified catalog names the concrete program; the invitation PID is the
+// exact route. Never select an assistant by its generic owner subtitle/order.
+async function mentionAgent(box,agent){
+ const title=agent.agent_id+' · '+agent.host.address+' · participation '+agent.pid;
+ const exact=page.locator(box).locator('button.mention-row').and(page.getByTitle(title,{exact:true}));
+ await exact.filter({hasText:'@'+fixtureAgentNames.get(agent.pid)}).waitFor();
+ assert.equal(await exact.evaluate(n=>n.firstChild.textContent),'@'+fixtureAgentNames.get(agent.pid));
+ await exact.click();
+}
 // Measurements that leave the journey usable are collected, so one run names
 // every failing check; any collected failure still fails the run.
 const check=(ok,message)=>{if(!ok)result.failures.push(message);};
@@ -28,8 +37,8 @@ const classic={
  async keyboard(shot){await page.locator('#body').fill('Keyboard draft');await page.locator('#body').focus();await page.setViewportSize({width:390,height:480});const send=await page.locator('#send').evaluate(n=>{const b=n.getBoundingClientRect();return {height:b.height,bottom:b.bottom,viewport:innerHeight};});check(send.height>=44&&send.bottom<=send.viewport+1,'390 keyboard: composer/tap target below keyboard viewport or under 44px '+JSON.stringify(send));check(await page.locator('#timeline').evaluate(n=>n.clientHeight>=50),'390 keyboard: decorative frame must leave visible messages at keyboard height');check(await page.locator('#body').evaluate(n=>parseFloat(getComputedStyle(n).fontSize)>=14),'390 keyboard: composer remains readable');await shot();await page.setViewportSize({width:390,height:844});await page.locator('#body').fill('');},
  async topic(text){await page.getByRole('button',{name:'New topic',exact:true}).click();await this.send(text);await this.sent(text).waitFor();},
  notified:target=>page.locator('#m-'+target.id),
- async askOwn(text){const b=page.locator('#body');await b.fill('');await b.pressSequentially('@');await page.locator('#mentions').getByText('Your assistant',{exact:true}).first().click();await b.pressSequentially(' '+text);await page.locator('#send').click();},
- asking:async()=>/^Ask /.test((await page.locator('#send').textContent()).trim()),
+ async askOwn(text){const b=page.locator('#body');await b.fill('');await b.pressSequentially('@');await mentionAgent('#mentions',ownAgent);await b.pressSequentially(' '+text);await page.locator('#send').click();},
+ asking:async()=>(await page.locator('#send').textContent()).trim()==='Ask '+fixtureAgentNames.get(ownAgent.pid).replace(/^Your/,'your'),
  async clear(){await page.locator('#body').fill('');if(await page.locator('#replying-cancel').isVisible())await page.locator('#replying-cancel').click();},
  async reopen(){await this.list();await page.locator('#conv-list button').filter({hasText:'Bohdan'}).first().click();await page.locator('#conv-name').filter({hasText:'Bohdan'}).waitFor();await page.locator('#composer').waitFor();await this.list();await this.thread();},
  draft:()=>page.locator('#body').inputValue(),
@@ -55,8 +64,8 @@ const zoom={
  // Zoom's New topic opens the write dialog for the new flow.
  async topic(text){await this.thread();await page.getByRole('button',{name:'New topic',exact:true}).click();await page.locator('#write-body').fill(text);await page.locator('#dialog-ok').click();await page.locator('#dialog').waitFor({state:'hidden'});await this.sent(text).waitFor();},
  notified:target=>z().locator('.zoom-message').filter({hasText:target.body.split('\n')[0]}),
- async askOwn(text){await writeButton().click();const b=page.locator('#write-body');await b.fill('');await b.pressSequentially('@');await page.locator('#write-mentions').getByText('Your assistant',{exact:true}).first().click();await b.pressSequentially(' '+text);await page.locator('#dialog-ok').click();await page.locator('#dialog').waitFor({state:'hidden'});},
- asking:async()=>{await writeButton().click();const on=await page.locator('#write-agent-target').getByText('@Your agent').count()>0;await page.locator('#dialog-cancel').click();return on;},
+ async askOwn(text){await writeButton().click();const b=page.locator('#write-body');await b.fill('');await b.pressSequentially('@');await mentionAgent('#write-mentions',ownAgent);await b.pressSequentially(' '+text);await page.locator('#dialog-ok').click();await page.locator('#dialog').waitFor({state:'hidden'});},
+ asking:async()=>{await writeButton().click();const on=await page.locator('#write-agent-target .addressed-assistant').and(page.getByTitle('@'+fixtureAgentNames.get(ownAgent.pid),{exact:true})).count()===1;await page.locator('#dialog-cancel').click();return on;},
  async clear(){await writeButton().click();await page.locator('#write-body').fill('');const x=page.locator('#write-agent-target').getByRole('button',{name:'×',exact:true});if(await x.count())await x.first().click();await page.locator('#dialog-cancel').click();},
  async reopen(){await this.list();await z().locator('.person-card').filter({hasText:'Bohdan'}).click();await z().locator('.mini-chat').waitFor();await settled();await this.thread();},
  async draft(){await writeButton().click();const v=await page.locator('#write-body').inputValue();await page.locator('#dialog-cancel').click();return v;},
@@ -109,20 +118,25 @@ const ui=family==='zoom'?zoom:classic;
  // failed ask keeps its assistant with the restored text. The request is
  // stopped at the network, so no job runs in the shared fixture.
  {await page.setViewportSize({width:1440,height:1000});await ui.thread();
-  const me=await page.evaluate(()=>window.agentnet.api('/api/overview').then(o=>o.me.address));
+  const me=await page.evaluate(()=>window.agentnet.api('/api/overview').then(o=>o.me));
+  const catalog=await page.evaluate(()=>window.agentnet.api('/api/agents'));
+  const defaults=catalog.agents.filter(a=>a.enabled&&a.default);assert.equal(defaults.length,1,'The disposable responder has one concrete configured default');
+  const record=defaults[0].record;assert.match(record.id,/^[0-9a-f]{32}$/);assert.equal(record.host,me.address);assert.equal(record.host_key,me.fingerprint);
+  const {concreteAgentLabel}=await import(path.join(pkg,'composer-followup.mjs'));
+  const records=catalog.agents.filter(a=>a.enabled).map(a=>a.record);
   const actives=async()=>(await page.evaluate(conv=>window.agentnet.api('/api/dm?id='+conv),seed.dm_vitalii)).agents.filter(a=>a.host_here&&a.state==='active');
   const dismiss=pid=>page.evaluate(pid=>window.agentnet.api('/api/dm/agent/dismiss',{pid}),pid);
   for(const a of await actives())await dismiss(a.pid); /* a clean fixture: an aborted earlier run may have left one */
-  await page.evaluate(([conv,host])=>window.agentnet.api('/api/dm/agent/invite',{conv,host,share:[],tasks_from:[],note:''}),[seed.dm_vitalii,me]);
+  await page.evaluate(([conv,host,agent])=>window.agentnet.api('/api/dm/agent/invite',{conv,host,agent_id:agent,share:[],tasks_from:[],note:''}),[seed.dm_vitalii,record.host,record.id]);
   const own=async()=>(await actives())[0];
-  for(let i=0;i<60&&!await own();i++)await page.waitForTimeout(250);const agent=await own();assert(agent,'Own agent did not join the DM');
+  for(let i=0;i<60&&!await own();i++)await page.waitForTimeout(250);const agent=await own();assert(agent,'Own agent did not join the DM');assert.equal(agent.agent_id,record.id);assert.equal(agent.host.address,record.host);assert.equal(agent.host.fingerprint,record.host_key);ownAgent=agent;fixtureAgentNames.set(agent.pid,(family==='holonet'?'':'Your ')+concreteAgentLabel(record,records));
   try{
   // An active assistant is an ordinary state: at keyboard height (390x480) Send stays in view and messages stay visible.
   await page.setViewportSize({width:390,height:844});await ui.list();await ui.thread();await ui.keyboard(()=>shot('keyboard-active-agent'));await page.setViewportSize({width:1440,height:1000});
   await ui.list();await ui.thread();let asked=null;const stop=r=>{asked=r.request().postDataJSON();return r.abort().catch(()=>{}); /* a cancelled request is already handled */};await page.route('**/api/dm/agent/ask',stop);
   try{await ui.askOwn('Own agent '+runID);await page.waitForFunction(()=>/^Not sent/.test(document.querySelector('#skin').shadowRoot.querySelector('#compose-error')?.textContent||''));}
   finally{await page.unroute('**/api/dm/agent/ask',stop);}
-  check(!!asked,'One Send after choosing the own agent from the @ list reaches the host');check(asked&&!('reply_receiver' in asked),'An own-device agent is asked without a default reply receiver');
+  check(asked?.pid===agent.pid&&asked?.kind==='question','One Send from the exact concrete own-agent @ entry reaches that participation');check(asked&&!('reply_receiver' in asked),'An own-device agent is asked without a default reply receiver');
   check(await ui.asking(),'A failed ask keeps its assistant with the restored text');await shot('own-agent-ask');
   await ui.reopen();check((await ui.draft()).includes('Own agent '+runID)&&await ui.asking(),'The restored ask (text and assistant) is kept as the draft across leaving and reopening the chat');
   await ui.clear();
@@ -130,13 +144,14 @@ const ui=family==='zoom'?zoom:classic;
   // shows A, and B's draft and target stay. B is a synthetic second assistant
   // added to this DM's view; every ask is stopped at the network.
   if(family!=='zoom'){
-   const B={...agent,pid:'b'.repeat(32),pids:[]},addB=async r=>{const res=await r.fetch(),j=await res.json();if(j.id===seed.dm_vitalii&&!j.agents.some(a=>a.pid===B.pid))j.agents.push(B);return r.fulfill({response:res,json:j}).catch(e=>{if(!/(^|: )Route is already handled!$/.test(e.message))throw e;});};
-   await page.route(/\/api\/dm\?id=/,addB);let release,held=new Promise(r=>release=r),posted=[];
+   const B={...agent,pid:'b'.repeat(32),agent_id:'c'.repeat(32),pids:[]},recordB={...record,id:B.agent_id,label:'Fixture B'};assert.notEqual(B.agent_id,agent.agent_id);fixtureAgentNames.set(B.pid,(family==='holonet'?'':'Your ')+concreteAgentLabel(recordB,[...records,recordB]));const addB=async r=>{const res=await r.fetch(),j=await res.json();if(j.id===seed.dm_vitalii&&!j.agents.some(a=>a.pid===B.pid))j.agents.push(B);return r.fulfill({response:res,json:j}).catch(e=>{if(!/(^|: )Route is already handled!$/.test(e.message))throw e;});};
+   const addCatalogB=async r=>{const res=await r.fetch(),j=await res.json();if(j.host===record.host&&!j.agents.some(a=>a.record.id===recordB.id))j.agents.push({record:recordB,enabled:true});return r.fulfill({response:res,json:j});};
+   await page.route(/\/api\/agents(?:\?|$)/,addCatalogB);await page.route(/\/api\/dm\?id=/,addB);let release,held=new Promise(r=>release=r),posted=[];
    const hold=async r=>{posted.push(r.request().postDataJSON());if(posted.length===1)await held;return r.abort().catch(()=>{}); /* a cancelled request is already handled */};await page.route('**/api/dm/agent/ask',hold);
    try{await page.reload();await page.locator(rootClass).waitFor();await ui.list();await ui.thread();const b=page.locator('#body'); /* reloaded: the DM view now includes B */
-    await b.pressSequentially('@');await page.locator('#mentions').getByText('Your assistant',{exact:true}).first().click();await b.pressSequentially(' Ask A '+runID);await page.locator('#send').click();
+    await b.pressSequentially('@');await mentionAgent('#mentions',ownAgent);await b.pressSequentially(' Ask A '+runID);await page.locator('#send').click();
     await page.waitForFunction(()=>!document.querySelector('#skin').shadowRoot.querySelector('#body').value);
-    await b.pressSequentially('@');await page.locator('#mentions').getByText('Your assistant',{exact:true}).nth(1).click();await b.pressSequentially(' Draft B '+runID);
+    await b.pressSequentially('@');await mentionAgent('#mentions',B);await b.pressSequentially(' Draft B '+runID);
     release();const failed=page.locator('#timeline li.msg.out').filter({hasText:'Ask A '+runID});await failed.getByRole('button',{name:'Retry',exact:true}).waitFor();
     check((await b.inputValue()).includes('Draft B '+runID),'A failed ask leaves the newer B draft');
     await failed.getByRole('button',{name:'Retry',exact:true}).click();for(let i=0;i<40&&posted.length<2;i++)await page.waitForTimeout(100);
@@ -149,7 +164,7 @@ const ui=family==='zoom'?zoom:classic;
     // A fails after B is chosen with nothing typed: B's empty draft keeps B and no A text, and A keeps its Retry.
     await page.unroute('**/api/dm/agent/ask',hold);let rel2,once=false;const held2=new Promise(r=>rel2=r),hold2=async r=>{posted.push(r.request().postDataJSON());if(!once){once=true;await held2;}return r.abort().catch(()=>{});};await page.route('**/api/dm/agent/ask',hold2);
     try{await ui.clear();const n0=posted.length;
-     await b.pressSequentially('@');await page.locator('#mentions').getByText('Your assistant',{exact:true}).first().click();await b.pressSequentially(' Ask A2 '+runID);await page.locator('#send').click();
+     await b.pressSequentially('@');await mentionAgent('#mentions',ownAgent);await b.pressSequentially(' Ask A2 '+runID);await page.locator('#send').click();
      await page.waitForFunction(()=>!document.querySelector('#skin').shadowRoot.querySelector('#body').value);
      if(family==='holonet'){await page.locator('#crew-toggle').click();await page.locator('#crew-drawer').waitFor();}
      await page.locator('.assistant-participant[title*="'+B.pid+'"]').first().click();await page.locator('#dialog').getByRole('button',{name:'Ask',exact:true}).click();if(await page.locator('#dialog-ok').isVisible())await page.locator('#dialog-ok').click();
@@ -159,7 +174,7 @@ const ui=family==='zoom'?zoom:classic;
      await b.fill('B only '+runID);await page.locator('#send').click();for(let i=0;i<40&&posted.length<n0+2;i++)await page.waitForTimeout(100);
      check(posted[n0]?.pid===agent.pid&&posted[n0+1]?.pid===B.pid,'With nothing typed, B stays the target after A fails');await shot('a-fails-b-empty');
     }finally{await page.unroute('**/api/dm/agent/ask',hold2);rel2();}
-   }finally{await page.unroute('**/api/dm/agent/ask',hold);await page.unroute(/\/api\/dm\?id=/,addB);release();}
+   }finally{await page.unroute('**/api/dm/agent/ask',hold);await page.unroute(/\/api\/dm\?id=/,addB);await page.unroute(/\/api\/agents(?:\?|$)/,addCatalogB);release();}
    await ui.clear();
    // A long link in a message is shortened and clickable (Holonet reuses Classic's link-text from v0.8.26).
    const url='https://example.com/agentnet-skins/a/rather/long/path/for/the/link/check/'+runID+'?view=full&from=skins';await ui.send('Link check '+url);

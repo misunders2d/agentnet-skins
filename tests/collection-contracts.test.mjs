@@ -183,9 +183,13 @@ test('phone group details hands off to an editable shared-links dialog', {skip:!
     assert.equal(await page.getByRole('button',{name:'Save links',exact:true}).isVisible(),true);
     const box=await field.boundingBox();assert(box.x>=0&&box.x+box.width<=390);
     await page.keyboard.press('Escape');
-    if(skin==='zoom')await page.getByRole('button',{name:/^Write in this/}).click();
-    await page.getByRole('button',{name:'Scheduled messages',exact:true}).filter({visible:true}).click();
-    await page.getByRole('button',{name:'Edit schedule',exact:true}).click();
+    if(skin==='classic')await page.getByRole('button',{name:'Back to conversations',exact:true}).click();
+    await page.getByRole('button',{name:/^Outbox(?:,|$)/}).click();
+    const outbox=page.getByRole('dialog',{name:'Outbox',exact:true});
+    await outbox.getByRole('button',{name:'Scheduled',exact:true}).click();
+    assert.equal(await outbox.getByRole('button',{name:'Edit schedule',exact:true}).count(),0,'Compact rows do not expose edit actions before selection');
+    await outbox.getByRole('button',{name:/^View scheduled message:/}).click();
+    await outbox.getByRole('button',{name:'Edit schedule',exact:true}).click();
     const date=page.getByLabel('Reschedule date',{exact:true}),time=page.getByLabel('Reschedule time',{exact:true});
     const originalDate=await date.inputValue();
     await time.fill('14:45');

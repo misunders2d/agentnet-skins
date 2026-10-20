@@ -25,13 +25,9 @@ Comic's fixes whenever it is rebuilt.
 
 ## Previews
 
-Rendered through the production loader with an invented company (Brightwater
-Ceramics: invented people and messages), Pulp built from this overlay on the
-AgentNet v0.8.32 (commit `3ba44749`). Desktop 1440 × 1000 and phone
-390 × 844 previews show the skin's own area; phone screenshots use Chromium
-emulation.
+The retained images below are historical production-loader renderings with a disposable fictional company (Brightwater Ceramics: invented people and messages), at desktop 1440 × 1000 and phone 390 × 844 in light/dark themes. Phone screenshots use Chromium viewport emulation. The v0.9.0 preview-regeneration and qualification record is preserved in [PROVENANCE.md](../../PROVENANCE.md).
 
-The release candidate pin is AgentNet v0.8.33 at `0859f188`. These four previews were rendered on that exact pin and inspected. The complete collection gate and publication remain pending; earlier v32 qualification does not qualify this candidate.
+The current source candidate targets AgentNet v0.9.1 at [`d5318cd92ccd48ebdc5caf771c409b2beb0104b4`](https://github.com/misunders2d/agentnet/tree/d5318cd92ccd48ebdc5caf771c409b2beb0104b4). Complete exact-pin qualification, candidate preview refresh and gallery publication are pending; these retained images do not qualify v0.9.1.
 
 | Desktop, day | Desktop, night |
 | --- | --- |
@@ -40,6 +36,8 @@ The release candidate pin is AgentNet v0.8.33 at `0859f188`. These four previews
 | Phone, day | Phone, night |
 | --- | --- |
 | ![Pulp on a phone, day](previews/mobile-light.png) | ![Pulp on a phone, night](previews/mobile-dark.png) |
+
+Targets Host API v1; `"agentnet": "v0.9.1"`. The overlay is rebuilt by the exact pinned Comic source.
 
 ## What is in the overlay
 

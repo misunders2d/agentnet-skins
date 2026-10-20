@@ -92,13 +92,33 @@ async function backToChat(){const rungs=z().locator('.ladder .rung');await rungs
   result.checks.push('Cleared search keeps sticky-header focus padding current after resize');
   let at=await longChat('Write in this DM…','Long DM');await shot('long-dm');
   await page.touchscreen.tap(at.x,at.y);await page.locator('#write-body').waitFor();check(await page.locator('#dialog-title').textContent()==='Write to Anna','The long DM\'s Write writes to Anna');
-  const dmText='Long history write '+runTag;await page.locator('#write-body').fill(dmText);await page.locator('#dialog-ok').tap();await z().locator('.mini-chat').getByText(dmText,{exact:true}).waitFor();
+  const dmText='Long history write '+runTag,replyText='Long history reply '+runTag,sendEvidence=[];
+  const captureSend=async response=>{
+   const request=response.request();if(new URL(response.url()).pathname!=='/api/dm/send'||request.method()!=='POST')return;
+   let draft;try{draft=request.postDataJSON();}catch{return;}if(draft?.conv!==seed.dm_anna||![dmText,replyText].includes(draft.body))return;
+   const row={turn:draft.body===dmText?'write':'reply',request:{id:draft.id,conv:draft.conv,topic:draft.topic,reply_to:draft.reply_to,quote:draft.quote},status:response.status()};sendEvidence.push(row);
+   try{const data=await response.json();row.returned={id:data.id,lid:data.lid,state:data.state};}catch(error){row.responseError=String(error.message).slice(0,160);}
+  };
+  page.on('response',captureSend);
+  await page.locator('#write-body').fill(dmText);await page.locator('#dialog-ok').tap();await z().locator('.mini-chat').getByText(dmText,{exact:true}).waitFor();
   await tap(z().locator('.mini-chat button.mc-bubble').filter({hasText:'Long history 100'}),'Mid-history message');await z().locator('.zoom-message').waitFor();await settled();
   const originalParentID=await messageID();
   await tap(z().getByRole('button',{name:'Reply',exact:true}),'Reply (long DM)');await page.locator('#dialog').getByText(/^Replying to: Long history 100/).waitFor();
-  const replyText='Long history reply '+runTag;await page.locator('#write-body').fill(replyText);await page.locator('#dialog-ok').tap();await z().locator('.mini-chat').getByText(replyText,{exact:true}).waitFor();
+  await page.locator('#write-body').fill(replyText);await page.locator('#dialog-ok').tap();await z().locator('.mini-chat').getByText(replyText,{exact:true}).waitFor();
   // Optimistic sends are divs; these real buttons require the stored projection.
-  await bubbleFor(dmText).waitFor();await bubbleFor(replyText).waitFor();
+  try{await bubbleFor(dmText).waitFor();await bubbleFor(replyText).waitFor();}
+  catch(error){
+   const diagnostic=await page.evaluate(async({conv,texts,rootClass})=>{
+    const root=document.querySelector('#skin')?.shadowRoot?.querySelector(rootClass),role=body=>texts.indexOf(body),rungs=[...(root?.querySelectorAll('#zoom .ladder .rung')||[])];
+    const ui={level:rungs.findIndex(n=>n.getAttribute('aria-current')==='step'),step:rungs.find(n=>n.getAttribute('aria-current')==='step')?.textContent,layers:root?.querySelectorAll('#zoom .zoom-layer').length,
+     topic:[...(root?.querySelectorAll('.topics-bar [aria-pressed="true"]')||[])].map(n=>({label:n.textContent,title:n.title})),
+     rows:[...(root?.querySelectorAll('#zoom .mini-chat .mc-bubble')||[])].filter(n=>role(n.querySelector('.mc-text')?.textContent)>=0).map(n=>({turn:role(n.querySelector('.mc-text')?.textContent),id:n.closest('li')?.id,tag:n.tagName})),
+     error:root?.querySelector('#compose-error')?.textContent?.slice(0,240),dialogOpen:!!root?.querySelector('#dialog[open]'),writeDisabled:root?.querySelector('#zoom .zoom-write .primary')?.disabled,sendDisabled:root?.querySelector('#send')?.disabled};
+    let raw;try{const view=await window.agentnet.api('/api/dm?id='+encodeURIComponent(conv));raw={id:view.id,count:view.messages?.length,rows:(view.messages||[]).filter(m=>role(m.body)>=0).map(m=>({turn:role(m.body),id:m.id,lid:m.lid,topic:m.topic,kind:m.kind,dir:m.dir}))};}catch(failure){raw={error:String(failure.message).slice(0,240)};}
+    return{conv,ui,raw};
+   },{conv:seed.dm_anna,texts:[dmText,replyText,'Long history 100'],rootClass}).catch(failure=>({diagnosticError:String(failure.message).slice(0,240)}));
+   console.error('ZOOM_LONG_DM_DIAGNOSTIC',JSON.stringify({sends:sendEvidence,...diagnostic}));throw error;
+  }finally{page.off('response',captureSend);}
   const dmNow=history.dm([dmText,replyText]),parent=dmNow.find(x=>x.body==='Long history 100'),reply=dmNow.find(x=>x.body===replyText),written=dmNow.find(x=>x.body===dmText);
   check(!!written,'The long DM\'s Write was sent in that DM');let quotesOriginal=false;
   if(written&&reply&&parent){

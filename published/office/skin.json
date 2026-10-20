@@ -2,7 +2,7 @@
   "api": 1,
   "id": "office",
   "name": "Office",
-  "agentnet": "v0.9.0",
+  "agentnet": "v0.9.1",
   "entry": "entry.mjs",
   "style": "style.css",
   "document": "document.css",

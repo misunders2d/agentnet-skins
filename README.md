@@ -2,6 +2,8 @@
 
 Portable interfaces for [AgentNet](https://github.com/misunders2d/agentnet). Build one, share its folder, install it on a computer or relay, import it into one browser, or pick it from AgentNet’s in-app **skin gallery**. Every skin uses AgentNet’s existing encrypted conversations, topics, people, agents and permissions through **Host API v1**.
 
+The current source candidate targets **AgentNet v0.9.1**, pinned to [`d5318cd92ccd48ebdc5caf771c409b2beb0104b4`](https://github.com/misunders2d/agentnet/tree/d5318cd92ccd48ebdc5caf771c409b2beb0104b4). Complete qualification of this exact pin, refreshed candidate previews and gallery publication are pending. Historical results and previews below do not qualify the new candidate.
+
 ## Gallery
 
 | Skin | Direction | Available here |
@@ -12,7 +14,7 @@ Portable interfaces for [AgentNet](https://github.com/misunders2d/agentnet). Bui
 | [Pulp](skins/pulp) | An overlay skin on Comic: a 1970s paperback by day and a roadside diner by night. Chats read like a table of contents, topics open with chapter cards, requests for your OK arrive as a case, and agents wear costumes. Everything Comic does. | Screenshots, overlay source and installable build |
 | [Office](skins/office) | A plain workplace messenger: white pages, thin hairlines, a dark neutral rail, the device's own font, flat messages and a bordered composer. An overlay skin on Comic: everything Comic does, without the stickers. | Screenshots, overlay source and installable build |
 
-Each skin’s own README contains current screenshots of the real rendered skin, covering desktop/mobile and supported themes. Keep this root catalogue compact; put previews and skin-specific guidance in `skins/<id>/`. Use synthetic content with invented names, label the tested revision, and refresh previews when visible behavior changes. A gallery entry without a preview is incomplete; a preview never replaces compatibility tests. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Each skin’s own README links real rendered screenshots covering desktop/mobile and supported themes, and identifies historical previews while the candidate refresh is pending. Keep this root catalogue compact; put previews and skin-specific guidance in `skins/<id>/`. Use synthetic content with invented names, label the tested revision, and refresh previews when visible behavior changes. A gallery entry without a preview is incomplete; a preview never replaces compatibility tests. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 From v0.8.25 AgentNet keeps only **Comic** built in. Comic is also the base of every *overlay skin* below.
 
@@ -24,7 +26,7 @@ From v0.8.25 AgentNet keeps only **Comic** built in. Comic is also the base of e
 | **Overlay skin** | Any of Comic’s slots in `overlay/`: theme, fonts, brand mark, avatars, send button, topic intro, request frame | Comic’s interface and flows with your own presentation; Comic’s fixes and features arrive on every rebuild |
 | **Standalone skin** | A complete package in `src/` (Holonet, Classic, Zoom) | A different interface altogether, on the skin contract alone |
 
-Start with an overlay unless the interaction itself must change. The slots and what each must keep are in the pinned AgentNet’s [Comic kit README](https://github.com/misunders2d/agentnet/blob/ac98b331ce11425d7595beceb53f123068ddd705/internal/ui/web/src/skin/README.md).
+Start with an overlay unless the interaction itself must change. The slots and what each must keep are in the pinned AgentNet’s [Comic kit README](https://github.com/misunders2d/agentnet/blob/d5318cd92ccd48ebdc5caf771c409b2beb0104b4/internal/ui/web/src/skin/README.md).
 
 ## Build and install
 
@@ -56,7 +58,7 @@ npm run build && npm run check
 
 An overlay starts with every slot of the pinned kit; delete the ones you keep unchanged so they follow Comic on each rebuild (a theme-only skin keeps `brand.tsx` and `theme.css`). Its `skin.json` holds only `api`, `id`, `name` and `agentnet`; the build writes the complete manifest. A standalone scaffold is a **complete independent package** with all conversation, topic, agent, people, settings and file controls; it keeps Holonet’s internal selectors so the interaction journeys apply unchanged. Color and corner changes alone are theme variants.
 
-Start with [CONTRIBUTING.md](CONTRIBUTING.md), the [creator quickstart](docs/CREATING.md), the [compatibility checklist](docs/CONFORMANCE.md) and the [version policy](docs/COMPATIBILITY.md). AI coding agents read [AGENTS.md](AGENTS.md). The authoritative contract remains AgentNet’s [UI_SKINS.md](https://github.com/misunders2d/agentnet/blob/ac98b331ce11425d7595beceb53f123068ddd705/docs/UI_SKINS.md) at the pinned revision.
+Start with [CONTRIBUTING.md](CONTRIBUTING.md), the [creator quickstart](docs/CREATING.md), the [compatibility checklist](docs/CONFORMANCE.md) and the [version policy](docs/COMPATIBILITY.md). AI coding agents read [AGENTS.md](AGENTS.md). The authoritative contract remains AgentNet’s [UI_SKINS.md](https://github.com/misunders2d/agentnet/blob/d5318cd92ccd48ebdc5caf771c409b2beb0104b4/docs/UI_SKINS.md) at the pinned revision.
 
 ## Verify
 
@@ -68,7 +70,7 @@ npm run check
 npm test
 ```
 
-`check` covers manifests, declared assets/imports, syntax, the source lint (for an overlay: its own sources), reproducible builds, the new-skin scaffolds, negative cases and `published/` (every hash and digest recomputed). `test` adds, for every package, AgentNet’s own contract check against the pinned demo daemon, the pinned AgentNet’s gallery code reading `published/`, and headless Chromium contract/lifecycle and real production-loader journeys against a **disposable company**: no personal profile, real model, live enrollment or user messages. Tests require Linux, Go 1.26.8, Git, Bash, Python 3 and OpenSSL. They compile the exact upstream commit in `upstream.json`, AgentNet `0859f188` at `v0.8.33`; the default checkout is ignored under `.cache/`.
+`check` covers manifests, declared assets/imports, syntax, the source lint (for an overlay: its own sources), reproducible builds, the new-skin scaffolds, negative cases and `published/` (every hash and digest recomputed). `test` adds, for every package, AgentNet’s own contract check against the pinned demo daemon, the pinned AgentNet’s gallery code reading `published/`, and headless Chromium contract/lifecycle and real production-loader journeys against a **disposable company**: no personal profile, real model, live enrollment or user messages. Tests require Linux, Go 1.26.8, Git, Bash, Python 3 and OpenSSL. They compile the exact upstream commit in `upstream.json`, AgentNet `771e738e` at `v0.9.1`; the default checkout is ignored under `.cache/`.
 
 Every `skins/<id>/` is built and tested, together with a temporary standalone scaffold whose original sibling source is removed before building, and a throwaway overlay built twice to prove identical bytes. Journeys run per interaction family: the Classic-family journeys for Holonet and Classic, the same checks through Zoom’s ladder and write dialog for Zoom, AgentNet’s Comic journey for overlays. The runner prints which suites ran for each skin; a skipped suite is never counted as a pass. [CI](.github/workflows/test.yml) runs the same commands. An existing Chromium can be selected with `AGENTNET_CHROMIUM=/path/to/chromium`. For offline/cached source use `AGENTNET_SOURCE=/path/to/agentnet`; only the pinned Git commit is archived, never working-tree changes. Choose an installed Go with `AGENTNET_GO=/path/to/go`.
 
@@ -108,4 +110,6 @@ chosen answer for Retry; private input remains in memory only. Host authority
 checks decide whether a live operation can continue. Rendered fixture tests
 verify presentation and retry boundaries, not universal native tool support.
 
-The v0.9.0 packages are pinned to `6bd64377db879e7e61596cd7f084bcda080a1034`. The immutable-archive build, retained 235/235 static checks with no skips, and complete observed runtime gate pass for all five skins and both scaffolds, including the applicable pinned-runtime, gallery, browser-provider, responsive and lifecycle journeys. All 20 desktop/phone light/dark previews were regenerated on this exact pin and inspected. Inapplicable motion and overlay journeys are not counted as passes. Earlier device-link bootstrap SQLite BUSY and phone video-navigation timeout failures remain recorded without causal-repair or flakiness claims; the subsequent focused phone check and unchanged observed runtime gate pass. See [PROVENANCE.md](PROVENANCE.md). Gallery publication and production-device acceptance are separate.
+Historical v0.9.0 qualification: the packages were pinned to `6bd64377db879e7e61596cd7f084bcda080a1034`. The immutable-archive build, retained 235/235 static checks with no skips, and complete observed runtime gate pass for all five skins and both scaffolds, including the applicable pinned-runtime, gallery, browser-provider, responsive and lifecycle journeys. All 20 desktop/phone light/dark previews were regenerated on this exact pin and inspected. Inapplicable motion and overlay journeys are not counted as passes. Earlier device-link bootstrap SQLite BUSY and phone video-navigation timeout failures remain recorded without causal-repair or flakiness claims; the subsequent focused phone check and unchanged observed runtime gate pass. See [PROVENANCE.md](PROVENANCE.md). Gallery publication and production-device acceptance are separate.
+
+The v0.9.1 source retains concrete agent/device destinations and exact send recovery, adds a dedicated Outbox for Scheduled, Drafts and Reminders, and preserves exact notification/topic landing. Classic, Holonet and Zoom use the shared bound helpers; Office and Pulp inherit Comic on rebuild. Qualification and preview refresh for the exact current pin remain pending.

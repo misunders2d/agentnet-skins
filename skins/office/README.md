@@ -28,9 +28,9 @@ settings, workspaces) and picks up Comic's fixes whenever it is rebuilt.
 
 ## Previews
 
-The retained images below are historical production-loader renderings with a disposable fictional company (Brightwater Ceramics: invented people and messages), at desktop 1440 × 1000 and phone 390 × 844 in light/dark themes. Phone screenshots use Chromium viewport emulation. The v0.9.0 preview-regeneration and qualification record is preserved in [PROVENANCE.md](../../PROVENANCE.md).
+The four images below were regenerated and inspected through the production loader on AgentNet v0.9.1 at [`771e738ee5b8d097cf342e375659992d10ecf80b`](https://github.com/misunders2d/agentnet/tree/771e738ee5b8d097cf342e375659992d10ecf80b), using the disposable fictional Brightwater Ceramics company. They show desktop 1440 × 1000 and phone 390 × 844 in light/dark themes. Phone screenshots use Chromium viewport emulation; physical-phone behavior remains separate.
 
-The current source candidate targets AgentNet v0.9.1 at [`d5318cd92ccd48ebdc5caf771c409b2beb0104b4`](https://github.com/misunders2d/agentnet/tree/d5318cd92ccd48ebdc5caf771c409b2beb0104b4). Complete exact-pin qualification, candidate preview refresh and gallery publication are pending; these retained images do not qualify v0.9.1.
+The current source targets AgentNet v0.9.1 at [`d5318cd92ccd48ebdc5caf771c409b2beb0104b4`](https://github.com/misunders2d/agentnet/tree/d5318cd92ccd48ebdc5caf771c409b2beb0104b4). [Complete exact-pin collection CI](https://github.com/misunders2d/agentnet-skins/actions/runs/39491173106) passes all applicable journeys for this skin; production inputs are unchanged from the preview capture. Gallery publication remains pending. [PROVENANCE.md](../../PROVENANCE.md) records CI counts, separate local rendered coverage, the unexplained local Classic failure and evidence limits.
 
 | Desktop, light | Desktop, dark |
 | --- | --- |

@@ -11,7 +11,7 @@ const ui=family==='zoom'?{
  // Zoom draws Everyone once its first overview arrives.
  ready:()=>z().locator('.person-card').first().waitFor(),
  async list(){await page.locator('#nav-chats').click();await settled();await z().locator('.ladder .rung').nth(0).click();await z().locator('.person-card').filter({hasText:'Vitalii'}).waitFor();await settled();},
- // A person card opens their latest DM message; one step out is that DM.
+ // A person card opens their Main chat, even while its latest message syncs.
  async thread(){await z().locator('.person-card').filter({hasText:'Vitalii'}).click();await z().locator('.mini-chat').waitFor();await settled();assert.equal(await z().locator('.zoom-message').count(),0,'A person card opens their DM as a chat, not its latest message');},
  async send(text,file){await z().getByRole('button',{name:'Write in this DM…',exact:true}).click();await page.locator('#write-body').fill(text);if(file)await page.locator('#write-files').setInputFiles(file);await page.locator('#dialog-ok').click();await page.locator('#dialog').waitFor({state:'hidden'});},
  sent:text=>z().locator('.mini-chat').getByText(text,{exact:true}),

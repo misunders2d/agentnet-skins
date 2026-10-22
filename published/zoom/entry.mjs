@@ -6248,7 +6248,7 @@ const Zoom = {
           held && held + " held", unread && unread + " new"].filter(Boolean).join(" · ");
         const b = el("button", { type: "button", class: "person-card" + (p.state === "conflict" ? " danger" : ""), "aria-label": p.label + ", " + status },
           avatar(p.label || p.address, "node-face"), el("span", { class: "node-name" }, p.label), el("span", { class: "node-status" }, status));
-        b.addEventListener("click", () => theirs[0]?.last_id ? void openMessage({id:theirs[0].last_id,conv:theirs[0].id}, true) : this.go(1, { person: personKey(p), peer: null }, b));
+        b.addEventListener("click", () => this.go(1, { person: personKey(p), peer: null }, b));
         return el("li", { class: "person-cluster" }, b, devices(p),
           agentNodes(p, (conv) => this.go(2, { person: personKey(p), dm: conv, peer: null })));
       })),

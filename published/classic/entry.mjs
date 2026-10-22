@@ -101,7 +101,7 @@ function flatTopicScope(t) {
 async function choosePersonTopic(conv,topic) {
  state.messageOpening=null;
  topicSelections[conv]=topic||'';topicFresh[conv]=false;if(conv===state.dm)selectReadTopic();
- if(conv===state.dm){setDMReply(null);renderDMBody(false);markDMRead();}else await openDM(conv);
+ if(conv===state.dm&&root.classList.contains('show-conv')){setDMReply(null);renderDMBody(false);markDMRead();}else await openDM(conv);
 }
 function openPersonMain(p,dms) {
  const main=choosePersonMain(dms,p.person);
@@ -1826,7 +1826,7 @@ function personRow(p, dms) {
   const held = dms.reduce((n, d) => n + d.held, 0);
   const last = dms[0];
   const head = el("button", { type: "button", class: "conv-item contact", "aria-current": String(current),
-    onclick: () => {if(last?.last_id)void openMessage({id:last.last_id,conv:last.id});else if(!openPersonMain(p,dms))openHub({kind:"person",key});} },
+    onclick: () => {if(!openPersonMain(p,dms))openHub({kind:"person",key});} },
     avatar(p.label || p.address),
     el("span", { class: "conv-main" },
       el("span", { class: "conv-top" }, el("span", { class: "conv-name person-name" }, p.label),

@@ -30,13 +30,13 @@ test('standalone rendered concrete choices, same-target recovery and exact cache
   const u=new URL(req.url,'http://127.0.0.1');if(u.pathname==='/'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><div id="skin"></div>');return;}
   const match=/^\/(classic|holonet|zoom)\/([^/]+)$/.exec(u.pathname);if(!match){res.writeHead(404).end();return;}
   try{const [_,skin,file]=match;let data=file==='manifest.mjs'?'export default '+fs.readFileSync(path.join(root,'skins',skin,'skin.json'),'utf8'):fs.readFileSync(file==='entry.mjs'&&process.env.AGENTNET_V091_ENTRY_BASE?path.join(process.env.AGENTNET_V091_ENTRY_BASE,skin,file):path.join(root,'skins',skin,'src',file));
-   if(file==='entry.mjs'){data=data.toString();const needle=skin==='zoom'?'\nstart();':'const ready = start();';assert(data.includes(needle));data=data.replace(needle,'globalThis.fixture={state,contactsOf,newConversationDialog,send,openMessage,loadDM,loadThread,beginDM,topicSelections,topicFresh,syncComposer,keepDraft'+(skin==='zoom'?',Zoom':'')+'};'+(skin==='zoom'?'':'const ready=Promise.resolve();'));}
+   if(file==='entry.mjs'){data=data.toString();const needle=skin==='zoom'?'\nstart();':'const ready = start();';assert(data.includes(needle));data=data.replace(needle,'globalThis.fixture={state,contactsOf,newConversationDialog,send,openMessage,loadDM,loadThread,beginDM,topicSelections,topicFresh,syncComposer,keepDraft,selectSection'+(skin==='zoom'?',Zoom':',personRow')+'};'+(skin==='zoom'?'':'const ready=Promise.resolve();'));}
    res.setHeader('Content-Type',file.endsWith('.css')?'text/css':'text/javascript');res.end(data);
   }catch(e){res.writeHead(404).end(String(e));}
  });let browser;
  try{await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port;
   browser=await chromium.launch({headless:true,executablePath:process.env.AGENTNET_CHROMIUM});
-  for(const skin of skins)for(const width of [1280,390])await t.test(skin+' '+width,async()=>{
+  for(const skin of skins)for(const width of [1280,390])await t.test(skin+' '+width,async t=>{
    const context=await browser.newContext({viewport:{width,height:844},reducedMotion:'reduce'}),page=await context.newPage(),errors=[];page.setDefaultTimeout(4000);page.on('pageerror',e=>errors.push(e.stack));
    try{await page.goto(origin);await page.evaluate(async({skin,fp,other})=>{
     const shadow=document.querySelector('#skin').attachShadow({mode:'open'}),style=new CSSStyleSheet();style.replaceSync(await(await fetch('/'+skin+'/style.css')).text());shadow.adoptedStyleSheets=[style];const app=document.createElement('div');app.className='skin-root';shadow.append(app);window.app=app;
@@ -68,6 +68,24 @@ test('standalone rendered concrete choices, same-target recovery and exact cache
     const result=await page.evaluate(async()=>{f.prepareLanding();f.overview.dms=[{id:f.conv,peer:f.dm.peer}];f.gate=true;const started=performance.now(),opening=fixture.openMessage({id:f.wanted,conv:f.conv,dir:'in'});await new Promise(r=>setTimeout(r,150));const beforeRelease=fixture.topicSelections[f.conv]===f.topic&&!fixture.state.messageOpening;f.gate=false;f.releases.splice(0).forEach(r=>r());await opening;return{beforeRelease,elapsedMs:Math.round(performance.now()-started),topic:fixture.topicSelections[f.conv]};});
     assert.equal(result.topic,'e'.repeat(32));if(!process.env.AGENTNET_V091_ENTRY_BASE)assert(result.beforeRelease);console.log('NOTIFICATION_COMPARE '+JSON.stringify({skin,width,...result}));return;
    }
+   await t.test('person card opens Main while the latest message is still syncing',async()=>{
+    await page.evaluate(()=>{
+     const summary={id:f.conv,kind:'dm',peer:f.dm.peer,count:2,unread:0,held:0,last_id:'7'.repeat(32),last:'Not synced yet',last_at:'2026-10-20',created:f.dm.created};
+     f.overview.persons=true;f.overview.dms=[summary];
+     const card=document.createElement('div');card.id='person-navigation-fixture';
+     card.append(fixture.Zoom?fixture.Zoom.people():fixture.personRow(f.dm.peer,[summary]));app.append(card);
+    });
+    await page.locator('#person-navigation-fixture button').filter({hasText:'Briar'}).first().click();
+    await page.waitForFunction(()=>fixture.state.dmData?.id===f.conv);
+    assert.equal(await page.locator('[data-notification-landing]').count(),0,'ordinary person navigation does not wait for an exact message');
+    await page.locator(skin==='zoom'?'#zoom .mini-chat':'#timeline').getByText('Main original',{exact:true}).waitFor();
+    assert.equal(await page.evaluate(()=>fixture.topicSelections[f.conv]||''),'');
+    assert.equal(await page.evaluate(()=>!!fixture.state.messageOpening),false);
+    await page.evaluate(()=>fixture.selectSection('chats'));
+    await page.locator('#person-navigation-fixture button').filter({hasText:'Briar'}).first().click();
+    await page.locator(skin==='zoom'?'#zoom .mini-chat':'#timeline').getByText('Main original',{exact:true}).waitFor();
+   });
+   await page.evaluate(()=>{app.querySelector('#person-navigation-fixture').remove();f.overview.dms=[];});
    const groups=await page.evaluate(()=>fixture.contactsOf([{peer:f.a.host,agent_host:f.a.host,agent_key:f.a.host_key,agent_id:f.a.id,last_at:'2026-10-20',count:1},{peer:f.a.host,agent_host:f.a.host,agent_key:f.a.host_key,agent_id:f.b.id,last_at:'2026-10-20',count:1},{peer:f.a.host,agent_host:f.a.host,agent_key:f.a.host_key,agent_legacy:true,last_at:'2026-10-20',count:1},{peer:f.a.host,agent_host:f.a.host,agent_key:f.a.host_key,last_at:'2026-10-20',count:1}]).length);assert.equal(groups,4);
    await page.evaluate(()=>fixture.newConversationDialog({host:f.a.host,id:f.a.id}));await page.waitForFunction(()=>document.querySelector('#skin').shadowRoot.querySelector('#new-agent').options.length===3);
    const bounds=await page.locator('#dialog').evaluate(n=>{const r=n.getBoundingClientRect();return{left:r.left,right:r.right,width:innerWidth};});assert(bounds.left>=0&&bounds.right<=bounds.width+1,'configured-agent dialog fits the viewport');

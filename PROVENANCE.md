@@ -2,6 +2,15 @@
 
 ## v0.9.4 focused chat recovery
 
+[Gallery v2026.10.23.2](https://github.com/misunders2d/agentnet-skins/releases/tag/v2026.10.23.2)
+was published October 23, 2026 at 15:28:20 UTC from published
+`135ab451a49476c7e51079d4dae2ae4f9ccfa9b8`. The complete matching collection
+[CI gate39975393352](https://github.com/misunders2d/agentnet-skins/actions/runs/39975393352)
+passed against the final core pin. Unauthenticated public verification through the
+actual v0.9.4 gallery parser passed all five packages, 129 package files and
+20 previews across151 HTTPS requests. This documentation update changes no
+published package, preview or tag.
+
 This collection pins AgentNet `83376cbc9b70d71ee2c78047a660dab930b3a1f7`. Every manifest names v0.9.4. Classic, Holonet, Pulp and Zoom are1.9.4; Office is1.7.4. Source fixes preserve exact ordinary Reply ancestry, selected running attempts, text/files and retry identity. The standalone Reply gesture deliberately retargets an existing draft and clears New topic; removing the derived agent restores an ordinary reply. Handling refusals are visible rather than presented as success.
 
 Complete local qualification at the immutable `c29cddfc41bbd8cbcad3f5b381a158656295a9c5` pin passed306 Node checks, with zero failures or skips. All five package contracts, Office/Pulp's complete Comic journeys, published-gallery parser acceptance and standalone/overlay scaffolds passed. Classic, Holonet and the standalone scaffold passed runtime, lifecycle, browser-provider, responsive, touch and applicable motion journeys. Zoom's browser, contract, lifecycle and touch passed. Its single browser-provider failure was a strict locator encountering both navigation layers during restore. The existing readiness wait now selects the sole layer; deterministic RED/GREEN and a fresh real browser-provider journey pass with exact device offer/person/key, single approval, sends/files and IndexedDB reload assertions retained. Original failures are kept. Inapplicable motion/world families are not counted as executed passes.

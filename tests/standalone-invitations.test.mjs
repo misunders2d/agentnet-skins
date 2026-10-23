@@ -19,7 +19,7 @@ test('standalone Review reaches one exact guest invitation at narrow widths; quo
     if(process.env.AGENTNET_UI_BASELINE)data=fs.readFileSync(path.join(process.env.AGENTNET_UI_BASELINE,m[1]+'-entry.mjs'));
     const needle=m[1]==='zoom'?'\nstart();':'const ready = start();';assert(data.toString().includes(needle));
     // Keep the existing chat opener and decision dialog; skip unrelated startup.
-    const seam='globalThis.fixture={state,renderReview,messageReference};const realOpenDM=openDM;openDM=async(...args)=>{opened.push(args[0]);return realOpenDM(...args);};'+(m[1]==='zoom'?'':'const ready=Promise.resolve();');
+    const seam='globalThis.fixture={state,renderReview,messageReference,groupsSection,groupInvitationNotices};const realOpenDM=openDM;openDM=async(...args)=>{opened.push(args[0]);return realOpenDM(...args);};'+(m[1]==='zoom'?'':'const ready=Promise.resolve();');
     data=data.toString().replace(needle,seam);
    }
    res.setHeader('Content-Type',m[2].endsWith('.css')?'text/css':'text/javascript');res.end(data);
@@ -43,7 +43,7 @@ test('standalone Review reaches one exact guest invitation at narrow widths; quo
      window.overview={me:{address:me.address,fingerprint:'atlas-key'},person:me,people:[peer],threads:[],dms:[{id:view.id,title:'Planning',peer}],review:[],links:[],needs_you:[invite,{...invite}],held:[],reminders:[],peers:[]};window.posts=[];window.opened=[];window.reads=[];
      const host={version:1,platform:'daemon',workspace:{id:'default'},listen:()=>()=>{},onOpen(){},api:async(p,body)=>{
       if(body===undefined){reads.push(p);if(p.startsWith('/api/dm?'))return structuredClone(view);if(p.startsWith('/api/typing'))return {current:false,supported:false,send:false,scopes:[]};if(p.startsWith('/api/agents'))return {agents:[],sessions:[]};if(p==='/api/teams')return {teams:[]};if(p==='/api/workspace')return {};throw Error('Unexpected read '+p);}
-      posts.push({p,body});if(p!=='/api/dm/guest/decide')throw Error('Unexpected mutation '+p);
+      posts.push({p,body});if(p==='/api/groups/decide')return new Promise(()=>{});if(p!=='/api/dm/guest/decide')throw Error('Unexpected mutation '+p);
       overview.needs_you=[];view.guests[0].state=body.accept?'active':'declined';fixture.renderReview([]);return {};
      }};
      await(await import('/'+skin+'/entry.mjs')).mount(root,host);
@@ -82,6 +82,42 @@ test('standalone Review reaches one exact guest invitation at narrow widths; quo
     assert.equal(await page.locator('#review-count').textContent(),'0','decision leaves no duplicate badge');assert.equal(await page.locator('[data-guest-invitation]').count(),0);
     assert.deepEqual(errors,[]);
     if(process.env.AGENTNET_SCREENSHOTS)await page.screenshot({path:path.join(process.env.AGENTNET_SCREENSHOTS,`invitation-${skin}-${width}-${accept}.png`)});
+
+    // Render the actual group invitation list, preserving every exact scope.
+    const proof=await page.evaluate(()=>{
+     const me=overview.person.person,conv=view.id,inviter='briar/desk';
+     const old={id:'1'.repeat(32),conv,inviter,target:me,direction:'in',status:'stale',title:'Old proposal',history:[]};
+     const current={...old,id:'2'.repeat(32),status:'pending',title:'Current proposal'};
+     const otherInviter={...old,id:'3'.repeat(32),inviter:'briar/phone',title:'Other inviter'};
+     const otherConv={...old,id:'4'.repeat(32),conv:'d'.repeat(64),title:'Other conversation'};
+     const outgoing={...old,id:'5'.repeat(32),direction:'out',status:'pending',target:'cedar',title:'Outgoing pending'};
+     const notice={...outgoing,id:'6'.repeat(32),conv:'e'.repeat(64),status:'stale',title:'Outgoing stale',can_cancel:true,can_refresh:true};
+     overview.groups=true;overview.dms=[];overview.group_invitations=[old,current,otherInviter,otherConv,outgoing,notice];
+     const list=document.createElement('ul');list.id='current-group-invitations';document.querySelector('#skin').shadowRoot.querySelector('#quote-check').after(list);
+     const draw=records=>{overview.group_invitations=records;list.replaceChildren(...fixture.groupsSection());return [...list.querySelectorAll('button')].filter(b=>b.textContent.startsWith('Invitation: ')).map(b=>b.textContent);};
+     window.groupProof={old,current,otherInviter,otherConv,outgoing,notice,draw};
+     const selected=draw(overview.group_invitations);
+     return {selected,notices:fixture.groupInvitationNotices().map(i=>i.id),posts:posts.length};
+    });
+    assert.deepEqual(proof.selected,['Invitation: Current proposal · from briar/desk','Invitation: Other inviter · from briar/phone','Invitation: Other conversation · from briar/desk'],'only same conversation AND exact inviter supersedes stale inbound proposal');
+    assert.deepEqual(proof.notices,['6'.repeat(32)],'outgoing stale notice remains refreshable');assert.equal(proof.posts,1,'rendering sends nothing beyond prior explicit guest decision');
+    assert.equal(await page.locator('#current-group-invitations').getByRole('button',{name:/^Review fresh invitation for /}).count(),1,'existing fresh-review path stays available in every skin');
+    if(skin!=='holonet')assert.equal(await page.locator('#current-group-invitations').getByRole('button',{name:'Refresh invitation…',exact:true}).count(),1);
+    for(const scenario of ['lone','outgoing','accepted','declined','unrelated','reversed']){
+     const labels=await page.evaluate(scenario=>{const {old,current,otherInviter,otherConv,outgoing,draw}=groupProof;
+      return draw(scenario==='lone'?[old]:scenario==='outgoing'?[old,outgoing]:['accepted','declined'].includes(scenario)?[old,{...current,status:scenario}]:scenario==='unrelated'?[old,{...otherInviter,status:'pending'},{...otherConv,status:'pending'}]:[current,old]);
+     },scenario);
+     assert.equal(labels.some(s=>s.startsWith('Invitation: Old proposal')),!['reversed','accepted','declined'].includes(scenario),scenario+' preserves exactly the eligible old proposal');
+    }
+    await page.evaluate(accept=>{posts=[];groupProof.draw(accept?[groupProof.old,groupProof.current]:[groupProof.old]);},accept);
+    await page.locator('#current-group-invitations').getByRole('button',{name:accept?'Invitation: Current proposal · from briar/desk':'Invitation: Old proposal · from briar/desk',exact:true}).click();
+    await page.locator('#dialog').waitFor();assert.equal(await page.evaluate(()=>posts.length),0,'opening current/stale group proposal never carries old consent or auto-submits');
+    assert.equal(await page.locator('#dialog-ok').textContent(),accept?'Accept invitation':'No thanks');
+    assert.equal(await page.locator('#dialog').getByRole('button',{name:'Accept invitation',exact:true}).count(),accept?1:0,'lone stale invitation can only be dismissed');
+    await page.locator('#dialog-ok').click();await page.waitForFunction(()=>posts.length===1);
+    assert.deepEqual(await page.evaluate(()=>posts),[{p:'/api/groups/decide',body:{id:(accept?'2':'1').repeat(32),accept}}],'explicit decision addresses only the selected proposal; synthetic result remains pending');
+    assert.deepEqual(errors,[]);
+
    }finally{await context.close();}
   });
  }finally{await browser?.close();await new Promise(r=>server.close(r));}

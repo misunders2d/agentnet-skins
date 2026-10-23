@@ -76,9 +76,80 @@ const ui=family==='zoom'?zoom:classic;
  const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
  const shot=async(name)=>{const f=path.join(evidence,'screenshots',m.id+'-'+name+'.png');await page.screenshot({path:f});result.screenshots.push(f);};
  const mounted=()=>page.locator(rootClass).waitFor();
+ // The ordinary-opening control has no push; later cases restore the real stream.
+ let releaseEntryEvents;const entryEvents=new Promise(r=>releaseEntryEvents=r);
+ const holdEntryEvents=async route=>{await entryEvents;await route.continue().catch(()=>{});};
+ if(family!=='zoom')await page.route('**/events',holdEntryEvents);
  await page.goto(urls.sergey.page);await page.goto(origin+'/?skin='+m.id);
  await page.getByRole('button',{name:'Use this skin',exact:true}).waitFor();assert.equal(await page.locator(rootClass).count(),0,'Untrusted code must not mount');await shot('trust');await page.getByRole('button',{name:'Use this skin',exact:true}).click();await mounted();
  result.checks.push('Installed package is listed by production catalog; exact-digest trust required before mount');
+ // A real push may return a newer DM view before the row-opening GET.
+ // Its winning view must finish only the current visit's explicit opening.
+ if(family!=='zoom'){
+  const bounded=(promise,label)=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error(label+' exceeded the existing 15s bound')),15000);promise.then(v=>{clearTimeout(timer);resolve(v);},e=>{clearTimeout(timer);reject(e);});});
+  await page.setViewportSize({width:390,height:844});
+  // Activity must also cancel the opening GET when that GET itself wins.
+  await ui.list();let entryStart,entryDone,releaseEntry,entryLoads=0;
+  const entry=new Promise(r=>entryStart=r),entryFinished=new Promise(r=>entryDone=r),entryHold=new Promise(r=>releaseEntry=r);
+  const holdEntry=async route=>{if(new URL(route.request().url()).searchParams.get('id')!==seed.dm_bohdan)return route.continue();const n=++entryLoads,response=await route.fetch();if(n===1){entryStart();await entryHold;}await route.fulfill({response});if(n===1)entryDone();};
+  await page.route('**/api/dm?*',holdEntry);
+  try{
+   await page.locator('#conv-list').getByText('Bohdan',{exact:true}).first().click();await bounded(entry,'ordinary opening GET');assert.equal(await page.locator('#composer').isVisible(),false,'Uncached ordinary opening has not committed a conversation');assert.equal(await page.locator('#review-btn').isVisible(),true,'Activity is visibly available while the uncached opening waits');
+   await page.locator('#review-btn').click();assert.equal(entryLoads,1,'No newer pushed load supersedes the held ordinary opening');
+   releaseEntry();await bounded(entryFinished,'ordinary opening response');await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+   assert.equal(await page.locator(rootClass).evaluate(root=>root.classList.contains('show-conv')),false,'Winning ordinary opening cannot replace chosen Activity');assert.equal(await page.locator('#review').isVisible(),true,'Activity survives the ordinary opening response');
+  }finally{releaseEntry();releaseEntryEvents();await page.unrouteAll({behavior:'wait'});}
+  // The no-push proof above is complete; reset the fixture for real push cases.
+  await page.reload();await mounted();await ui.list();
+  for(const destination of ['conversation','chats','activity']){
+   await ui.list();let firstStart,secondStart,firstDone,secondDone,releaseFirst,releaseSecond,count=0;
+   const first=new Promise(r=>firstStart=r),second=new Promise(r=>secondStart=r),done1=new Promise(r=>firstDone=r),done2=new Promise(r=>secondDone=r),hold1=new Promise(r=>releaseFirst=r),hold2=new Promise(r=>releaseSecond=r);
+   const hold=async route=>{if(new URL(route.request().url()).searchParams.get('id')!==seed.dm_vitalii)return route.continue();const n=++count,response=await route.fetch();if(n===1){firstStart();await hold1;}else if(n===2){secondStart();await hold2;}await route.fulfill({response});if(n===1)firstDone();if(n===2)secondDone();};
+   await page.route('**/api/dm?*',hold);
+   try{
+    await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().click();await bounded(first,'opening GET');
+    await page.evaluate(([conv,body])=>window.agentnet.api('/api/dm/send',{conv,body}),[seed.dm_vitalii,'Current visit push '+destination+' '+runID]);
+    await bounded(second,'pushed winning GET');
+    if(destination!=='conversation')await page.locator(destination==='chats'?'#nav-chats':'#review-btn').click();
+    releaseSecond();await bounded(done2,'winning response');releaseFirst();await bounded(done1,'older response');
+    if(destination==='conversation'){
+     await page.locator('#conv-name').filter({hasText:'Vitalii'}).waitFor();await page.locator('#composer').waitFor();
+     await page.locator('#timeline').getByText('Current visit push '+destination+' '+runID,{exact:true}).waitFor();
+    }else{
+     await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+     assert.equal(await page.locator(rootClass).evaluate(root=>root.classList.contains('show-conv')),false,'late DM response cannot replace chosen '+destination);
+     assert.equal(await page.locator('#review').isVisible(),destination==='activity','Activity choice is preserved');
+    }
+   }finally{releaseFirst();releaseSecond();await page.unrouteAll({behavior:'wait'});}
+  }
+  result.checks.push('Native push before opening response commits the current visit; Chats/Activity invalidate entry intent even when the opening GET wins');
+  await page.setViewportSize({width:1440,height:1000});
+ }
+ if(family==='zoom'){
+  const bounded=(promise,label)=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error(label+' exceeded the existing 15s bound')),15000);promise.then(v=>{clearTimeout(timer);resolve(v);},e=>{clearTimeout(timer);reject(e);});});
+  await page.setViewportSize({width:390,height:844});
+  for(const newer of [false,true]){
+   let firstStart,secondStart,firstDone,secondDone,releaseFirst,releaseSecond,count=0;
+   const first=new Promise(r=>firstStart=r),second=new Promise(r=>secondStart=r),done1=new Promise(r=>firstDone=r),done2=new Promise(r=>secondDone=r),hold1=new Promise(r=>releaseFirst=r),hold2=new Promise(r=>releaseSecond=r);
+   const hold=async route=>{if(new URL(route.request().url()).searchParams.get('id')!==seed.dm_vitalii)return route.continue();const n=++count,response=await route.fetch();if(n===1){firstStart();await hold1;}else if(n===2){secondStart();await hold2;}await route.fulfill({response});if(n===1)firstDone();if(n===2)secondDone();};
+   await page.route('**/api/dm?*',hold);
+   try{
+    // This probes startup at an exact destination, including its cold DTO load.
+    await page.goto('about:blank');const documentReady=page.waitForEvent('domcontentloaded');
+    await page.goto(origin+'/?skin='+m.id+'#conv='+seed.dm_vitalii);await documentReady;await bounded(first,'exact destination opening');
+    const body='Current Zoom visit push '+newer+' '+runID;await page.evaluate(([conv,body])=>window.agentnet.api('/api/dm/send',{conv,body}),[seed.dm_vitalii,body]);
+    await bounded(second,'pushed winning DTO');
+    if(newer)await page.evaluate(conv=>{location.hash='conv='+conv;},seed.dm_bohdan);
+    releaseFirst();await bounded(done1,'discarded older response');
+    if(newer){await z().locator('.zoom-chat-head').filter({hasText:'Bohdan'}).waitFor();await settled();assert.match(await z().locator('.zoom-chat-head').textContent(),/Bohdan/);}
+    releaseSecond();await bounded(done2,'winning response');await z().locator('.mini-chat').waitFor();await settled();
+    if(newer){await z().locator('.zoom-chat-head').filter({hasText:'Bohdan'}).waitFor();await settled();assert.match(await z().locator('.zoom-chat-head').textContent(),/Bohdan/,'older pending DTO cannot replace the newer destination');}
+    else await z().locator('.mini-chat').getByText(body,{exact:true}).waitFor();
+   }finally{releaseFirst();releaseSecond();await page.unrouteAll({behavior:'wait'});}
+  }
+  result.checks.push('Zoom exact destination waits for winning DTO; newer destination survives older late response');
+  await page.setViewportSize({width:1440,height:1000});
+ }
  for(const width of [1440,390])for(const theme of ['dark','light']){
   const tag=width+'-'+theme;await page.setViewportSize({width,height:width===390?844:1000});await page.emulateMedia({colorScheme:theme,reducedMotion:'reduce'});
   await ui.list();const gear=page.getByRole('button',{name:'Settings',exact:true});check(await gear.isVisible(),tag+' a visible Settings item');await gear.click();await page.locator('#settings-appearance').waitFor();check(await page.locator('#settings-tab-appearance').getAttribute('aria-selected')==='true',tag+' Settings opens Appearance');

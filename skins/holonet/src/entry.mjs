@@ -104,6 +104,23 @@ const state = { thread: null, data: null, seq: -1, answering: null, lastSeen: {}
   version: "", updating: false, newVersion: "", dialogRestore: null, dialogBusy: false, gen: 0, switching: null, capturedFor: null };
 
 
+function handleBack() {
+    const top = [...root.querySelectorAll('dialog[open]')].at(-1);
+    if (top) {
+      if (top.id !== 'dialog' || !state.dialogBusy) {
+        const cancel = new Event('cancel', {cancelable:true});
+        if (top.dispatchEvent(cancel)) top.close();
+      }
+      return true;
+    }
+    if (mentionView) { closeMentions(); return true; }
+    if (!$('review').hidden) { toggleReview(false); return true; }
+    if (root.classList.contains('show-conv')) { void backOneLevel(); return true; }
+    if (state.contactView === 'people') { selectSection('chats'); return true; }
+    return false;
+}
+if (host.onBack) cleanups.push(host.onBack(handleBack));
+
 // Personal attention shares the existing open-topic read bookkeeping. Only
 // explicit navigation arms generations; refreshes never create another visit.
 function attentionKey(m){return m.attention?JSON.stringify([m.id,m.attention.rev,m.attention.writer]):m.id;}
@@ -712,7 +729,8 @@ async function openReminder(r) {
 // Outbox adapts only this skin's existing drafts, reminder actions and host.
 function outboxChatText(conv) {
  const d=(state.overview?.dms||[]).find(d=>d.id===conv);
- return d?.title||d?.peer?.label||(state.dmData?.id===conv?(state.dmData.title||state.dmData.peer?.label):'')||'Chat unavailable';
+ const label=t=>t?.kind==='group'?(t.title||t.peer?.label):(t?.peer?.label||t?.title);
+ return label(d)||label(state.dmData?.id===conv?state.dmData:null)||'Chat unavailable';
 }
 function outboxDrafts() {
  return Object.entries(state.drafts).filter(([,d])=>d.text?.trim()||(d.files||[]).some(f=>f.file||f.bytes)).map(([key,d])=>{
@@ -1420,11 +1438,18 @@ async function reviewFreshGroupInvitation(i, open = openDM) {
   inviteGroupDialog(state.dmData, i.target);
 }
 
+// A fresh proposal supersedes only its own inviter's stale invitation.
+function incomingGroupInvites(invitations = []) {
+  const incoming = invitations.filter(i => i.direction === "in" && ["pending", "stale"].includes(i.status));
+  const current = new Set(invitations.filter(i => i.direction === "in" && ["pending", "accepted", "declined"].includes(i.status)).map(i => JSON.stringify([i.conv, i.inviter])));
+  return incoming.filter(i => i.status !== "stale" || !current.has(JSON.stringify([i.conv, i.inviter])));
+}
+
 function groupsSection(open = openDM) {
   const o = state.overview;
   if (!o?.groups) return [];
   return [el("li", { class: "result-head" }, "Groups", el("button", { type: "button", class: "text-btn", onclick: newGroupDialog }, "New group…")),
-    ...(o.group_invitations || []).filter(i => i.direction === "in" && i.status === "pending").map(i => el("li", {},
+    ...incomingGroupInvites(o.group_invitations || []).map(i => el("li", {},
       el("button", { type: "button", class: "thread-row", onclick: () => groupInvitationDialog(i) }, "Invitation: " + i.title + " · from " + i.inviter))),
     ...groupInvitationNotices().map(i => el("li", { class: "hint" }, groupInvitationNotice(i), i.direction === "out" && el("button", { type: "button", class: "text-btn", onclick: () => reviewFreshGroupInvitation(i, open) }, "Review fresh invitation for " + personLabelOf(i.target) + "…"))),
     ...(o.dms || []).filter(humanGroup).map(d => dmRow(d, open))];
@@ -1497,7 +1522,7 @@ function newGroupDialog(initial) {
 }
 
 function groupInvitationDialog(i) {
-  const host = currentHost, gen = state.gen, ws = wsNow();
+  const host = currentHost, gen = state.gen, ws = wsNow(), stale = i.status === "stale";
   const decide = async accept => {
     if (gen !== state.gen || wsNow() !== ws) throw Error("Workspace changed; review the invitation again.");
     await api("/api/groups/decide", { id: i.id, accept }, host);
@@ -1505,11 +1530,11 @@ function groupInvitationDialog(i) {
     announce(accept ? "Acceptance recorded. Membership waits for the administrator's verified update." : "Invitation declined.");
     await loadOverview();
   };
-  dialog({ title: "Join " + i.title + "?", ok: "Accept invitation",
-    body: [el("p", {}, "Invitation from " + i.inviter + ". Accepting joins this group after the administrator publishes its signed update."),
+  dialog({ title: (stale ? "Invitation to " : "Join ") + i.title + (stale ? "" : "?"), ok: stale ? "No thanks" : "Accept invitation",
+    body: [el("p", {}, stale ? "Group details changed. Ask for a new invitation to join, or dismiss this one." : "Invitation from " + i.inviter + ". Accepting joins this group after the administrator publishes its signed update."),
       el("p", { class: "hint" }, (i.history || []).length ? "Shared earlier context: " + plural(i.history.length, "selected message", "selected messages") + " and only their attached files. Other earlier messages stay private." : "No earlier messages or files are shared."),
-      el("button", { type: "button", class: "text-btn", onclick: async () => { try { await decide(false); $("dialog").close(); } catch(e) { announce(e.message); } } }, "Decline invitation")],
-    run: () => decide(true) });
+      !stale && el("button", { type: "button", class: "text-btn", onclick: async () => { try { await decide(false); $("dialog").close(); } catch(e) { announce(e.message); } } }, "Decline invitation")],
+    run: () => decide(!stale) });
 }
 
 function inviteGroupDialog(t, initialPerson) {
@@ -2346,39 +2371,72 @@ async function openDM(id, localView, readEntry = true, freshEntryView = false) {
   if (changed&&!localView) api("/api/refresh", { id }).catch(() => {}); // once per open: receipts the server still holds
 }
 
+// Temporary verification pauses are renderer state, never successful membership DTOs.
+const groupContextWait="Updating verified group details. Sending is paused until verification finishes.";
+const dmLoadViews=new WeakMap();
+let dmLoadRequest=0;
+function groupContextWaiting(){return state.dmPending?.host===currentHost&&state.dmPending.id===state.dm;}
+function showPendingGroup(opening){
+  state.dmData=null;
+  fill($("conv-name"),"Updating group details…");
+  for(const id of ["conv-topic","conv-presence","conv-avatar","peer-chips","agents"])fill($(id));
+  const notice=$("notice");notice.hidden=false;notice.setAttribute("role","status");
+  fill(notice,el("p",{},groupContextWait));
+  fill($("timeline"),el("p",{class:"hint"},"Waiting for verified group details."));
+  const draft=state.draftKey===null&&state.drafts["dm:"+state.dm];
+  if(draft){$("body").value=draft.text||"";state.files=draft.files||[];renderPending();grow();}
+  showPane("conv");if(opening)commitConversation();setHubBack();syncComposer();
+}
+
 async function loadDM(scrollToEnd, localView, freshEntryView = false) {
-  const id = state.dm, gen = state.gen;
+  const id = state.dm, gen = state.gen, focusOpening = state.messageOpening, host = currentHost, workspace = wsNow(), request = ++dmLoadRequest;
   if (!id) return;
-  const visit=state.readVisit;if(visit)visit.loading++;
+  const visit=state.readVisit;if(visit){visit.loading++;if(scrollToEnd)visit.opening=true;}
+  const current=()=>alive&&host===currentHost&&workspace===wsNow()&&gen===state.gen&&state.dm===id&&state.readVisit===visit&&request===dmLoadRequest&&(!focusOpening||state.messageOpening===focusOpening);
   let t=localView;
   try {
-    if(!t)t = await api("/api/dm?id=" + encodeURIComponent(id));
+    if(!t)t = await api("/api/dm?id=" + encodeURIComponent(id),undefined,host);
   } catch (e) {
-    if(visit)visit.loading--;
-    announce(e.message);
-    return;
+    if (!current()) {if(visit)visit.loading--;return;}
+    if (e?.code !== "group_context_pending") {if(visit)visit.loading--;announce(e.message);return;}
+    state.dmPending={id,host};
+    if(visit)visit.fresh=null; // A verification wait never grants another read entry.
+    const saved=state.dmData;
+    if (!saved || saved.id!==id || dmLoadViews.get(saved)?.host!==host) {
+      if(visit)visit.loading--;
+      showPendingGroup(visit ? visit.opening : scrollToEnd);
+      return;
+    }
+    t={...saved,frozen:saved.frozen||groupContextWait};
+    dmLoadViews.set(t,{host,pending:true});
   }
-  if (state.readVisit!==visit || !alive || state.dm !== id || gen !== state.gen) {if(visit)visit.loading--;return;} // another conversation or workspace was opened meanwhile
+  if (!current()) {if(visit)visit.loading--;return;} // another request, read visit, conversation or workspace won
+  const pending=!!dmLoadViews.get(t)?.pending;
+  if(pending&&dmLoadViews.get(t).host!==host){if(visit)visit.loading--;return;}
+  state.dmPending=pending?{id,host}:null;
+  if(pending&&visit)visit.fresh=null;
+  dmLoadViews.set(t,{host,pending});
   // A participation record is shown as the sentence it stands for, in every view.
   t.messages = t.messages.map((m) => (m.excerpt_pid ? Object.assign({}, m, { actions: [], can: [] })
     : m.event ? Object.assign({}, m, { body: m.event }) : m));
   t.agents = t.agents || [];
   t.guests = t.guests || [];
   state.dmData = t;
-  const arrivedFocus=resumeMessageFocus(t);
-  commitReadView(visit,t,"dm",!localView||freshEntryView);
+  const arrivedFocus=!pending&&resumeMessageFocus(t);
+  commitReadView(visit,t,"dm",!pending&&(!localView||freshEntryView));
   fill($("conv-name"), humanGroup(t) ? t.title : t.peer.label);
   $("conv-topic").textContent = humanGroup(t) ? dmVisitor(t) ? "Invited agent context · visitor to this group" : "Group conversation · " + groupMemberCount(t) : dmVisitor(t) ? "Invited agent context · you are not a member of this DM"
     : dmHumanGuest(t) ? "Temporary human participation · same private conversation" : "DM with a person · started " + when(t.created) + (t.mine ? " by you" : " by them");
   $("conv-avatar").replaceWith(Object.assign(avatar(humanGroup(t) ? t.title : t.peer.label || t.peer.address), { id: "conv-avatar" }));
   const online = presenceOf(t.peer.address); // the server's pushed view, only while current
-  $("conv-presence").textContent = humanGroup(t) ? (t.frozen ? "Last verified audience · access unavailable" : dmVisitor(t) ? "Selected assistant context only" : groupMemberCount(t))
+  $("conv-presence").textContent = humanGroup(t) ? (pending ? "Updating verified group details…" : t.frozen ? "Last verified audience · access unavailable" : dmVisitor(t) ? "Selected assistant context only" : groupMemberCount(t))
     : (dmVisitor(t) ? "Selected assistant context only" : online ? "Computer " + online : "Conversation with " + t.peer.label);
 
   fill($("peer-chips"), ...dmNotifyChips(t));
   const n = $("notice");
+  if(pending)n.setAttribute("role","status");else n.removeAttribute("role");
   n.hidden = !t.frozen && !dmVisitor(t) && !dmHumanGuest(t) && !t.audience_pending;
-  fill(n, t.frozen ? el("p", {}, t.frozen) : dmVisitor(t) ? el("p", {}, "Only selected context and requests addressed to this agent are supplied. You cannot send ordinary room messages or change membership.") : [
+  fill(n, pending ? el("p", {}, groupContextWait) : t.frozen ? el("p", {}, t.frozen) : dmVisitor(t) ? el("p", {}, "Only selected context and requests addressed to this agent are supplied. You cannot send ordinary room messages or change membership.") : [
     dmHumanGuest(t) && el("p", {}, guestAuthor(t) ? "You joined this conversation." : t.guests.some(g => g.host_here && g.state === "invited") ? "You’re invited. Join from your participant details." : t.guests.some(g => g.host_here && !["dismissed", "declined"].includes(g.state)) ? "Sending is unavailable here." : "You’re no longer in this conversation. Messages already received remain."),
     t.audience_pending && el("p", {}, "Audience updated here. Other devices may still be updating.")]);
   n.classList.toggle("guest-notice", dmHumanGuest(t));
@@ -2398,7 +2456,8 @@ async function loadDM(scrollToEnd, localView, freshEntryView = false) {
   if (state.dmAgent && agentOf(state.dmAgent)) setDMAgent(agentOf(state.dmAgent)); // its state now; a dismissed one stays the target
   state.draftKey = key;
   syncComposer();
-  if (scrollToEnd) { commitConversation();positionReadEntry(); }
+  // A pushed winning load completes this visit's still-current entry.
+  if (visit ? visit.opening : scrollToEnd) { commitConversation();positionReadEntry();if(visit&&!pending)visit.opening=false; }
   if(visit)visit.loading--;
   state.readVisit?.watcher?.evaluate();
   if(arrivedFocus)flash(arrivedFocus);
@@ -2517,6 +2576,7 @@ function dmMsg(m, t, prev) {
         !t.frozen && !dmVisitor(t) && !m.excerpt_pid && !m.deleted && el("button", { type: "button", class: "text-btn", onclick: () => { setDMReply(m); $("body").focus(); } }, "Reply"),
         !t.frozen&&!dmVisitor(t)&&!m.topic&&!m.topic_event&&!m.excerpt_pid&&!m.deleted&&el("button",{type:"button",class:"text-btn",onclick:async()=>{try{await api("/api/topic/create",{conv:t.id,peer:"",id:m.lid||m.id});topicSelections[t.id]=m.lid||m.id;await loadDM(false);}catch(e){announce(e.message);}}},"Make a topic"),
         reminderLine(m),
+        storageSendActions(m, t.id),
         dmDetails(m),
         !t.frozen && messageMenu(m, t.id, bubble))));
 }
@@ -2538,7 +2598,7 @@ function dmDetails(m) {
       el("dt", {}, "Device"), el("dd", {}, m.from),
       el("dt", {}, "Message id"), el("dd", { class: "mono" }, m.id),
       el("dt", {}, "Kind"), el("dd", {}, m.kind),
-      m.delivery && [el("dt", {}, "Delivery"),el("dd",{},deliveryText(m))],
+      m.delivery && !storageFailureText(m) && [el("dt", {}, "Delivery"),el("dd",{},deliveryText(m))],
       m.sent_at && Date.parse(m.at)-Date.parse(m.sent_at)>=60000 && [el("dt",{},"Arrived here"),el("dd",{},new Date(m.at).toLocaleString())],
       m.state && [el("dt", {}, "Stored state"), el("dd", { class: "mono" }, m.state)],
       m.via && [el("dt", {}, "Sent from"), el("dd", {}, "your " + myDeviceName(m.via) + " (" + m.via + ")")],
@@ -2556,7 +2616,78 @@ function myDeviceName(address) {
   return d ? d.name : address;
 }
 
+// Classify only explicit producer codes; prose and chat roles grant no action.
+const storageRetries = new Set();
+function storageFailure(m) {
+  const details = [m.detail, ...(m.copies || []).filter(c => c.state === "failed").map(c => c.detail)];
+  const causes = {
+    relay_quota: "The workspace attachment quota is full.",
+    file_too_large: "This file exceeds the server's file-size limit.",
+    relay_disk_full: "The server is out of disk space.",
+    local_disk_full: "This device is out of storage.",
+    network_unavailable: "The server cannot be reached."
+  };
+  for (const detail of details) {
+    const match = /^send_error:([a-z_]+):\s*[\s\S]*$/.exec(detail || "");
+    if (match && Object.hasOwn(causes, match[1])) return {code:match[1], reason:causes[match[1]]};
+  }
+  return null;
+}
+function storageAdmin() {
+  return state.overview?.role === "admin" || state.storageAccess?.host === currentHost && state.storageAccess.canChangeQuota;
+}
+function storageFailureText(m) {
+  const failure = storageFailure(m);
+  if (!failure || m.dir !== "out" || m.delivery_uncertain || m.send_stopped || !["failed","queued","waiting"].includes(m.delivery || m.state)) return "";
+  const code = failure.code, admin = storageAdmin();
+  const action = code === "relay_quota" ? admin ? "Open Storage to review the quota, then retry this message." : "Ask a workspace admin to review the attachment quota, then retry this message."
+    : code === "file_too_large" ? "Choose a smaller file for a new message. Your original is kept."
+      : code === "relay_disk_full" ? admin ? "Free disk space on the server, then retry this message." : "Ask a workspace admin to free disk space on the server, then retry this message."
+        : code === "local_disk_full" ? "Free space on this device, then retry this message."
+          : "Your message and files are kept here. Retry when the connection returns.";
+  return failure.reason + " " + action;
+}
+function storageRetryAllowed(m) {
+  return m.dir === "out" && !m._local && !m.replica && !m.history && !m.synced_from && !m.via && !m.excerpt_pid && !m.deleted && !m.send_stopped && !m.delivery_cancelled && !m.delivery_uncertain
+    && (m.delivery || m.state) === "failed" && ["relay_quota", "relay_disk_full"].includes(storageFailure(m)?.code);
+}
+function storageSendActions(m, conv) {
+  const failure = storageFailure(m);
+  if (!storageFailureText(m) || m.deleted || m._local || m.replica || m.history || m.synced_from || m.via || m.excerpt_pid) return null;
+  const host = currentHost, ws = wsNow(), gen = state.gen, viewID = conv || state.thread, id = m.lid || m.id;
+  const current = () => alive && host === currentHost && ws === wsNow() && gen === state.gen && (conv ? state.dm === conv : !state.dm && state.thread === viewID);
+  const key = JSON.stringify([ws,conv,id]);
+  const retry = storageRetryAllowed(m) && el("button", {type:"button",class:"text-btn","data-storage-retry":key,disabled:storageRetries.has(key),onclick:async () => {
+    const view = conv ? state.dmData : state.data;
+    const latest = view?.messages?.find(row => (row.lid || row.id) === id);
+    if (!current() || storageRetries.has(key) || !latest || !storageRetryAllowed(latest)) return;
+    storageRetries.add(key);
+    for (const button of root.querySelectorAll("[data-storage-retry]")) if (button.dataset.storageRetry === key) button.disabled = true;
+    try {
+      const result = await api("/api/storage/retry_send", {conv,id}, host);
+      if (!current()) return;
+      announce(result.retried > 0 ? "Queued for sending. Delivery is not yet confirmed." : "No eligible stored copy can be retried. Nothing was queued.");
+      if (conv) await loadDM(false); else await loadThread(false);
+    } catch {
+      if (current()) announce("This stored message could not be retried now. Open Storage or try again.");
+    } finally {
+      storageRetries.delete(key); retry.disabled = false;
+      if (current()) for (const button of root.querySelectorAll("[data-storage-retry]")) if (button.dataset.storageRetry === key) button.disabled = false;
+    }
+  }}, "Retry message");
+  const storage = (failure.code === "local_disk_full" || failure.code === "relay_quota" && storageAdmin()) && el("button", {type:"button",class:"text-btn",onclick:() => {
+    if (current()) { showSettings(); settingsTab("storage"); }
+  }}, "Open Storage");
+  return retry || storage ? [retry, storage] : null;
+}
+function deviceSendText(m) {
+  return storageFailureText(m) || (m.delivery_uncertain ? "Delivery unconfirmed; local retries stopped" : m.send_stopped && ["failed","not_delivered"].includes(m.state) ? "Not sent; local sending stopped" : m.state_text);
+}
+
 function deliveryText(m) {
+  if (m.delivery_uncertain) return "Delivery unconfirmed; local retries stopped";
+  if (m.send_stopped && ["failed","not_delivered"].includes(m.state)) return "Not sent; local sending stopped";
+  if (storageFailureText(m)) return storageFailureText(m);
   return ["waiting","quarantined","expired","failed"].includes(m.delivery) && m.state_text ? m.state_text : copyWord[m.delivery] || m.delivery;
 }
 const copyWord = { delivered: "delivered", custody: "on your server", queued: "Sending…", waiting: "kept here, not sent yet", failed: "not sent", quarantined: "they could not verify it", expired: "not delivered: that session ended first" };
@@ -3409,6 +3540,7 @@ function toggleReview(open) {
   $("search").hidden = show;
   $("section-title").textContent = show ? "Activity" : state.contactView === "people" ? "People" : "Chats";
   if (show) {
+    if(state.readVisit)state.readVisit.opening=false;
     root.classList.remove("show-conv");
   }
   if (show) $("review").querySelector("button")?.focus();
@@ -4125,9 +4257,9 @@ function renderMsg(m, byId, prev, t) {
     panel = el("div", { class: "working" }, el("span", {}, m.state_text), nativeActivity(m.detail), actionButton("cancel", m, t, false));
   }
 
-  const footText = !needs && !working ? m.state_text : "";
+  const footText = !needs && !working ? deviceSendText(m) : "";
   const waiting = m.next && m.next.startsWith("Waiting on") ? m.next : "";
-  const parts = [execLine(m, t), waiting && el("span", { class: "waiting" }, waiting), footText && el("span", {}, footText), reminderLine(m), details(m)]
+  const parts = [execLine(m, t), waiting && el("span", { class: "waiting" }, waiting), footText && el("span", {}, footText), storageSendActions(m, ""), reminderLine(m), details(m)]
     .filter(Boolean).flatMap((p, i) => i ? [el("span", { class: "sep", "aria-hidden": "true" }, "·"), p] : [p]);
 
   const col = el("div", { class: "col" }, meta, bubble,
@@ -4146,7 +4278,7 @@ function details(m) {
       el("dt", {}, "Sent"), el("dd", {}, new Date(m.sent_at || m.at).toLocaleString()),
       el("dt", {}, "Message id"), el("dd", { class: "mono" }, m.id),
       el("dt", {}, "Kind"), el("dd", {}, m.kind),
-      m.delivery && [el("dt", {}, "Delivery"),el("dd",{},deliveryText(m))],
+      m.delivery && !storageFailureText(m) && [el("dt", {}, "Delivery"),el("dd",{},deliveryText(m))],
       m.sent_at && Date.parse(m.at)-Date.parse(m.sent_at)>=60000 && [el("dt",{},"Arrived here"),el("dd",{},new Date(m.at).toLocaleString())],
       m.state && [el("dt", {}, "Stored state"), el("dd", { class: "mono" }, m.state)],
       m.status && [el("dt", {}, "Outcome"), el("dd", { class: "mono" }, m.status)],
@@ -4817,7 +4949,7 @@ function syncComposer() {
     }
     if (a && kindValue() === "message") setKind("question");
     $("attach").hidden = !filesAllowed();
-    $("body").placeholder = !d ? "" : revoked ? "This device was removed from its server" : d.frozen ? "Nothing more can be sent in this conversation"
+    $("body").placeholder = groupContextWaiting() ? "Updating verified group details…" : !d ? "" : revoked ? "This device was removed from its server" : d.frozen ? "Nothing more can be sent in this conversation"
       : askGone() ? "This agent cannot be asked now" : a ? "Ask " + agentName(a).replace(/^Your/, "your") : dmHumanGuest(d) ? "Message " + joinedNames(guestAudienceNames(d)) : "Write to " + (humanGroup(d) ? d.title : d.peer.label);
     kindHint();
     renderTarget();
@@ -5454,14 +5586,18 @@ async function renderFileStorage() {
 }
 
 async function renderStorage() {
+  const host = currentHost, gen = state.gen;
   const box = $("storage");
   fill(box, el("p", { class: "hint" }, "Reading…"));
   let v;
-  try { v = await api("/api/storage"); } catch (e) {
+  try { v = await api("/api/storage", undefined, host); } catch (e) {
+    if (host !== currentHost || gen !== state.gen) return;
     fill(box, el("p", { class: "hint" }, /404/.test(e.message) ? "This AgentNet does not report storage yet." : "Storage could not be read now."),
       el("button", { type: "button", class: "btn", onclick: renderStorage }, "Read again"));
     return;
   }
+  if (host !== currentHost || gen !== state.gen) return;
+  state.storageAccess = {host,canChangeQuota:v.remote?.usage?.can_change_quota === true};
   const local = v.local || {}, areas = local.areas || [];
   const drafts = state.files.length ? plural(state.files.length, "file", "files") + " waiting in the composer (in memory only)" : "";
   const known = local.known || { files: 0, bytes: 0 };
@@ -5494,7 +5630,7 @@ async function renderAssistantSetup() {
 async function renderAppControls() {
   const host = currentHost, gen = state.gen;
   const command = $("app-command"), update = $("app-update");
-  if (!command || !update || !host.appStatus) return;
+  if (!command || !update || !host.appStatus || host.platform === "browser" || host.appControlsAvailable === false && state.overview?.app !== true) return;
   const current = () => alive && host === currentHost && gen === state.gen;
   let status;
   try { status = await host.appStatus(); }
@@ -5679,6 +5815,7 @@ function start() {
     }
   });
   $("back").addEventListener("click", backOneLevel);
+
   $("hub-back").addEventListener("click", () => state.hubUp && openHub(state.hubUp));
   $("dialog-form").addEventListener("submit", (e) => { if (e.submitter !== $("dialog-cancel")) e.preventDefault(); });
   for (const [id, what] of [["sim-arrival", "arrival"], ["sim-finish", "finish"]]) {

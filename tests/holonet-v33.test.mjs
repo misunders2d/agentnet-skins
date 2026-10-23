@@ -128,7 +128,7 @@ test('Holonet Review close recreates only a matching committed current view; pen
 import http from 'node:http';import {createRequire} from 'node:module';import {createHash} from 'node:crypto';
 const require=createRequire(import.meta.url);
 test('Holonet actual entry Review, File scheduling, emoji and lazy video lifetimes',{skip:!process.env.AGENTNET_CHROMIUM},async t=>{
- const {chromium}=require(process.env.AGENTNET_PLAYWRIGHT||'playwright'),collection=path.dirname(path.dirname(skin)),sample=fs.readFileSync(process.env.AGENTNET_VIDEO_SAMPLE||path.join(upstream,'.agentnet/v33/video/implementation/sample.webm'));
+ const {chromium}=require(process.env.AGENTNET_PLAYWRIGHT||'playwright'),collection=path.dirname(path.dirname(skin)),sample=fs.readFileSync(process.env.AGENTNET_VIDEO_SAMPLE||path.join(collection,'tests/fixtures/sample.webm'));
  assert.equal(sample.length,22298);assert.equal(createHash('sha256').update(sample).digest('hex'),'e08c61a95e5360c254bab3689fb5530a852337029b384d5cc617f92a64e26066');
  const manifest=JSON.parse(fs.readFileSync(path.join(skin,'skin.json'))),assets=new Set(manifest.files),evidence=process.env.AGENTNET_STEERING_EVIDENCE;let browser,failed=false;
  const server=http.createServer((req,res)=>{

@@ -16,11 +16,13 @@ const check=(ok,msg)=>{if(!ok)result.failures.push(msg);};
 async function tap(loc,label){
  for(let attempt=1;;attempt++){
   try{
-   await loc.tap({trial:true}); // Built-in actionability retries the same locator after a pushed redraw.
-   const box=await loc.evaluate(n=>{const root=n.getRootNode();if(!root.elementFromPoint)throw Error('detached by a redraw');const r=n.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,top=root.elementFromPoint(x,y);return {w:Math.round(r.width),h:Math.round(r.height),hit:!!top&&(top===n||n.contains(top))};});
+   const position=await loc.evaluate(n=>({x:n.clientWidth/2,y:n.clientHeight/2}));
+   await loc.tap({trial:true,position}); // Request the measured centre, including when the control is partly clipped.
+   const box=await loc.evaluate(n=>{const root=n.getRootNode();if(!root.elementFromPoint)throw Error('detached by a redraw');const r=n.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,top=root.elementFromPoint(x,y);return {w:Math.round(r.width),h:Math.round(r.height),cw:n.clientWidth,ch:n.clientHeight,hit:!!top&&(top===n||n.contains(top))};});
+   if(box.cw!==position.x*2||box.ch!==position.y*2)throw Error('detached by a redraw');
    result.taps.push(label+' '+box.w+'x'+box.h);
    check(box.w>=44&&box.h>=44,label+' is '+box.w+'x'+box.h+', under 44px');check(box.hit,label+' is covered where it is tapped');
-   await loc.tap();return;
+   await loc.tap({position});return;
   }catch(e){if(attempt<3&&/not attached|detached/i.test(e.message)){await page.waitForTimeout(300);continue;}throw e;}
  }
 }

@@ -984,7 +984,7 @@ button.reaction { cursor: pointer; }
 .an-outbox-summary { display: grid; grid-template-columns: minmax(9rem, 1.1fr) minmax(6rem, 1fr) minmax(0, 2fr) minmax(5rem, .7fr); grid-template-areas: "time chat preview status"; align-items: center; gap: 8px 16px; box-sizing: border-box; width: 100%; min-height: 64px; padding: 12px 8px; border: 0; color: inherit; background: transparent; text-align: start; font: inherit; }
 .an-outbox-summary:hover, .an-outbox-summary:focus-visible { background: var(--surface, var(--an-surface, #eee)); }
 .an-outbox-summary .an-schedule-when { grid-area: time; font-size: 13px; }
-.an-outbox-chat { grid-area: chat; min-width: 0; overflow-wrap: anywhere; }
+.an-outbox-chat { grid-area: chat; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .an-outbox-preview { grid-area: preview; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .an-outbox-status { grid-area: status; }
 .an-outbox-draft { grid-template-columns: minmax(8rem, 1fr) minmax(0, 2fr); grid-template-areas: "chat preview" "meta files"; }

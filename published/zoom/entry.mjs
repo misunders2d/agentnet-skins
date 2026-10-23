@@ -111,6 +111,24 @@ const state = { contentRevision:0, reviewOpen:false, scheduleReady:false, schedu
   version: "", updating: false, newVersion: "", dialogRestore: null, dialogBusy: false, gen: 0, switching: null, capturedFor: null };
 
 
+function handleBack() {
+    const top = [...root.querySelectorAll('dialog[open]')].at(-1);
+    if (top) {
+      if (top.id !== 'dialog' || !state.dialogBusy) {
+        const cancel = new Event('cancel', {cancelable:true});
+        if (top.dispatchEvent(cancel)) top.close();
+      }
+      return true;
+    }
+    if (mentionView) { closeMentions(); return true; }
+    if (!$('review').hidden) { toggleReview(false); return true; }
+    if (Zoom.level > 0) { Zoom.out(); return true; }
+    if (root.classList.contains('show-conv')) { void backOneLevel(); return true; }
+    if (state.contactView === 'people') { selectSection('chats'); return true; }
+    return false;
+}
+if (host.onBack) cleanups.push(host.onBack(handleBack));
+
 // Personal attention shares the existing open-topic read bookkeeping. Only
 // explicit navigation arms generations; refreshes never create another visit.
 function attentionKey(m){return m.attention?JSON.stringify([m.id,m.attention.rev,m.attention.writer]):m.id;}
@@ -769,7 +787,8 @@ async function openReminder(r) {
 // Outbox adapts only this skin's existing drafts, reminder actions and host.
 function outboxChatText(conv) {
  const d=(state.overview?.dms||[]).find(d=>d.id===conv);
- return d?.title||d?.peer?.label||(state.dmData?.id===conv?(state.dmData.title||state.dmData.peer?.label):'')||'Chat unavailable';
+ const label=t=>t?.kind==='group'?(t.title||t.peer?.label):(t?.peer?.label||t?.title);
+ return label(d)||label(state.dmData?.id===conv?state.dmData:null)||'Chat unavailable';
 }
 function outboxDrafts() {
  return Object.entries(state.drafts).filter(([,d])=>d.text?.trim()||(d.files||[]).some(f=>f.file||f.bytes)).map(([key,d])=>{
@@ -1497,11 +1516,18 @@ async function reviewFreshGroupInvitation(i, open = openDM) {
   inviteGroupDialog(state.dmData, i.target);
 }
 
+// A fresh proposal supersedes only its own inviter's stale invitation.
+function incomingGroupInvites(invitations = []) {
+  const incoming = invitations.filter(i => i.direction === "in" && ["pending", "stale"].includes(i.status));
+  const current = new Set(invitations.filter(i => i.direction === "in" && ["pending", "accepted", "declined"].includes(i.status)).map(i => JSON.stringify([i.conv, i.inviter])));
+  return incoming.filter(i => i.status !== "stale" || !current.has(JSON.stringify([i.conv, i.inviter])));
+}
+
 function groupsSection(open = openDM) {
   const o = state.overview;
   if (!o?.groups) return [];
   return [el("li", { class: "result-head" }, "Groups", el("button", { type: "button", class: "text-btn", onclick: newGroupDialog }, "New group…")),
-    ...(o.group_invitations || []).filter(i => i.direction === "in" && ["pending", "stale"].includes(i.status)).map(i => el("li", {},
+    ...incomingGroupInvites(o.group_invitations || []).map(i => el("li", {},
       el("button", { type: "button", class: "thread-row", onclick: () => groupInvitationDialog(i) }, "Invitation: " + i.title + " · from " + i.inviter))),
     ...groupInvitationNotices().map(i => el("li", { class: "hint" }, groupInvitationNotice(i), groupInvitationActions(i), i.direction === "out" && el("button", { type: "button", class: "text-btn", onclick: () => reviewFreshGroupInvitation(i, open) }, "Review fresh invitation for " + personLabelOf(i.target) + "…"))),
     ...(o.dms || []).filter(humanGroup).map(d => dmRow(d, open))];
@@ -2417,38 +2443,72 @@ function saveToDrive(m, idx, name) {
 
 async function openDM(id, localView, readEntry = true, freshEntryView = false) { await Zoom.go(2, {dm: id}, undefined, localView, readEntry, freshEntryView); }
 
+// Temporary verification pauses are renderer state, never successful membership DTOs.
+const groupContextWait="Updating verified group details. Sending is paused until verification finishes.";
+const dmLoadViews=new WeakMap();
+let dmLoadRequest=0;
+function groupContextWaiting(){return state.dmPending?.host===currentHost&&state.dmPending.id===state.dm;}
+function showPendingGroup(){
+  state.dmData=null;
+  fill($("conv-name"),"Updating group details…");
+  for(const id of ["conv-topic","conv-presence","conv-avatar","peer-chips","agents"])fill($(id));
+  const notice=$("notice");notice.hidden=false;notice.setAttribute("role","status");
+  fill(notice,el("p",{},groupContextWait));
+  fill($("timeline"),el("p",{class:"hint"},"Waiting for verified group details."));
+  const draft=state.draftKey===null&&state.drafts["dm:"+state.dm];
+  if(draft){$("body").value=draft.text||"";state.files=draft.files||[];renderPending();grow();}
+  showPane("conv");setHubBack();syncComposer();
+  Zoom.refresh();
+}
+
 async function loadDM(scrollToEnd, localView, freshEntryView = false) {
-  const id = state.dm, gen = state.gen, focusOpening = state.messageOpening;
+  const id = state.dm, gen = state.gen, focusOpening = state.messageOpening, host = currentHost, workspace = wsNow(), request = ++dmLoadRequest;
   if (!id) return;
-  const visit=state.readVisit;if(visit)visit.loading++;
+  const visit=state.readVisit;if(visit){visit.loading++;if(scrollToEnd)visit.opening=Zoom.generation;}
+  const current=()=>alive&&host===currentHost&&workspace===wsNow()&&gen===state.gen&&state.dm===id&&state.readVisit===visit&&request===dmLoadRequest&&(!focusOpening||state.messageOpening===focusOpening);
   let t=localView;
   try {
-    if(!t)t = await api("/api/dm?id=" + encodeURIComponent(id));
+    if(!t)t = await api("/api/dm?id=" + encodeURIComponent(id),undefined,host);
   } catch (e) {
-    if(visit)visit.loading--;
-    announce(e.message);
-    return;
+    if (!current()) {if(visit)visit.loading--;return;}
+    if (e?.code !== "group_context_pending") {if(visit)visit.loading--;announce(e.message);return;}
+    state.dmPending={id,host};
+    if(visit)visit.fresh=null; // A verification wait never grants another read entry.
+    const saved=state.dmData;
+    if (!saved || saved.id!==id || dmLoadViews.get(saved)?.host!==host) {
+      if(visit)visit.loading--;
+      showPendingGroup();
+      return;
+    }
+    t={...saved,frozen:saved.frozen||groupContextWait};
+    dmLoadViews.set(t,{host,pending:true});
   }
-  if (state.readVisit!==visit || !alive || state.dm !== id || gen !== state.gen || (focusOpening && state.messageOpening !== focusOpening)) {if(visit)visit.loading--;return;} // another conversation or workspace was opened meanwhile
+  if (!current()) {if(visit)visit.loading--;return;} // another request, read visit, conversation or workspace won
+  const pending=!!dmLoadViews.get(t)?.pending;
+  if(pending&&dmLoadViews.get(t).host!==host){if(visit)visit.loading--;return;}
+  state.dmPending=pending?{id,host}:null;
+  if(pending&&visit)visit.fresh=null;
+  dmLoadViews.set(t,{host,pending});
   // A participation record is shown as the sentence it stands for, in every view.
   t.messages = t.messages.map((m) => (m.excerpt_pid ? Object.assign({}, m, { actions: [], can: [] })
     : m.event ? Object.assign({}, m, { body: m.event }) : m));
   t.agents = t.agents || [];
   t.guests = t.guests || [];
   state.dmData = t;
-  const arrivedFocus = resumeMessageFocus(t);
+  const arrivedFocus = !pending && resumeMessageFocus(t);
   fill($("conv-name"), humanGroup(t) ? t.title : t.peer.label);
   $("conv-topic").textContent = humanGroup(t) ? dmVisitor(t) ? "Invited agent context · visitor to this group" : dmHumanGuest(t) ? "Human guest in this group · no membership rights" : "Group conversation · " + groupMemberCount(t) : dmVisitor(t) ? "Invited agent context · you are not a member of this DM"
     : dmHumanGuest(t) ? "Temporary human participation · same private conversation" : "DM with a person · started " + when(t.created) + (t.mine ? " by you" : " by them");
   $("conv-avatar").replaceWith(Object.assign(avatar(humanGroup(t) ? t.title : t.peer.label || t.peer.address), { id: "conv-avatar" }));
   const online = presenceOf(t.peer.address); // the server's pushed view, only while current
-  $("conv-presence").textContent = humanGroup(t) ? (t.frozen ? "Last verified audience · access unavailable" : dmVisitor(t) ? "Selected assistant context only" : groupMemberCount(t))
+  $("conv-presence").textContent = humanGroup(t) ? (pending ? "Updating verified group details…" : t.frozen ? "Last verified audience · access unavailable" : dmVisitor(t) ? "Selected assistant context only" : groupMemberCount(t))
     : (dmVisitor(t) ? "Selected assistant context only" : online ? "Computer " + online : "Conversation with " + t.peer.label);
 
   fill($("peer-chips"), ...dmNotifyChips(t));
   const n = $("notice");
+  if(pending)n.setAttribute("role","status");else n.removeAttribute("role");
   n.hidden = !t.frozen && !dmVisitor(t) && !dmHumanGuest(t) && !t.audience_pending;
-  fill(n, t.frozen ? el("p", {}, t.frozen) : dmVisitor(t) ? el("p", {}, "Only selected context and requests addressed to this agent are supplied. You cannot send ordinary room messages or change membership.") : [
+  fill(n, pending ? el("p", {}, groupContextWait) : t.frozen ? el("p", {}, t.frozen) : dmVisitor(t) ? el("p", {}, "Only selected context and requests addressed to this agent are supplied. You cannot send ordinary room messages or change membership.") : [
     dmHumanGuest(t) && el("p", {}, guestAuthor(t) ? "You joined this conversation." : t.guests.some(g => g.host_here && g.state === "invited") ? "You’re invited. Join from your participant details." : t.guests.some(g => g.host_here && !["dismissed", "declined"].includes(g.state)) ? "Sending is unavailable here." : "You’re no longer in this conversation. Messages already received remain."),
     t.audience_pending && el("p", {}, "Audience updated here. Other devices may still be updating.")]);
   n.classList.toggle("guest-notice", dmHumanGuest(t));
@@ -2461,7 +2521,7 @@ async function loadDM(scrollToEnd, localView, freshEntryView = false) {
   renderDrive(t);
   if(topicSelections[t.id]&&!(t.topics||[]).some(x=>x.id===topicSelections[t.id])&&!sends.merge("dm:"+t.id,t.messages).some(m=>m._local&&m.topic===topicSelections[t.id]))topicSelections[t.id]="";
   topicUI.update({conv:t.id},t.topics,topicSelections[t.id],flatTopicScope(t),topicMetadata(t));
-  commitReadView(visit,t,"dm",!localView||freshEntryView);
+  commitReadView(visit,t,"dm",!pending&&(!localView||freshEntryView));
   renderDMBody(scrollToEnd);
   const key = "dm:" + id;
   if (state.draftKey === null) restoreDraft(key, t); // just switched here (beginDM)
@@ -2556,9 +2616,9 @@ function dmDetails(m) {
       el("dt", {}, "Device"), el("dd", {}, m.from),
       el("dt", {}, "Message id"), el("dd", { class: "mono" }, m.id),
       el("dt", {}, "Kind"), el("dd", {}, m.kind),
-      m.delivery && [el("dt", {}, "Delivery"),el("dd",{},deliveryText(m))],
-      m.delivery === "waiting" && m.detail && [el("dt", {}, "Waiting for"), el("dd", { class: "mono" }, m.detail.replace(/^peer_update:\s*/, ""))],
-      m.delivery !== "waiting" && m.detail && [el("dt", {}, "Send detail"), el("dd", { class: "mono" }, m.detail)],
+      m.delivery && !storageFailureText(m) && [el("dt", {}, "Delivery"),el("dd",{},deliveryText(m))],
+      m.delivery === "waiting" && m.detail && !storageFailure({detail:m.detail}) && [el("dt", {}, "Waiting for"), el("dd", { class: "mono" }, m.detail.replace(/^peer_update:\s*/, ""))],
+      m.delivery !== "waiting" && m.detail && !storageFailure({detail:m.detail}) && [el("dt", {}, "Send detail"), el("dd", { class: "mono" }, m.detail)],
       m.delivery_uncertain && [el("dt", {}, "Delivery"), el("dd", {}, "Unconfirmed; local retries stopped. Cancellation cannot be confirmed.")],
       m.sent_at && Date.parse(m.at)-Date.parse(m.sent_at)>=60000 && [el("dt",{},"Arrived here"),el("dd",{},new Date(m.at).toLocaleString())],
       m.state && [el("dt", {}, "Stored state"), el("dd", { class: "mono" }, m.state)],
@@ -2577,9 +2637,78 @@ function myDeviceName(address) {
   return d ? d.name : address;
 }
 
+// Classify only explicit producer codes; prose and chat roles grant no action.
+const storageRetries = new Set();
+function storageFailure(m) {
+  const details = [m.detail, ...(m.copies || []).filter(c => c.state === "failed").map(c => c.detail)];
+  const causes = {
+    relay_quota: "The workspace attachment quota is full.",
+    file_too_large: "This file exceeds the server's file-size limit.",
+    relay_disk_full: "The server is out of disk space.",
+    local_disk_full: "This device is out of storage.",
+    network_unavailable: "The server cannot be reached."
+  };
+  for (const detail of details) {
+    const match = /^send_error:([a-z_]+):\s*[\s\S]*$/.exec(detail || "");
+    if (match && Object.hasOwn(causes, match[1])) return {code:match[1], reason:causes[match[1]]};
+  }
+  return null;
+}
+function storageAdmin() {
+  return state.overview?.role === "admin" || state.storageAccess?.host === currentHost && state.storageAccess.canChangeQuota;
+}
+function storageFailureText(m) {
+  const failure = storageFailure(m);
+  if (!failure || m.dir !== "out" || m.delivery_uncertain || m.send_stopped || !["failed","queued","waiting"].includes(m.delivery || m.state)) return "";
+  const code = failure.code, admin = storageAdmin();
+  const action = code === "relay_quota" ? admin ? "Open Storage to review the quota, then retry this message." : "Ask a workspace admin to review the attachment quota, then retry this message."
+    : code === "file_too_large" ? "Choose a smaller file for a new message. Your original is kept."
+      : code === "relay_disk_full" ? admin ? "Free disk space on the server, then retry this message." : "Ask a workspace admin to free disk space on the server, then retry this message."
+        : code === "local_disk_full" ? "Free space on this device, then retry this message."
+          : "Your message and files are kept here. Retry when the connection returns.";
+  return failure.reason + " " + action;
+}
+function storageRetryAllowed(m) {
+  return m.dir === "out" && !m._local && !m.replica && !m.history && !m.synced_from && !m.via && !m.excerpt_pid && !m.deleted && !m.send_stopped && !m.delivery_cancelled && !m.delivery_uncertain
+    && (m.delivery || m.state) === "failed" && ["relay_quota", "relay_disk_full"].includes(storageFailure(m)?.code);
+}
+function storageSendActions(m, conv) {
+  const failure = storageFailure(m);
+  if (!storageFailureText(m) || m.deleted || m._local || m.replica || m.history || m.synced_from || m.via || m.excerpt_pid) return null;
+  const host = currentHost, ws = wsNow(), gen = state.gen, viewID = conv || state.thread, id = m.lid || m.id;
+  const current = () => alive && host === currentHost && ws === wsNow() && gen === state.gen && (conv ? state.dm === conv : !state.dm && state.thread === viewID);
+  const key = JSON.stringify([ws,conv,id]);
+  const retry = storageRetryAllowed(m) && el("button", {type:"button",class:"text-btn","data-storage-retry":key,disabled:storageRetries.has(key),onclick:async () => {
+    const view = conv ? state.dmData : state.data;
+    const latest = view?.messages?.find(row => (row.lid || row.id) === id);
+    if (!current() || storageRetries.has(key) || !latest || !storageRetryAllowed(latest)) return;
+    storageRetries.add(key);
+    for (const button of root.querySelectorAll("[data-storage-retry]")) if (button.dataset.storageRetry === key) button.disabled = true;
+    try {
+      const result = await api("/api/storage/retry_send", {conv,id}, host);
+      if (!current()) return;
+      announce(result.retried > 0 ? "Queued for sending. Delivery is not yet confirmed." : "No eligible stored copy can be retried. Nothing was queued.");
+      if (conv) await loadDM(false); else await loadThread(false);
+    } catch {
+      if (current()) announce("This stored message could not be retried now. Open Storage or try again.");
+    } finally {
+      storageRetries.delete(key); retry.disabled = false;
+      if (current()) for (const button of root.querySelectorAll("[data-storage-retry]")) if (button.dataset.storageRetry === key) button.disabled = false;
+    }
+  }}, "Retry message");
+  const storage = (failure.code === "local_disk_full" || failure.code === "relay_quota" && storageAdmin()) && el("button", {type:"button",class:"text-btn",onclick:() => {
+    if (current()) { showSettings(); settingsTab("storage"); }
+  }}, "Open Storage");
+  return retry || storage ? [retry, storage] : null;
+}
+function deviceSendText(m) {
+  return storageFailureText(m) || (m.delivery_uncertain ? "Delivery unconfirmed; local retries stopped" : m.send_stopped && ["failed","not_delivered"].includes(m.state) ? "Not sent; local sending stopped" : m.state_text);
+}
+
 function deliveryText(m) {
   if (m.delivery_uncertain) return "Delivery unconfirmed; local retries stopped";
   if (m.send_stopped && ["failed","not_delivered"].includes(m.state)) return "Not sent; local sending stopped";
+  if (storageFailureText(m)) return storageFailureText(m);
   return ["waiting","quarantined","expired","failed"].includes(m.delivery) && m.state_text ? m.state_text : copyWord[m.delivery] || m.delivery;
 }
 const copyWord = { delivered: "delivered", custody: "on your server", queued: "Sending…", waiting: "kept here, not sent yet", failed: "not sent", quarantined: "they could not verify it", expired: "not delivered: that session ended first" };
@@ -3557,6 +3686,7 @@ function toggleReview(open) {
   $("search").hidden = show;
   $("section-title").textContent = show ? "Activity" : state.contactView === "people" ? "People" : "Chats";
   if (show) {
+    if(state.readVisit)state.readVisit.opening=null;
     root.classList.remove("show-conv");
   }
   $("draft-state").hidden = !show; $("zoom").hidden = show;
@@ -4241,9 +4371,9 @@ function details(m) {
       el("dt", {}, "Sent"), el("dd", {}, new Date(m.sent_at || m.at).toLocaleString()),
       el("dt", {}, "Message id"), el("dd", { class: "mono" }, m.id),
       el("dt", {}, "Kind"), el("dd", {}, m.kind),
-      m.delivery && [el("dt", {}, "Delivery"),el("dd",{},deliveryText(m))],
-      m.delivery === "waiting" && m.detail && [el("dt", {}, "Waiting for"), el("dd", { class: "mono" }, m.detail.replace(/^peer_update:\s*/, ""))],
-      m.delivery !== "waiting" && m.detail && [el("dt", {}, "Send detail"), el("dd", { class: "mono" }, m.detail)],
+      m.delivery && !storageFailureText(m) && [el("dt", {}, "Delivery"),el("dd",{},deliveryText(m))],
+      m.delivery === "waiting" && m.detail && !storageFailure({detail:m.detail}) && [el("dt", {}, "Waiting for"), el("dd", { class: "mono" }, m.detail.replace(/^peer_update:\s*/, ""))],
+      m.delivery !== "waiting" && m.detail && !storageFailure({detail:m.detail}) && [el("dt", {}, "Send detail"), el("dd", { class: "mono" }, m.detail)],
       m.delivery_uncertain && [el("dt", {}, "Delivery"), el("dd", {}, "Unconfirmed; local retries stopped. Cancellation cannot be confirmed.")],
       m.sent_at && Date.parse(m.at)-Date.parse(m.sent_at)>=60000 && [el("dt",{},"Arrived here"),el("dd",{},new Date(m.at).toLocaleString())],
       m.state && [el("dt", {}, "Stored state"), el("dd", { class: "mono" }, m.state)],
@@ -4952,7 +5082,7 @@ function syncComposer() {
     }
     if (a && kindValue() === "message") setKind("question");
     $("attach").hidden = !filesAllowed();
-    $("body").placeholder = !d ? "" : revoked ? "This device was removed from its server" : d.frozen ? "Nothing more can be sent in this conversation"
+    $("body").placeholder = groupContextWaiting() ? "Updating verified group details…" : !d ? "" : revoked ? "This device was removed from its server" : d.frozen ? "Nothing more can be sent in this conversation"
       : askGone() ? "This agent cannot be asked now" : a ? "Ask " + agentName(a).replace(/^Your/, "your") : dmHumanGuest(d) ? "Message " + joinedNames(guestAudienceNames(d)) : "Write to " + (humanGroup(d) ? d.title : d.peer.label);
     kindHint();
     renderTarget();
@@ -5598,14 +5728,18 @@ async function renderFileStorage() {
 }
 
 async function renderStorage() {
+  const host = currentHost, gen = state.gen;
   const box = $("storage");
   fill(box, el("p", { class: "hint" }, "Reading…"));
   let v;
-  try { v = await api("/api/storage"); } catch (e) {
+  try { v = await api("/api/storage", undefined, host); } catch (e) {
+    if (host !== currentHost || gen !== state.gen) return;
     fill(box, el("p", { class: "hint" }, /404/.test(e.message) ? "This AgentNet does not report storage yet." : "Storage could not be read now."),
       el("button", { type: "button", class: "btn", onclick: renderStorage }, "Read again"));
     return;
   }
+  if (host !== currentHost || gen !== state.gen) return;
+  state.storageAccess = {host,canChangeQuota:v.remote?.usage?.can_change_quota === true};
   const local = v.local || {}, areas = local.areas || [];
   const drafts = state.files.length ? plural(state.files.length, "file", "files") + " waiting in the composer (in memory only)" : "";
   const known = local.known || { files: 0, bytes: 0 };
@@ -5646,7 +5780,7 @@ async function renderAppControls() {
   const command = $("app-command"), update = $("app-update");
   if (!command || !update) return;
   fill(command); fill(update);
-  if (host.platform === "browser" || !host.appStatus) return;
+  if (host.platform === "browser" || !host.appStatus || host.appControlsAvailable === false && state.overview?.app !== true) return;
   const current = () => alive && host === currentHost && gen === state.gen && render === appControlsRender && $("settings").open;
   let status;
   try { status = await host.appStatus(); }
@@ -5840,6 +5974,7 @@ function start() {
     }
   });
   $("back").addEventListener("click", backOneLevel);
+
   $("hub-back").addEventListener("click", () => state.hubUp && openHub(state.hubUp));
   $("dialog-form").addEventListener("submit", (e) => { if (e.submitter !== $("dialog-cancel")) e.preventDefault(); });
   for (const [id, what] of [["sim-arrival", "arrival"], ["sim-finish", "finish"]]) {
@@ -6067,6 +6202,14 @@ const Zoom = {
   // refresh redraws the current level after new data, without motion.
   refresh() {
     if (!alive || !state.overview) return;
+    const visit=state.readVisit,entry=visit?.opening===this.generation&&visit.host===currentHost&&visit.id===this.dm&&state.dm===this.dm;
+    const currentDM=state.dmData?.id===this.dm&&dmLoadViews.get(state.dmData)?.host===currentHost;
+    // A newer load may own this visit's DTO while go() has already returned.
+    // Keep its destination, then resume only from the winning bound view.
+    if(entry){
+      if(!currentDM&&!groupContextWaiting()&&visit.loading>0)return;
+      if(currentDM)this.person=personKey(state.dmData.peer);
+    }
     if (this.navigating !== null) { this.dirty = true; return; }
     const localMotion = $("zoom").getAnimations({subtree: true}).filter(a => a.playState === "running" && !(a instanceof CSSAnimation));
     if (localMotion.length) {
@@ -6076,9 +6219,9 @@ const Zoom = {
       }
       return;
     }
-    if (this.person) {
-      if (this.level >= 2 && (!state.dmData || state.dm !== this.dm)) this.level = 1;
-      if (this.level === 3 && !state.dmData.messages.some((m) => m.id === this.msg)) this.level = 2;
+    if (this.person || groupContextWaiting()) {
+      if (this.level >= 2 && (!state.dmData || state.dm !== this.dm) && !groupContextWaiting()) this.level = 1;
+      if (this.level === 3 && !state.dmData?.messages.some((m) => m.id === this.msg)) this.level = 2;
     } else {
       if (this.level >= 2 && (!state.data || state.data.peer !== this.peer)) this.level = this.peer ? 1 : 0;
       if (this.level === 3 && !state.data.messages.some((m) => m.id === this.msg)) this.level = 2;
@@ -6094,6 +6237,7 @@ const Zoom = {
     const selection = typing ? [focused.selectionStart, focused.selectionEnd] : null;
     retireVisibleRead();
     fill(surface, this.layer());
+    if(entry&&currentDM&&!groupContextWaiting())visit.opening=null;
     const content = surface.querySelector(".zoom-content");
     for (const d of surface.querySelectorAll("details[data-person], details[data-keep]")) d.open = expanded.includes(d.dataset.person || d.dataset.keep);
     placeUnreadDivider(content,state.readVisit,state.dm?state.dmData:state.data,state.dm?"dm":"thread");
@@ -6128,7 +6272,7 @@ const Zoom = {
 
   layer() {
     placeDrivePanel(false);
-    const views = this.person ? [() => this.everyone(), () => this.personLevel(), () => this.dmLevel(), () => this.dmMessage()]
+    const views = (this.person || groupContextWaiting()) ? [() => this.everyone(), () => this.personLevel(), () => this.dmLevel(), () => this.dmMessage()]
       : [() => this.everyone(), () => this.person_(), () => this.thread(), () => this.message()];
     topicUI.show(this.level>=2);
     prepareMediaRender(state.dm?state.dmData:state.data,state.dm?"dm":"thread");
@@ -6179,8 +6323,17 @@ const Zoom = {
       const changed = beginDM(dm,readEntry);
       this.dm = dm;
       this.peer = null;
+      const visit=state.readVisit;
       await loadDM(true,localView,freshEntryView);
-      if (state.dmData) this.person = personKey(state.dmData.peer); // a listed person is known by its id once checked
+      if(!alive||generation!==this.generation||host!==currentHost||state.readVisit!==visit||state.dm!==dm)return;
+      if(visit&&visit.opening!==generation){this.navigating=null;return;}
+      const ready=state.dmData?.id===dm&&dmLoadViews.get(state.dmData)?.host===host;
+      if(!ready&&!groupContextWaiting()){
+        this.navigating=null;
+        if(!visit?.loading){if(visit)visit.opening=null;this.refresh();}
+        return; // The current load will refresh this visit; a real failure was announced.
+      }
+      if (ready) this.person = personKey(state.dmData.peer); // a listed person is known by its id once checked
       if (changed&&!localView) api("/api/refresh", { id: dm }).catch(() => {});
     }
     if (!alive || generation !== this.generation || host !== currentHost) return;
@@ -6210,6 +6363,7 @@ const Zoom = {
     } else {
       old?.remove(); this.navigating = null; this.dirty = false;
     }
+    if(dm&&state.readVisit?.opening===generation&&!groupContextWaiting())state.readVisit.opening=null;
     focusZoomLayer(fresh);syncVisibleRead();syncScheduleControls();
   },
 
@@ -6302,7 +6456,7 @@ const Zoom = {
   dmLevel() {
     const base = state.dmData;
     const d = base && {...base, messages:sends.merge("dm:"+base.id, base.messages)};
-    if (!d) return el("p", { class: "hint" }, "This DM could not be loaded.");
+    if (!d) return el("p", { class: "hint", role:groupContextWaiting()?"status":undefined }, groupContextWaiting()?groupContextWait:"This DM could not be loaded.");
     const messages=d.messages.filter(m=>(m.topic||'')===(topicSelections[d.id]||''));
     const title=d.topics?.find(t=>t.id===topicSelections[d.id])?.title || (messages[0] ? firstLine(messages[0].body,80) : "No messages yet");
     const me = state.overview && state.overview.person ? state.overview.person.label : "You";
@@ -6313,11 +6467,11 @@ const Zoom = {
         el("p", { class: "hint" }, humanGroup(d) ? (dmHumanGuest(d) ? "Guest in group: " : "Group: ") + d.title + " · " + groupMemberCount(d) : "DM with " + d.peer.label + " (the name they give) · " + devicesText(d.peer)),
         el("h2", {}, title)),
         el("div", { class: "zoom-write" }, el("button",{type:"button",class:"btn","aria-label":"Conversation details",onclick:conversationDetails},"⋯"), el("button", { type: "button", class: "btn primary", disabled: !!d.frozen || state.sending || dmHumanGuest(d) && !guestAuthor(d), onclick: () => dmWriteDialog(d) },
-          d.frozen ? "Nothing more can be sent in this conversation" : dmHumanGuest(d) && !guestAuthor(d) ? "Join before writing in this group" : humanGroup(d) ? "Write in this group…" : "Write in this DM…"))),
+          groupContextWaiting() ? "Updating verified group details…" : d.frozen ? "Nothing more can be sent in this conversation" : dmHumanGuest(d) && !guestAuthor(d) ? "Join before writing in this group" : humanGroup(d) ? "Write in this group…" : "Write in this DM…"))),
       el("div", { class: "peer-chips zoom-chips" }, dmNotifyChips(d),
         d.peer?.person && el("button", { type: "button", class: "peer-chip" + (state.driveOpen ? " on" : ""), title: "This DM's shared Google Drive folder, if the workspace has Drive on; files there are outside AgentNet's encryption", onclick: () => toggleDrivePanel(state.dmData) }, "Project space")),
       state.driveOpen && d.peer?.person && placeDrivePanel(true),
-      d.frozen && el("p", { class: "notice" }, d.frozen),
+      d.frozen && el("p", { class: "notice", role:groupContextWaiting()?"status":undefined }, groupContextWaiting()?groupContextWait:d.frozen),
       humanGroup(d) && pendingGroupPeople(d).length > 0 && el("section", {"aria-label":"Invited people", class:"participant-list"},
         pendingGroupPeople(d).map(i => el("span", {class:"participant invited-person"},
           avatar(personLabelOf(i.target), "sm"), personLabelOf(i.target),
@@ -6356,7 +6510,7 @@ const Zoom = {
           execution && el("p", {class:"narr", "data-agent-execution":""}, execution),
           working(m) && nativeActivity(m.job_detail),
           m.exec?.state === "not_run" && m.job_detail && el("p", {class:"hint"}, m.job_detail),
-          m.exec?.state !== "not_run" && (m.delivery || m.state_text) && el("p", { class: m.exec?.state ? "hint" : "narr" }, m.dir === "out" && m.delivery ? deliveryText(m) : m.state_text));
+          m.exec?.state !== "not_run" && (m.delivery || m.state_text) && el("p", { class: m.exec?.state ? "hint" : "narr" }, m.dir === "out" && m.delivery ? deliveryText(m) : m.state_text), storageSendActions(m, d.id));
       })));
   },
 
@@ -6379,7 +6533,8 @@ const Zoom = {
       !m.deleted && !m.event && !m.excerpt_pid && !dmVisitor(d) && !(dmHumanGuest(d) && !guestAuthor(d)) && !d.frozen &&
         el("div", { class: "acts" }, el("button", { type: "button", class: "act", onclick: async () => { await this.go(2, {}); if (state.dm !== d.id) return; setDMReply(m); dmWriteDialog(state.dmData); } }, "Reply")),
       working(m) && nativeActivity(m.job_detail),
-      m.state_text && el("p", { class: "hint" }, m.state_text),
+      (m.delivery || m.state_text) && el("p", { class: "hint" }, m.dir === "out" && m.delivery ? deliveryText(m) : m.state_text),
+      storageSendActions(m, d.id),
       ["question", "task"].includes(m.kind) && (m.actions || []).some(a => a !== "do_it") &&
         !(agentDetailFor(m, d) && ((m.actions || []).includes("resolve") || m.exec?.state === "needs_human")) &&
         el("div", {class:"acts"}, m.actions.filter(a => a !== "do_it").map((a,i) => actionButton(a,m,d,i===0))),
@@ -6425,7 +6580,8 @@ const Zoom = {
           m.summary && el("p", { class: "narr" }, "Your responder's summary: " + m.summary),
           execLine(m, t),
           working(m) && nativeActivity(m.detail),
-          m.state_text && !needsYou(m) && el("p", { class: "narr" + (working(m) ? " running" : "") }, m.state_text),
+          m.state_text && !needsYou(m) && el("p", { class: "narr" + (working(m) ? " running" : "") }, deviceSendText(m)),
+          storageSendActions(m, ""),
           proposalCard(m.proposal),
           needsYou(m) && el("div", { class: "decide" }, el("p", { class: "decide-why" }, (m.state_text || "").replace(/^Needs you: /, "Needs you · ")),
             el("div", { class: "acts" }, m.actions.map((a, i) => actionButton(a, m, t, i === 0)))),
@@ -6451,7 +6607,8 @@ const Zoom = {
       m.summary && el("div", { class: "note" }, el("p", { class: "note-label" }, "Summary written on this computer by your responder"), el("p", { class: "body" }, m.summary)),
       execLine(m, t),
       working(m) && nativeActivity(m.detail),
-      m.state_text && el("p", { class: "hint" }, m.state_text),
+      m.state_text && el("p", { class: "hint" }, deviceSendText(m)),
+      storageSendActions(m, ""),
       (m.actions || []).length > 0 && el("div", { class: "acts" }, m.actions.map((a, i) => actionButton(a, m, t, i === 0))),
       d);
   },

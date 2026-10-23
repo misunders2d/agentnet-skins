@@ -2,6 +2,12 @@
 
 ## v0.9.5 historical-device hook correction
 
+[Gallery v2026.10.23.3](https://github.com/misunders2d/agentnet-skins/releases/tag/v2026.10.23.3)
+was published October 23, 2026 at 16:25:56 UTC from
+`c3a82940f1821f17aea8d09d048dc405bc6a51c3`. Unauthenticated verification through
+the tagged v0.9.5 gallery parser passes all five packages, 129 files and 20 previews
+across 151 HTTPS requests. This documentation update changes no published bytes.
+
 This collection pins AgentNet `aaa4ff1d4963509c3ee12b8f46c931d21498ec87`.
 Every manifest names v0.9.5. Classic, Holonet, Pulp and Zoom are 1.9.5;
 Office is 1.7.5. Only version/pin/package metadata changes from the published
@@ -10,10 +16,12 @@ string only. All other published executable assets, styles and previews are
 byte-identical; the shared UI, protocol, envelope and skin contract trees are
 also identical. The native hook correction changes no GUI contract.
 
-Complete runtime evidence from successful collection CI39975393352 is retained
-for unchanged bytes. Fresh archive/build, package, parser, static and Node checks
-run against the final pin; skips remain explicit. Existing capture provenance
-and physical-device limits below remain unchanged. Publication is pending.
+Complete final-pin `npm test` [CI39983304890](https://github.com/misunders2d/agentnet-skins/actions/runs/39983304890)
+passed at this gallery source. Root's fresh browser-enabled Node run passes
+306/306, zero skips; the initial run without Chromium retains its 160 passes and
+23 explicit skips. The duplicate tag-triggered run39984752902 was cancelled after
+the identical-source branch gate passed. Existing capture provenance and physical
+device limits below remain unchanged.
 
 
 ## Historical v0.9.4 focused chat recovery

@@ -1,6 +1,8 @@
 # Source provenance
 
-The v0.9.3 collection pins AgentNet `76da6ed826004067e82ed2b639022760a99de587`. All five manifests name v0.9.3. Classic, Holonet, Pulp and Zoom are 1.9.3; Office is 1.7.3. Overlays are rebuilt from that immutable archive.
+The v0.9.3 collection pins AgentNet `3f5bbc4362e1ee6345c676e9000ee742668c64ad`. All five manifests name v0.9.3. Classic, Holonet, Pulp and Zoom are 1.9.3; Office is 1.7.3. Overlays are rebuilt from that immutable archive.
+
+The final pin has byte-identical host contracts, shared UI and static inputs to the qualified `76da6ed8` archive. Only Android host, test, CI and documentation changes follow it. All five rebuilt package digests are checked against that qualification; complete retained runtime checks and actual preview capture remain separate from final-pin static/parser checks.
 
 All twenty current wide/phone light/dark previews were captured through the production loader on `76da6ed826004067e82ed2b639022760a99de587`, then visually inspected. Source and published preview hashes match. The final core correction keeps selected topics visible on small screens, places storage failures beside their action controls, and explains unavailable scheduling in its disabled menu item. Office and Pulp were rebuilt and passed both their generic contract checks and complete Comic journeys on this exact archive. All five packages pass static and actual candidate gallery-parser validation. Classic, Holonet and Zoom have byte-identical package digests to the already qualified collection, so their complete unchanged results remain valid.
 

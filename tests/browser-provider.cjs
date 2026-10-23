@@ -9,7 +9,7 @@ const rootClass='.'+(process.env.AGENTNET_SKIN_FAMILY||m.id)+'-root';
 const family=process.env.AGENTNET_SKIN_FAMILY||m.id,z=()=>page.locator('#zoom'),settled=()=>page.waitForFunction(()=>document.querySelector('#skin')?.shadowRoot?.querySelectorAll('#zoom .zoom-layer').length===1);
 const ui=family==='zoom'?{
  // Reload may restore Main; list() still explicitly requires Everyone/Vitalii.
- async ready(){await z().locator('.ladder').waitFor();await settled();},
+ async ready(){await z().locator('.zoom-layer:only-child .ladder').waitFor();await settled();},
  async list(){await page.locator('#nav-chats').click();await settled();await z().locator('.ladder .rung').nth(0).click();await z().locator('.person-card').filter({hasText:'Vitalii'}).waitFor();await settled();},
  // A person card opens their Main chat, even while its latest message syncs.
  async thread(){await z().locator('.person-card').filter({hasText:'Vitalii'}).click();await z().locator('.mini-chat').waitFor();await settled();assert.equal(await z().locator('.zoom-message').count(),0,'A person card opens their DM as a chat, not its latest message');},

@@ -15,7 +15,7 @@ const server=http.createServer((req,res)=>{
   let data=m[2]==='manifest.mjs'?'export default '+fs.readFileSync(path.join(base,'skin.json'),'utf8')+';':fs.readFileSync(path.join(base,'src',m[2]));
   if(m[2]==='entry.mjs'){
    const needle=m[1]==='zoom'?'\nstart();':'const ready = start();';assert(data.toString().includes(needle));
-   data=data.toString().replace(needle,'globalThis.fixture={state,setDMAgent,setDMReply,syncComposer,renderDMBody,sendDM,send,sends,renderPending,topicSelections,topicFresh'+(m[1]==='zoom'?',dmWriteDialog,Zoom':'')+(m[1]==='holonet'?',captureState:()=>({alive,currentHost:currentHost===host,workspaceCurrent:wsNow()===host.workspace.id,draftPresent:!!state.draftKey,dmDraftCurrent:state.draftKey===`dm:${state.dm}`,sending:!!state.sending,dmPresent:!!state.dm,dmDataPresent:!!state.dmData,pendingOpen:!!state.pendingOpen})':'')+'};const ready=Promise.resolve();');
+   data=data.toString().replace(needle,'globalThis.fixture={state,setDMAgent,setDMReply,syncComposer,renderDMBody,sendDM,send,sends,renderPending,topicSelections,topicFresh,keepDraft,restoreDraft,noteTyping,cancelReply:typeof cancelReply==="function"?cancelReply:null'+(m[1]==='zoom'?',dmWriteDialog,Zoom':'')+(m[1]==='holonet'?',captureState:()=>({alive,currentHost:currentHost===host,workspaceCurrent:wsNow()===host.workspace.id,draftPresent:!!state.draftKey,dmDraftCurrent:state.draftKey===`dm:${state.dm}`,sending:!!state.sending,dmPresent:!!state.dm,dmDataPresent:!!state.dmData,pendingOpen:!!state.pendingOpen})':'')+'};const ready=Promise.resolve();');
   }
   if(m[2]==='composer-followup.mjs')data=data.toString().replace('const rows=new Map(),seen=new Set();','globalThis.candidateScans=(globalThis.candidateScans||0)+1;const rows=new Map(),seen=new Set();');
   res.setHeader('Content-Type',m[2].endsWith('.css')?'text/css':m[2].endsWith('.svg')?'image/svg+xml':m[2].endsWith('.png')?'image/png':'text/javascript');res.end(data);
@@ -83,7 +83,7 @@ test('standalone natural tagged corrections preserve exact attempts, files and d
    }
    Object.assign(fixture.state,{overview,dm:conv,dmData:structuredClone(dm),draftKey:'dm:'+conv,files:[],dmReply:null,answering:null,data:null,thread:null});
    if(skin==='zoom'){Object.assign(fixture.Zoom,{level:2,dm:conv,person:peer.person});root.querySelector('#dialog').hidden=false;area.append(root.querySelector('#zoom'));root.querySelector('#zoom').hidden=false;root.querySelector('#composer').style.display='none';root.querySelector('#timeline').style.display='none';Object.assign(area.style,{height:'100vh',display:'flex',flexDirection:'column'});}
-   root.querySelector('#composer').addEventListener('submit',fixture.send);root.style.visibility='visible';fixture.setDMAgent(a);fixture.syncComposer();
+   root.querySelector('#composer').addEventListener('submit',fixture.send);root.querySelector('#body').addEventListener('input',fixture.noteTyping);if(fixture.cancelReply)root.querySelector('#replying-cancel').addEventListener('click',fixture.cancelReply);root.style.visibility='visible';fixture.setDMAgent(a);fixture.syncComposer();
    window.selectAgent=()=>fixture.setDMAgent(fixture.state.dmData.agents[0]);
    window.reset=(change={})=>{
     root.querySelector('#dialog').close();fixture.state.dialogRestore=null;
@@ -93,7 +93,7 @@ test('standalone natural tagged corrections preserve exact attempts, files and d
     Object.assign(fixture.state,{dm:conv,dmData:structuredClone(dm),draftKey:'dm:'+conv,files:[],dmReply:null,answering:null,typedFor:null});
     fixture.topicSelections[conv]='';fixture.topicFresh[conv]=false;window.calls=[];window.posts=[];window.stageFail=false;window.hold=false;window.failNext=false;window.note='Correction sent; native acceptance pending.';
     fixture.setDMAgent(fixture.state.dmData.agents[0]);fixture.syncComposer();fixture.renderPending();
-    if(skin==='zoom')fixture.dmWriteDialog(fixture.state.dmData);
+    if(skin==='zoom'){Object.assign(fixture.Zoom,{level:2,dm:conv,msg:null});fixture.dmWriteDialog(fixture.state.dmData);}
    };
   },skin);
   if(skin==='holonet')try{activeCapture.observer=await page.evaluateHandle(()=>{
@@ -146,6 +146,94 @@ test('standalone natural tagged corrections preserve exact attempts, files and d
    await page.waitForFunction(()=>document.getElementById('skin').shadowRoot.querySelector('#compose-error').textContent.includes('exact request'));
    assert.equal(await page.evaluate(()=>posts.length),0,bad);assert.equal(await page.evaluate(()=>calls.some(c=>c.path==='stage')),false,bad);
   }
+  activeCapture.stage='ordinary Reply continues answered work';
+  // A plain Reply on an agent's answer or clarification continues that exact
+  // request at Attempt 0 (Comic parity). Removing the assistant (×) keeps an
+  // ordinary reply; a reply to a person or to failed work stays ordinary.
+  const replyTo=async(change,id='f'.repeat(64))=>page.evaluate(({change,id,skin})=>{
+   const r=dm.messages[0];r.exec.state=change.state||'answered';if(change.refused)r.continuation={id:r.lid,key:r.target.fingerprint,host:r.exec.host,attempt:r.exec.attempt,handled:{refused:change.refused}};
+   dm.messages.push({id:'f'.repeat(64),kind:'answer',dir:'in',pid:dm.agents[0].pid,reply_to:r.id,body:'Which file should change?',at:'2026-10-14T10:05:00Z',actions:[],can:[]},{id:'1'.repeat(64),kind:'message',dir:'in',from:'briar/phone',body:'Person note',at:'2026-10-14T10:06:00Z',actions:[],can:[]});
+   fixture.state.dmData=structuredClone(dm);fixture.setDMAgent(null);fixture.setDMReply(fixture.state.dmData.messages.find(m=>m.id===id));fixture.syncComposer();
+   if(skin==='zoom'){document.getElementById('skin').shadowRoot.querySelector('#dialog').close();fixture.dmWriteDialog(fixture.state.dmData);}
+  },{change,id,skin});
+  const chip=()=>page.locator('[aria-label="Remove addressed assistant"]:visible');
+  const replying=()=>page.evaluate(skin=>{const root=document.getElementById('skin').shadowRoot;return skin==='zoom'?[...root.querySelectorAll('#dialog .quote')].some(n=>n.textContent.startsWith('Replying to: Which file')):root.querySelector('#replying-label').textContent==='Replying to'&&!root.querySelector('#replying').hidden;},skin);
+  for(const state of ['answered','needs_human','resolved','done']){
+   await reset();await replyTo({state});
+   assert.equal(await chip().count(),1,skin+' '+state+' shows the derived assistant');assert.equal(await replying(),true,skin+' '+state+' keeps the Reply');
+   await type('src/app.go');await submit();await page.waitForFunction(()=>posts.some(p=>p.path==='/api/request/followup'));
+   const sent=await page.evaluate(()=>posts.find(p=>p.path==='/api/request/followup').body);
+   assert.equal(sent.attempt,0,state);assert.equal(sent.ref.id,'4'.repeat(32),state);assert.equal(sent.ref.fingerprint,'11111111-11111111-11111111-11111111');assert.equal(sent.conv,'c'.repeat(64));assert.match(sent.body,/src\/app\.go/);
+   assert.equal(await page.evaluate(()=>posts.some(p=>p.path==='/api/dm/send'||p.path==='/api/dm/agent/ask')),false,state+' never starts new work');
+   assert.equal(await page.evaluate(()=>fixture.state.dmAgent),null,state+' sent: the derived assistant leaves with its Reply');
+  }
+  const ordinary=async label=>{
+   await submit();await page.waitForFunction(()=>posts.some(p=>p.path==='/api/dm/send'));
+   assert.equal(await page.evaluate(()=>posts.some(p=>p.path==='/api/request/followup'||p.path==='/api/dm/agent/ask')),false,label);
+   return page.evaluate(()=>posts.find(p=>p.path==='/api/dm/send').body);
+  };
+  await reset();await replyTo({});await chip().first().click();
+  assert.equal(await chip().count(),0);assert.equal(await replying(),true,'× keeps the Reply');
+  await type('just a note');assert.equal((await ordinary('×')).reply_to,'f'.repeat(64));
+  // The Stop choice and a derived assistant both survive leaving and reopening the draft.
+  for(const plain of [true,false]){
+   await reset();await replyTo({});if(plain)await chip().first().click();
+   await page.evaluate(skin=>{fixture.keepDraft();Object.assign(fixture.state,{dmReply:null,dmAgent:null,dmPlainReply:false,dmReplyAgent:null});fixture.restoreDraft('dm:'+fixture.state.dm,fixture.state.dmData);if(skin==='zoom'){document.getElementById('skin').shadowRoot.querySelector('#dialog').close();fixture.dmWriteDialog(fixture.state.dmData);}},skin);
+   assert.equal(await chip().count(),plain?0:1,skin+' restored, plain='+plain);
+   await type('restored');
+   if(plain)assert.equal((await ordinary('restored ×')).reply_to,'f'.repeat(64));
+   else{await submit();await page.waitForFunction(()=>posts.some(p=>p.path==='/api/request/followup'));assert.equal(await page.evaluate(()=>posts.find(p=>p.path==='/api/request/followup').body.attempt),0);}
+  }
+  // Removing the Reply itself also removes the assistant that came only from it.
+  await reset();await replyTo({});await page.evaluate(skin=>{fixture.setDMReply(null);if(skin==='zoom'){document.getElementById('skin').shadowRoot.querySelector('#dialog').close();fixture.dmWriteDialog(fixture.state.dmData);}},skin);
+  assert.equal(await page.evaluate(()=>fixture.state.dmAgent),null);assert.equal(await chip().count(),0,'no stale derived assistant');
+  await type('no longer a reply');const unbound=await ordinary('reply removed');assert.equal(unbound.reply_to,'','removed Reply sends no reply_to');
+  await reset();await replyTo({},'1'.repeat(64));assert.equal(await chip().count(),0,'a reply to a person derives nothing');
+  await type('to the person');assert.equal((await ordinary('person')).reply_to,'1'.repeat(64));
+  await reset();await replyTo({state:'failed'});assert.equal(await chip().count(),0,'failed work derives nothing');
+  await type('after failure');assert.equal((await ordinary('failed')).reply_to,'f'.repeat(64));
+  // Text and a file written before an explicit Reply move with it: one Send
+  // continues the request, also when a New topic was armed (Comic). × or
+  // Cancel afterwards sends ordinarily, again with one Send.
+  const typedFirst=async fresh=>{
+   await reset();
+   await page.evaluate(fresh=>{const r=dm.messages[0];r.exec.state='answered';dm.messages.push({id:'f'.repeat(64),kind:'answer',dir:'in',pid:dm.agents[0].pid,reply_to:r.id,body:'Which file should change?',at:'2026-10-14T10:05:00Z',actions:[],can:[]});fixture.state.dmData=structuredClone(dm);fixture.setDMAgent(null);if(fresh)fixture.topicFresh[dm.id]=true;fixture.syncComposer();},fresh);
+   await field.fill('Typed before Reply');
+   await page.evaluate(()=>{const f=new File(['early bytes'],'early.txt');fixture.state.files=[{key:'early',name:f.name,size:f.size,file:f}];fixture.renderPending();});
+   if(skin!=='zoom')assert.equal(await page.evaluate(()=>fixture.state.typedFor?.to),'dm:'+'c'.repeat(64),'real input bound the draft to the chat');
+   const id='f'.repeat(64);
+   if(skin==='zoom'){await page.locator('#dialog').evaluate(d=>d.close());await page.evaluate(()=>fixture.renderDMBody(false));await page.locator('#m-'+id+' .mc-bubble').first().click();await page.waitForFunction(()=>!fixture.Zoom.navigating);await page.locator('.zoom-message').getByRole('button',{name:'Reply',exact:true}).click();await page.waitForFunction(()=>!fixture.Zoom.navigating&&document.getElementById('skin').shadowRoot.querySelector('#dialog').open);}
+   else{await page.evaluate(()=>fixture.renderDMBody(false));await page.locator('#m-'+id).getByRole('button',{name:'Reply',exact:true}).click();}
+   assert.equal(await field.inputValue(),'Typed before Reply');
+  };
+  const sendOnce=async()=>{
+   await submit();
+   await page.waitForFunction(()=>posts.some(p=>p.path!=='/api/upload/discard'&&p.path!=='/api/typing')||[...document.getElementById('skin').shadowRoot.querySelectorAll('#compose-error,#dialog-error')].some(n=>n.textContent.trim()));
+   assert.deepEqual(await page.evaluate(()=>[...document.getElementById('skin').shadowRoot.querySelectorAll('#compose-error,#dialog-error')].map(n=>n.textContent.trim()).filter(Boolean)),[],'one Send, no blocker');
+  };
+  for(const fresh of [false,true]){
+   await typedFirst(fresh);
+   assert.equal(await chip().count(),1,skin+' Reply derives its agent, fresh='+fresh);assert.equal(await page.evaluate(()=>fixture.topicFresh['c'.repeat(64)]),false,'Reply clears an armed New topic');
+   await sendOnce();await page.waitForFunction(()=>posts.some(p=>p.path==='/api/request/followup'));
+   const sent=await page.evaluate(()=>posts.find(p=>p.path==='/api/request/followup').body);
+   assert.equal(sent.attempt,0);assert.equal(sent.ref.id,'4'.repeat(32));assert.match(sent.body,/Typed before Reply/);assert.equal(sent.files.length,1);
+   assert.deepEqual(await page.evaluate(()=>calls.filter(c=>c.path==='stage').map(c=>[c.name,c.bytes])),[['early.txt','early bytes']]);
+   assert.equal(await page.evaluate(()=>posts.some(p=>p.path==='/api/dm/send'||p.path==='/api/dm/agent/ask')),false,'no fresh ask');
+  }
+  for(const gesture of ['×','Cancel']){
+   await typedFirst(false);
+   if(gesture==='×')await chip().first().click();
+   else await page.locator(skin==='zoom'?'[aria-label="Do not reply to that message"]':'#replying-cancel').click();
+   assert.equal(await chip().count(),0,gesture);
+   await sendOnce();await page.waitForFunction(()=>posts.some(p=>p.path==='/api/dm/send'));
+   const plain=await page.evaluate(()=>posts.find(p=>p.path==='/api/dm/send').body);
+   assert.equal(plain.reply_to,gesture==='×'?'f'.repeat(64):'',gesture);assert.match(plain.body,/Typed before Reply/);assert.equal(plain.files.length,1);
+   assert.equal(await page.evaluate(()=>posts.some(p=>p.path==='/api/request/followup'||p.path==='/api/dm/agent/ask')),false,gesture+' sends ordinarily');
+  }
+  // A refused "Mark as handled" decision is shown, even once an answer exists.
+  await reset();await replyTo({state:'needs_human',refused:'Synthetic refusal: the request is running again.'});
+  await page.evaluate(()=>fixture.renderDMBody(false));
+  assert.equal(await page.evaluate(()=>[...document.getElementById('skin').shadowRoot.querySelectorAll('[role="status"]')].some(n=>n.textContent==='Not applied: Synthetic refusal: the request is running again.')),true,skin+' shows the handled refusal');
   activeCapture.stage='typing scan and natural overflow';
   await reset();const scans=await page.evaluate(()=>candidateScans||0);await field.pressSequentially(' thirty characters of correction');
   assert.equal(await page.evaluate(()=>candidateScans||0),scans);try{assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}catch(error){
@@ -303,7 +391,7 @@ test('standalone natural tagged corrections preserve exact attempts, files and d
   activeCapture.stage='final lifecycle and page error assertions';
    assert.equal(await page.title(),'Standalone steering fixture');assert.equal(page.url(),origin+'/');
    if(process.env.AGENTNET_STEERING_EVIDENCE){fs.mkdirSync(process.env.AGENTNET_STEERING_EVIDENCE,{recursive:true});await page.screenshot({path:path.join(process.env.AGENTNET_STEERING_EVIDENCE,skin+'-'+width+'.png')});}
-   console.log(JSON.stringify({skin,width,naturalCurrent:true,noChooser:true,multipleReply:true,freshNegatives:11,noTypingScan:true,stagingFailure:true,capturedRetry:true,nativeNotes:true,sharedFanout:skin!=='holonet',ordinaryDM:true,deviceSender:true,cancelClose:skin==='zoom'}));
+   console.log(JSON.stringify({skin,width,naturalCurrent:true,noChooser:true,multipleReply:true,freshNegatives:11,noTypingScan:true,stagingFailure:true,capturedRetry:true,nativeNotes:true,sharedFanout:skin!=='holonet',ordinaryDM:true,plainReplyContinuation:true,typedBeforeReply:true,handledRefusal:true,deviceSender:true,cancelClose:skin==='zoom'}));
   await stopObserver(activeCapture);
   assert.deepEqual(errors,[]);await page.evaluate(()=>window.unmount());await context.close();
  }

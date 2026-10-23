@@ -1,5 +1,17 @@
 # Source provenance
 
+## v0.9.4 focused chat recovery
+
+This collection pins AgentNet `83376cbc9b70d71ee2c78047a660dab930b3a1f7`. Every manifest names v0.9.4. Classic, Holonet, Pulp and Zoom are1.9.4; Office is1.7.4. Source fixes preserve exact ordinary Reply ancestry, selected running attempts, text/files and retry identity. The standalone Reply gesture deliberately retargets an existing draft and clears New topic; removing the derived agent restores an ordinary reply. Handling refusals are visible rather than presented as success.
+
+Complete local qualification at the immutable `c29cddfc41bbd8cbcad3f5b381a158656295a9c5` pin passed306 Node checks, with zero failures or skips. All five package contracts, Office/Pulp's complete Comic journeys, published-gallery parser acceptance and standalone/overlay scaffolds passed. Classic, Holonet and the standalone scaffold passed runtime, lifecycle, browser-provider, responsive, touch and applicable motion journeys. Zoom's browser, contract, lifecycle and touch passed. Its single browser-provider failure was a strict locator encountering both navigation layers during restore. The existing readiness wait now selects the sole layer; deterministic RED/GREEN and a fresh real browser-provider journey pass with exact device offer/person/key, single approval, sends/files and IndexedDB reload assertions retained. Original failures are kept. Inapplicable motion/world families are not counted as executed passes.
+
+The final core pin changes native harness-hook visibility and its regression/docs after that qualification. Its final test-only update isolates synthetic rows from daemon writes without changing production bytes. `internal/ui`, `internal/protocol`, `internal/envelope`, `docs/UI_SKINS.md` and `docs/HOST_API_ROUTES.md` are byte-identical between the two pins. Every package was rebuilt at the final pin; all published file hashes and catalog digests match the qualified bytes, and the complete collection static check passes. This retains runtime evidence for unchanged UI/contract code instead of repeating unrelated suites.
+
+The twenty appearance previews retain the recorded v0.9.3 capture revision below; no new physical-device capture is claimed. Tests use disposable fictional companies, real local TLS Hub/native and browser providers, and controlled synthetic responses where explicitly recorded. They do not qualify arbitrary third-party skins, physical phones, real provider accounts or public deployment.
+
+## Historical v0.9.3 qualification
+
 [Gallery v2026.10.23.1](https://github.com/misunders2d/agentnet-skins/releases/tag/v2026.10.23.1) was published October 23, 2026 at 07:50:19 UTC from immutable `5a12224bbc212db800459a40b8d16d6312f5d618`. Unauthenticated verification through the published core parser passes all 5 packages, 129 package files and 20 previews across 151 HTTPS requests. The app release is [v0.9.3](https://github.com/misunders2d/agentnet/releases/tag/v0.9.3).
 
 The v0.9.3 collection pins AgentNet `3f5bbc4362e1ee6345c676e9000ee742668c64ad`. All five manifests name v0.9.3. Classic, Holonet, Pulp and Zoom are 1.9.3; Office is 1.7.3. Overlays are rebuilt from that immutable archive.

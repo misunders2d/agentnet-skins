@@ -4,7 +4,7 @@ import {mountVideoFile,videoFileName} from './video-file.mjs';
 import {sniffVideo} from './pictures.mjs';
 import {unreadReview} from './unread-review.mjs';
 import {mountSchedule} from './schedule.mjs';
-import { composerFollowup, currentComposerFollowup, composerReplyFollowup, currentDirectComposerFollowup, sameFollowup, concreteAgentLabel, directBinding, directChatKey, sameDirectAgent, ComposerRecovery, directTopicQuery, directAgentKey } from "./composer-followup.mjs";
+import { composerFollowup, currentComposerFollowup, composerReplyFollowup, replyFollowupAgent, currentDirectComposerFollowup, sameFollowup, concreteAgentLabel, directBinding, directChatKey, sameDirectAgent, ComposerRecovery, directTopicQuery, directAgentKey } from "./composer-followup.mjs";
 import { nativeRequestItem } from "./native-request.mjs";
 import { reactionChoices, recordReaction, humanReactionOrder } from "./reaction-preferences.mjs";
 import {collectiveOptions, parseCollective, collectiveHref} from './collective-mentions.mjs';
@@ -2669,7 +2669,7 @@ function dmMsg(m, t, prev, compact = false) {
       m.exec?.state === "not_run" && m.job_detail && el("p", {class:"hint"}, m.job_detail),
       sharedWith.length > 0 && el("p", { class: "shared-note" }, "Shared with " + sharedWith.map((a) => agentName(a).replace(/^Your/, "your")).join(" and ")),
       el("div", { class: "foot" }, execLine(m, t), !held && !acts.length && m.exec?.state !== "not_run" && (m.delivery||m.state_text) && el("span", {}, m.dir==="out"&&m.delivery?(deliveryText(m)):m.state_text),
-        !t.frozen && !dmVisitor(t) && !m.excerpt_pid && !m.deleted && el("button", { type: "button", class: "text-btn", onclick: () => { setDMReply(m); $("body").focus(); } }, "Reply"),
+        !t.frozen && !dmVisitor(t) && !m.excerpt_pid && !m.deleted && el("button", { type: "button", class: "text-btn", onclick: () => { replyTo(m); $("body").focus(); } }, "Reply"),
         !t.frozen&&!dmVisitor(t)&&!m.topic&&!m.topic_event&&!m.excerpt_pid&&!m.deleted&&el("button",{type:"button",class:"text-btn",onclick:async()=>{try{await api("/api/topic/create",{conv:t.id,peer:"",id:m.lid||m.id});topicSelections[t.id]=m.lid||m.id;await loadDM(false);}catch(e){announce(e.message);}}},"Make a topic"),
         reminderLine(m),
         storageSendActions(m, t.id),
@@ -2840,7 +2840,7 @@ function selectedComposerFollowup(pid){
 }
 async function validateCapturedFollowup(followup,t,host,me){
  const fresh=await api('/api/dm?id='+encodeURIComponent(t.id),undefined,host),source=fresh.messages?.find(m=>m.id===followup.source);
- if(!sameFollowup(followup,composerFollowup(source,followup.pid,followup.topic,fresh,me)))throw Error('This exact request or agent changed. Nothing sent; the original follow-up and files remain available for review.');
+ if(!sameFollowup(followup,composerFollowup(source,followup.pid,followup.topic,fresh,me,followup.attempt===0)))throw Error('This exact request or agent changed. Nothing sent; the original follow-up and files remain available for review.');
 }
 
 // whoseAgent: a participation's host as the owner of its agent ("Your", "Bob's").
@@ -3525,7 +3525,7 @@ function failSend(id, key, ws, text, files, reply, answering, reason, mentions, 
   if (restore) {
     if (here) {
       $("body").value = text; state.mentions = mentions || []; state.mentionText = text; grow();
-      state.files = files; renderPending(); if (reply) setDMReply(reply); if (answering) setAnswering(answering); if (agent && !state.dmAgent && agentOf(agent)) setDMAgent(agentOf(agent)); /* never over a newer target */ keepDraft(); syncComposer();
+      state.files = files; renderPending(); if (reply) setDMReply(reply, !agent); if (answering) setAnswering(answering); if (agent && !state.dmAgent && agentOf(agent)) setDMAgent(agentOf(agent)); /* never over a newer target */ keepDraft(); syncComposer();
     } else draftsOf(ws)[key] = {...d, text, files, reply, answering, mentions, ...(agent ? {agent} : {})};
     sends.remove(id);
   }
@@ -4289,7 +4289,13 @@ function nativeActivity(detail) {
   const {label,at}=parsed;
   return el("span", {class:"hint", "data-native-activity":""}, label, " · ", at ? ["Native event reported ", el("time", {datetime:at,title:at}, new Date(at).toLocaleTimeString())] : "Native activity");
 }
+// A refused "Mark as handled" decision for this exact request shows with its
+// state (Comic RequestResolution): the host did not apply it.
 function execLine(m, t) {
+  const line = execState(m, t), refused = m.continuation?.handled?.refused;
+  return refused ? el("span", {}, line, el("span", { class: "exec-refused", role: "status" }, (line ? " · " : "") + "Not applied: " + refused)) : line;
+}
+function execState(m, t) {
   const e = m.exec;
   if (!e || !e.state) return null;
   // The terminal answer or result in this thread supersedes the host's last
@@ -4822,7 +4828,7 @@ function renderAgentTarget() {
     const a = agentOf(state.dmAgent);
     fill(box, state.dmAgent && !mentioned.some(s => mentionAgentPIDs(s).length) && el("span", { class: "addressed-assistant", title: (a?.agent_id || state.dmAgent) + " · " + (a?.host.address || "unavailable") + " · participation " + state.dmAgent },
       "@" + (a ? agentName(a) : "Selected assistant unavailable"),
-      el("button", { type: "button", class: "text-btn", disabled: state.sending, "aria-label": "Remove addressed assistant", onclick: () => { setDMAgent(null); keepDraft(); } }, "×")),
+      el("button", { type: "button", class: "text-btn", disabled: state.sending, "aria-label": "Remove addressed assistant", onclick: () => { const reply = state.dmReply; setDMAgent(null); if (reply) setDMReply(reply, true); retargetDraft(); keepDraft(); } }, "×")),
       mentioned.map(s => el("span", { class: "addressed-assistant mentioned-person", title: "@" + s.name + (s.role ? " · " + s.role : "") },
         "@" + s.name,
         el("button", { type: "button", class: "text-btn", disabled: state.sending, "aria-label": "Make @" + s.name + " plain text", onclick: () => { state.mentions = (state.mentions || []).filter(x => x !== s);
@@ -5136,12 +5142,38 @@ function boundElsewhere() {
   return "You started this text for someone else. Check the To line, then send again.";
 }
 
+// replyTo is the person's Reply on m. As in Comic it answers in m's topic (an
+// armed New topic yields), and the text typed so far now belongs to the target
+// the composer shows, like a choice in the mention list.
+function replyTo(m) {
+  if (state.dm && topicFresh[state.dm]) {
+    topicFresh[state.dm] = false;
+    if ((m.topic || "") !== (topicSelections[state.dm] || "")) { topicSelections[state.dm] = m.topic || ""; selectReadTopic(); renderDMBody(false); }
+    topicUI.repaint();
+  }
+  setDMReply(m);
+  retargetDraft();
+}
+// cancelReply is the composer's Cancel: the text goes to the conversation again.
+function cancelReply() { setAnswering(null); setDMReply(null); setDMAgent(null); retargetDraft(); }
+
 // setDMReply chooses the message of the open DM a new message replies to
 // (or none). It is part of that DM's draft and never crosses to another.
-function setDMReply(m) {
+function setDMReply(m, plain = false) {
   if (m && (dmVisitor() || m.excerpt_pid)) return;
+  if (state.dmReplyAgent && state.dmAgent === state.dmReplyAgent && m?.id !== state.dmReply?.id) { state.dmAgent = null; if (humanGroup()) refreshTyping(); } // it came only from the earlier Reply
+  state.dmReplyAgent = null;
   state.dmReply = m ? { id: m.id, body: m.body } : null;
+  state.dmPlainReply = !!m && plain;
   if (m && state.dmAgent && !composerReplyFollowup(state.dmData,state.dmAgent,topicSelections[state.dm]||"",state.overview?.me,m.id)) setDMAgent(null);
+  // A Reply on an agent's answer or clarification continues that exact
+  // request, as in Comic; removing the assistant (×) keeps an ordinary reply.
+  const derived = m && !plain && !state.dmAgent && !state.answering && !topicFresh[state.dm] && !selectedAgentPIDs(undefined, undefined, null).length && replyFollowupAgent(state.dmData,topicSelections[state.dm]||"",state.overview?.me,m.id);
+  if (derived) {
+    state.dmAgent = state.dmReplyAgent = derived;
+    if (kindValue() === "message") setKind("question");
+    if (humanGroup()) refreshTyping();
+  }
   if (!m && (state.answering || state.dmAgent)) return;
   $("replying").hidden = !m;
   if (m) {
@@ -5167,7 +5199,7 @@ function keepDraft() {
   if (state.draftKey === null) return;
   const text = $("body").value;
   if (text || state.answering || state.dmReply || state.dmAgent || state.deviceAgentID || state.replyReceiver || state.replyReceiverHost || state.files.length) {
-    state.drafts[state.draftKey] = { text, origin:state.dm?{kind:"dm",id:state.dm}:{kind:"thread",id:state.thread,binding:state.data?directBinding(state.data):undefined}, ...(state.dm?{topic:topicSelections[state.dm]||"",newTopic:!!topicFresh[state.dm]}:{}), kind: kindValue(), answering: state.answering, reply: state.dmReply, agent: state.dmAgent, agent_id: state.dm ? "" : state.deviceAgentID || "", files: state.files, typedFor: state.typedFor, mentions: validMentions(state.mentions, text), reply_receiver: state.replyReceiver, ...(state.replyReceiverHost ? { reply_receiver_host: state.replyReceiverHost } : {}) };
+    state.drafts[state.draftKey] = { text, origin:state.dm?{kind:"dm",id:state.dm}:{kind:"thread",id:state.thread,binding:state.data?directBinding(state.data):undefined}, ...(state.dm?{topic:topicSelections[state.dm]||"",newTopic:!!topicFresh[state.dm]}:{}), kind: kindValue(), answering: state.answering, reply: state.dmReply, plain_reply: !!state.dmReply && !!state.dmPlainReply, agent: state.dmAgent, agent_id: state.dm ? "" : state.deviceAgentID || "", files: state.files, typedFor: state.typedFor, mentions: validMentions(state.mentions, text), reply_receiver: state.replyReceiver, ...(state.replyReceiverHost ? { reply_receiver_host: state.replyReceiverHost } : {}) };
   }
   else delete state.drafts[state.draftKey];
 }
@@ -5192,7 +5224,7 @@ function restoreDraft(key, t) {
   setAnswering(m || null);
   // A DM's reply target comes back only if that message is in this DM.
   const r = state.dm && d && d.reply && t.messages.find((x) => x.id === d.reply.id);
-  setDMReply(r || null);
+  setDMReply(r || null, !!(d && d.plain_reply));
   // An agent target comes back as it was, even when that agent cannot be
   // asked any more: the person, not a dismissal, moves the text elsewhere.
   // Reload snapshots retain exact mention refs even when the old single-
@@ -5540,7 +5572,7 @@ function keepForReload() {
   keepDraft();
   const drafts = {};
   for (const [k, d] of Object.entries(state.drafts)) {
-    drafts[k] = { text: d.text, kind: d.kind, answering: d.answering ? d.answering.id : null, reply: d.reply ? d.reply.id : null, mentions: (d.mentions || []).map(({ start, name, ref }) => ({ start, name, ref })), reply_receiver: d.reply_receiver || null, ...(d.reply_receiver_host ? { reply_receiver_host: d.reply_receiver_host } : {}) };
+    drafts[k] = { text: d.text, kind: d.kind, answering: d.answering ? d.answering.id : null, reply: d.reply ? d.reply.id : null, ...(d.reply && d.plain_reply ? { plain_reply: true } : {}), mentions: (d.mentions || []).map(({ start, name, ref }) => ({ start, name, ref })), reply_receiver: d.reply_receiver || null, ...(d.reply_receiver_host ? { reply_receiver_host: d.reply_receiver_host } : {}) };
   }
   const fields = {};
   if (state.dialogRestore && $("dialog").open) {
@@ -5568,7 +5600,7 @@ async function restoreAfterReload() {
     try { await switchWorkspace(keep.workspace); } catch (e) { return false; }
   }
   for (const [k, d] of Object.entries(keep.drafts || {})) {
-    state.drafts[k] = { text: d.text, kind: d.kind, answering: d.answering ? { id: d.answering } : null, reply: d.reply ? { id: d.reply } : null, mentions: d.mentions || [], reply_receiver: d.reply_receiver || null };
+    state.drafts[k] = { text: d.text, kind: d.kind, answering: d.answering ? { id: d.answering } : null, reply: d.reply ? { id: d.reply } : null, plain_reply: !!d.plain_reply, mentions: d.mentions || [], reply_receiver: d.reply_receiver || null };
   }
   if (keep.thread) await openThread(keep.thread,undefined,undefined,false);
   else if (keep.dm) await openDM(keep.dm,undefined,false);
@@ -6086,7 +6118,7 @@ function start() {
   });
   $("kind").addEventListener("change", () => { kindHint(); renderTarget(); });
   kindHint();
-  $("replying-cancel").addEventListener("click", () => { setAnswering(null); setDMReply(null); setDMAgent(null); });
+  $("replying-cancel").addEventListener("click", cancelReply);
   // Files: chosen, pasted (an image in the clipboard) or dropped on the composer.
   $("attach").addEventListener("click", () => $("file-input").click());
   $("file-input").addEventListener("change", () => { addFiles([...$("file-input").files]); $("file-input").value = ""; });

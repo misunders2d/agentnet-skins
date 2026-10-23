@@ -6,9 +6,11 @@ function followupRef(m,me){
  const ref={id:m.lid||m.id,fingerprint};
  return id.test(ref.id)&&key.test(fingerprint||'')?ref:null;
 }
-export function composerFollowup(m,pid,topic,dm,me){
- const ref=followupRef(m,me),attempt=m?.exec?.attempt;
- if(!ref||!dm||dm.frozen||m.exec?.state!=='running'||m.exec.stale||!Number.isSafeInteger(attempt)||attempt<1)return null;
+// An ordinary Reply also continues the replied request after its answer or
+// clarification (Attempt 0); only running work is steered without one.
+export function composerFollowup(m,pid,topic,dm,me,ordinaryReply=false){
+ const ref=followupRef(m,me),running=m?.exec?.state==='running',attempt=running?m.exec.attempt:ordinaryReply&&['answered','needs_human','resolved','done'].includes(m?.exec?.state)?0:undefined;
+ if(!ref||!dm||dm.frozen||!Number.isSafeInteger(attempt)||attempt<(running?1:0)||m.exec.stale)return null;
  const agent=(dm.agents||[]).find(a=>a.pid===pid||(a.pids||[]).includes(pid));
  if(!agent?.can_ask||agent.state!=='active'||agent.topic!=null&&agent.topic!==topic||m.pid!==pid||(m.topic||'')!==topic||m.exec.host!==agent.host?.address||m.target?.address!==agent.host?.address||m.target?.fingerprint!==agent.host?.fingerprint||(m.target?.agent_id||'')!==(agent.agent_id||''))return null;
  return {ref,kind:m.kind,source:m.id,pid,topic,attempt,target:{address:m.target.address,fingerprint:m.target.fingerprint,agent_id:m.target.agent_id||''}};
@@ -19,17 +21,34 @@ export function activeComposerFollowups(dm,me,topic){
  return rows;
 }
 export function sameFollowup(a,b){return !!a&&!!b&&a.kind===b.kind&&a.pid===b.pid&&a.topic===b.topic&&a.attempt===b.attempt&&a.ref.id===b.ref.id&&a.ref.fingerprint===b.ref.fingerprint&&a.target.address===b.target.address&&a.target.fingerprint===b.target.fingerprint&&a.target.agent_id===b.target.agent_id;}
-export function composerReplyFollowup(dm,pid,topic,me,replyTo){
+// Stored reply ancestry ends at the first request it reaches. Strict refuses
+// rather than falling back to other running work when that request is this
+// agent's but can no longer be continued.
+export function composerReplyFollowup(dm,pid,topic,me,replyTo,strict=false){
  const messages=dm?.messages||[],seen=new Set();let next=replyTo;
+ const refuse=why=>{if(strict)throw Error(why+' Nothing was sent; your draft is kept.');};
  while(next&&!seen.has(next)){
   seen.add(next);const exact=messages.filter(m=>m.id===next),rows=exact.length?exact:messages.filter(m=>m.lid===next);
-  if(!rows.length||rows.some(m=>(m.topic||'')!==topic))return;
-  const current=rows.map(m=>composerFollowup(m,pid,topic,dm,me));
-  if(current.every(Boolean)&&current.every(m=>sameFollowup(m,current[0])))return current[0];
-  const parents=new Set(rows.map(m=>m.reply_to||''));if(parents.size!==1)return;next=rows[0].reply_to;
+  if(!rows.length||rows.some(m=>m.deleted||m._local||m.excerpt_pid||m.history||(m.topic||'')!==topic))return refuse('The selected reply or its topic is unavailable.');
+  if(rows.some(m=>['question','task'].includes(m.kind))){
+   const current=rows.map(m=>composerFollowup(m,pid,topic,dm,me,true));
+   if(current.every(Boolean)&&current.every(m=>sameFollowup(m,current[0])))return current[0];
+   return rows.some(m=>m.pid===pid)?refuse('The selected request or its exact agent cannot be continued.'):undefined;
+  }
+  const parents=new Set(rows.map(m=>m.reply_to||''));if(parents.size!==1)return refuse('The selected reply has ambiguous ancestry.');next=rows[0].reply_to;
  }
+ if(next)refuse('The selected reply has cyclic ancestry.');
+}
+// A Reply with no tagged agent continues the replied agent's exact request
+// only when stored ancestry binds it; a name or quote never chooses one.
+export function replyFollowupAgent(dm,topic,me,replyTo){
+ if(!dm||!replyTo)return;
+ const exact=(dm.messages||[]).filter(m=>m.id===replyTo),rows=exact.length?exact:(dm.messages||[]).filter(m=>m.lid===replyTo),pid=rows[0]?.pid;
+ if(!pid||rows.some(m=>m.pid!==pid)||!(dm.agents||[]).some(a=>a.pid===pid||(a.pids||[]).includes(pid)))return;
+ return composerReplyFollowup(dm,pid,topic,me,replyTo)?pid:undefined;
 }
 export function currentComposerFollowup(dm,pid,topic,me,replyTo){
+ if(replyTo){const bound=composerReplyFollowup(dm,pid,topic,me,replyTo,true);if(bound)return bound;}
  const reported=(dm?.messages||[]).filter(m=>m.pid===pid&&(m.topic||'')===topic&&m.exec?.state==='running'&&followupRef({...m,deleted:false},me)),attempts=new Map();
  for(const m of reported){const current=composerFollowup(m,pid,topic,dm,me),key=current&&JSON.stringify(current.ref);if(!current||attempts.has(key)&&attempts.get(key)!==current.attempt)throw Error('Running work is reported, but its current attempt or identity cannot be verified. Nothing was sent; your draft is kept.');attempts.set(key,current.attempt);}
  const rows=activeComposerFollowups(dm,me,topic).get(pid)||[];

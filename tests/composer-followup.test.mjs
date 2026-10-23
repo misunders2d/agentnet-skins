@@ -63,3 +63,37 @@ test('direct corrections bind default/named current work and linked original aut
   }
  }
 });
+
+test('ordinary Reply continues the replied request after its answer or clarification',async()=>{
+ for(const skin of ['classic','zoom','holonet']){
+  const {currentComposerFollowup:current,composerFollowup:choose,replyFollowupAgent:replyAgent,activeComposerFollowups:pool}=await import('../skins/'+skin+'/src/composer-followup.mjs');
+  assert.equal(typeof replyAgent,'function','reply derivation is missing in '+skin);
+  const human={id:'2'.repeat(64),kind:'message',dir:'in',from:'briar/phone',body:'Human note'};
+  const view=(state,extra=[])=>{const request={...structuredClone(source),exec:{...source.exec,state}};return {id:'e'.repeat(64),agents:[structuredClone(agent)],messages:[request,{id:'6'.repeat(64),kind:'answer',dir:'in',pid,reply_to:request.id,body:'Which file?'},human,...extra]};};
+  for(const state of ['answered','needs_human','resolved','done']){
+   const dm=view(state);
+   for(const replyTo of ['6'.repeat(64),source.id,source.lid]){
+    assert.equal(replyAgent(dm,'',me,replyTo),pid,skin+' '+state+' derives its agent');
+    const bound=current(dm,pid,'',me,replyTo);assert.equal(bound.attempt,0);assert.equal(bound.ref.id,source.lid);assert.equal(bound.kind,'task');assert.equal(bound.source,source.id);
+   }
+   assert.equal(choose(dm.messages[0],pid,'',dm,me),null,'no Reply: '+state+' work is not steered');assert.equal(current(dm,pid,'',me),undefined);assert.equal(pool(dm,me,'').size,0);
+   assert.equal(choose(dm.messages[0],pid,'',dm,me,true).attempt,0);
+  }
+  for(const state of ['failed','completed','cancelled','interrupted','queued','pending']){
+   const dm=view(state);assert.equal(replyAgent(dm,'',me,'6'.repeat(64)),undefined,skin+' '+state);
+   assert.throws(()=>current(dm,pid,'',me,'6'.repeat(64)),/cannot be continued/,skin+' '+state+' never falls back');
+  }
+  const answered=view('answered');
+  assert.equal(replyAgent(answered,'',me,human.id),undefined,'a reply to a person stays ordinary');assert.equal(current(answered,pid,'',me,human.id),undefined);
+  const deleted=view('answered');deleted.messages[1].deleted=true;assert.equal(replyAgent(deleted,'',me,'6'.repeat(64)),undefined);assert.throws(()=>current(deleted,pid,'',me,'6'.repeat(64)),/unavailable/);
+  const stranger=view('answered');stranger.messages[1].pid='f'.repeat(32);assert.equal(replyAgent(stranger,'',me,'6'.repeat(64)),undefined,'an answer from no current participation derives nothing');
+  for(const [label,change]of [['stale',m=>m.exec.stale=true],['wrong PID',m=>m.pid='f'.repeat(32)],['changed key',m=>m.target.fingerprint='22222222-22222222-22222222-22222222'],['agent origin',m=>m.origin='agent:codex']]){
+   const dm=view('answered');change(dm.messages[0]);assert.equal(replyAgent(dm,'',me,'6'.repeat(64)),undefined,skin+' '+label);
+  }
+  const running={...structuredClone(source),id:'8'.repeat(64),lid:'7'.repeat(32)},both=view('answered',[running]);
+  assert.equal(current(both,pid,'',me).ref.id,running.lid,'without Reply the running request is steered');
+  const replied=current(both,pid,'',me,'6'.repeat(64));assert.equal(replied.ref.id,source.lid,'Reply binds the replied request, not other running work');assert.equal(replied.attempt,0);
+  const other={...structuredClone(agent),pid:'9'.repeat(32),agent_id:'3'.repeat(32)},fanout=view('answered');fanout.agents.push(other);
+  assert.equal(current(fanout,other.pid,'',me,'6'.repeat(64)),undefined,'another tagged agent is not refused by this reply');
+ }
+});

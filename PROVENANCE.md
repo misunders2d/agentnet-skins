@@ -1,6 +1,22 @@
 # Source provenance
 
-## v0.9.4 focused chat recovery
+## v0.9.5 historical-device hook correction
+
+This collection pins AgentNet `aaa4ff1d4963509c3ee12b8f46c931d21498ec87`.
+Every manifest names v0.9.5. Classic, Holonet, Pulp and Zoom are 1.9.5;
+Office is 1.7.5. Only version/pin/package metadata changes from the published
+v0.9.4 collection. Generated standalone manifest modules change the version
+string only. All other published executable assets, styles and previews are
+byte-identical; the shared UI, protocol, envelope and skin contract trees are
+also identical. The native hook correction changes no GUI contract.
+
+Complete runtime evidence from successful collection CI39975393352 is retained
+for unchanged bytes. Fresh archive/build, package, parser, static and Node checks
+run against the final pin; skips remain explicit. Existing capture provenance
+and physical-device limits below remain unchanged. Publication is pending.
+
+
+## Historical v0.9.4 focused chat recovery
 
 [Gallery v2026.10.23.2](https://github.com/misunders2d/agentnet-skins/releases/tag/v2026.10.23.2)
 was published October 23, 2026 at 15:28:20 UTC from published

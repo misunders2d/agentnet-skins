@@ -1,5 +1,7 @@
 # Source provenance
 
+[Gallery v2026.10.23.1](https://github.com/misunders2d/agentnet-skins/releases/tag/v2026.10.23.1) was published October 23, 2026 at 07:50:19 UTC from immutable `5a12224bbc212db800459a40b8d16d6312f5d618`. Unauthenticated verification through the published core parser passes all 5 packages, 129 package files and 20 previews across 151 HTTPS requests. The app release is [v0.9.3](https://github.com/misunders2d/agentnet/releases/tag/v0.9.3).
+
 The v0.9.3 collection pins AgentNet `3f5bbc4362e1ee6345c676e9000ee742668c64ad`. All five manifests name v0.9.3. Classic, Holonet, Pulp and Zoom are 1.9.3; Office is 1.7.3. Overlays are rebuilt from that immutable archive.
 
 The final pin has byte-identical host contracts, shared UI and static inputs to the qualified `76da6ed8` archive. Only Android host, test, CI and documentation changes follow it. All five rebuilt package digests are checked against that qualification; complete retained runtime checks and actual preview capture remain separate from final-pin static/parser checks.

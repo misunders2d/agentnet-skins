@@ -27,7 +27,7 @@ Comic's fixes whenever it is rebuilt.
 
 The four images below were regenerated and inspected through the production loader on AgentNet v0.9.3 at [`76da6ed826004067e82ed2b639022760a99de587`](https://github.com/misunders2d/agentnet/tree/76da6ed826004067e82ed2b639022760a99de587), using the disposable fictional Brightwater Ceramics company. They show desktop 1440 × 1000 and phone 390 × 844 in light/dark themes. Phone screenshots use Chromium viewport emulation; physical-phone behavior remains separate.
 
-The current source targets AgentNet v0.9.3 at [`3f5bbc4362e1ee6345c676e9000ee742668c64ad`](https://github.com/misunders2d/agentnet/tree/3f5bbc4362e1ee6345c676e9000ee742668c64ad). The collection retains complete unchanged qualification and reruns affected checks, including the rebuilt Comic overlays. Gallery publication remains pending. [PROVENANCE.md](../../PROVENANCE.md) records the exact source, retained and repeated checks, original failures and evidence limits.
+The current source targets AgentNet v0.9.3 at [`3f5bbc4362e1ee6345c676e9000ee742668c64ad`](https://github.com/misunders2d/agentnet/tree/3f5bbc4362e1ee6345c676e9000ee742668c64ad). The collection retains complete unchanged qualification and reruns affected checks, including the rebuilt Comic overlays. Published in [gallery v2026.10.23.1](https://github.com/misunders2d/agentnet-skins/releases/tag/v2026.10.23.1). [PROVENANCE.md](../../PROVENANCE.md) records the exact source, retained and repeated checks, original failures and evidence limits.
 
 | Desktop, day | Desktop, night |
 | --- | --- |

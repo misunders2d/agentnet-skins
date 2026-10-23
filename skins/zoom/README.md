@@ -6,9 +6,9 @@ Zoom was built into AgentNet up to v0.8.24. From v0.8.25 AgentNet keeps only Com
 
 ## Preview
 
-The four images below were regenerated and inspected through the production loader on AgentNet v0.9.1 at [`771e738ee5b8d097cf342e375659992d10ecf80b`](https://github.com/misunders2d/agentnet/tree/771e738ee5b8d097cf342e375659992d10ecf80b), using the disposable fictional Brightwater Ceramics company. They show desktop 1440 × 1000 and phone 390 × 844 in light/dark themes. Phone screenshots use Chromium viewport emulation; physical-phone behavior remains separate.
+The four images below were regenerated and inspected through the production loader on AgentNet v0.9.3 at [`76da6ed826004067e82ed2b639022760a99de587`](https://github.com/misunders2d/agentnet/tree/76da6ed826004067e82ed2b639022760a99de587), using the disposable fictional Brightwater Ceramics company. They show desktop 1440 × 1000 and phone 390 × 844 in light/dark themes. Phone screenshots use Chromium viewport emulation; physical-phone behavior remains separate.
 
-The current source targets AgentNet v0.9.1 at [`d5318cd92ccd48ebdc5caf771c409b2beb0104b4`](https://github.com/misunders2d/agentnet/tree/d5318cd92ccd48ebdc5caf771c409b2beb0104b4). [Complete exact-pin collection CI](https://github.com/misunders2d/agentnet-skins/actions/runs/39491173106) passes all applicable journeys for this skin; production inputs are unchanged from the preview capture. Gallery publication remains pending. [PROVENANCE.md](../../PROVENANCE.md) records CI counts, separate local rendered coverage, the unexplained local Classic failure and evidence limits.
+The current source targets AgentNet v0.9.3 at [`76da6ed826004067e82ed2b639022760a99de587`](https://github.com/misunders2d/agentnet/tree/76da6ed826004067e82ed2b639022760a99de587). The collection retains complete unchanged qualification and reruns affected checks, including the rebuilt Comic overlays. Gallery publication remains pending. [PROVENANCE.md](../../PROVENANCE.md) records the exact source, retained and repeated checks, original failures and evidence limits.
 
 | Desktop light | Desktop dark |
 | --- | --- |
@@ -18,7 +18,7 @@ The current source targets AgentNet v0.9.1 at [`d5318cd92ccd48ebdc5caf771c409b2b
 | --- | --- |
 | ![Zoom light phone viewport: a conversation with the fictional Tomasz Reyes](previews/mobile-light.png) | ![Zoom dark phone viewport: a conversation with the fictional Tomasz Reyes](previews/mobile-dark.png) |
 
-Build: `node scripts/build.mjs zoom` from the repository root. Install or import `dist/zoom/` as described in the [main README](../../README.md). Targets Host API v1; `"agentnet": "v0.9.1"`. Drafts are namespaced by manifest identity and workspace; staged files are retired after a reconnect rather than replayed. No code, image or import needs a sibling skin, a CDN or a network service.
+Build: `node scripts/build.mjs zoom` from the repository root. Install or import `dist/zoom/` as described in the [main README](../../README.md). Targets Host API v1; `"agentnet": "v0.9.3"`. Drafts are namespaced by manifest identity and workspace; staged files are retired after a reconnect rather than replayed. No code, image or import needs a sibling skin, a CDN or a network service.
 
 ## v0.8.26 usability corrections
 

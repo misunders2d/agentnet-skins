@@ -25,9 +25,9 @@ Comic's fixes whenever it is rebuilt.
 
 ## Previews
 
-The four images below were regenerated and inspected through the production loader on AgentNet v0.9.1 at [`771e738ee5b8d097cf342e375659992d10ecf80b`](https://github.com/misunders2d/agentnet/tree/771e738ee5b8d097cf342e375659992d10ecf80b), using the disposable fictional Brightwater Ceramics company. They show desktop 1440 × 1000 and phone 390 × 844 in light/dark themes. Phone screenshots use Chromium viewport emulation; physical-phone behavior remains separate.
+The four images below were regenerated and inspected through the production loader on AgentNet v0.9.3 at [`76da6ed826004067e82ed2b639022760a99de587`](https://github.com/misunders2d/agentnet/tree/76da6ed826004067e82ed2b639022760a99de587), using the disposable fictional Brightwater Ceramics company. They show desktop 1440 × 1000 and phone 390 × 844 in light/dark themes. Phone screenshots use Chromium viewport emulation; physical-phone behavior remains separate.
 
-The current source targets AgentNet v0.9.1 at [`d5318cd92ccd48ebdc5caf771c409b2beb0104b4`](https://github.com/misunders2d/agentnet/tree/d5318cd92ccd48ebdc5caf771c409b2beb0104b4). [Complete exact-pin collection CI](https://github.com/misunders2d/agentnet-skins/actions/runs/39491173106) passes all applicable journeys for this skin; production inputs are unchanged from the preview capture. Gallery publication remains pending. [PROVENANCE.md](../../PROVENANCE.md) records CI counts, separate local rendered coverage, the unexplained local Classic failure and evidence limits.
+The current source targets AgentNet v0.9.3 at [`76da6ed826004067e82ed2b639022760a99de587`](https://github.com/misunders2d/agentnet/tree/76da6ed826004067e82ed2b639022760a99de587). The collection retains complete unchanged qualification and reruns affected checks, including the rebuilt Comic overlays. Gallery publication remains pending. [PROVENANCE.md](../../PROVENANCE.md) records the exact source, retained and repeated checks, original failures and evidence limits.
 
 | Desktop, day | Desktop, night |
 | --- | --- |
@@ -37,7 +37,7 @@ The current source targets AgentNet v0.9.1 at [`d5318cd92ccd48ebdc5caf771c409b2b
 | --- | --- |
 | ![Pulp on a phone, day](previews/mobile-light.png) | ![Pulp on a phone, night](previews/mobile-dark.png) |
 
-Targets Host API v1; `"agentnet": "v0.9.1"`. The overlay is rebuilt by the exact pinned Comic source.
+Targets Host API v1; `"agentnet": "v0.9.3"`. The overlay is rebuilt by the exact pinned Comic source.
 
 ## What is in the overlay
 

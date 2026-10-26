@@ -8,7 +8,7 @@
       "version": "1.9.7",
       "api": 1,
       "agentnet": "v0.9.7",
-      "digest": "1f6b8c99801d3bd65dce657346198dd4736ade9fdcaf41ef22bb0911d3c1cf94",
+      "digest": "062fe7e2e2b9b7696c858e1fe13741464a452f97dda01e94476426e6cb0e423f",
       "files": [
         {
           "path": "skin.json",
@@ -17,8 +17,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "87c7480c3b2c6da07f15574b6e7f22efa129f931b76312efa472434972195890",
-          "size": 442369
+          "sha256": "7c008f125133777e4c3b6d32174a5540c815aae953d01e37f8c1eb534b62dcf5",
+          "size": 446757
         },
         {
           "path": "composer-followup.mjs",
@@ -147,8 +147,8 @@
         },
         {
           "path": "schedule.mjs",
-          "sha256": "a64a4ee662ca04cc7c17b1e61445eaee267207b22ff97e1a579709800e9880f9",
-          "size": 28444
+          "sha256": "b997b0fc44449fd03b7d04dfefbf441fe64f047435bd5e2a0db8912d998470dd",
+          "size": 28547
         },
         {
           "path": "schedule-model.mjs",
@@ -195,7 +195,7 @@
       "version": "1.9.7",
       "api": 1,
       "agentnet": "v0.9.7",
-      "digest": "943a78b2c32d5df4b980396c057289eb57444864f4a95e4d68c319bc06cb6b20",
+      "digest": "1d2167fddcf60cbe9064947b1de62b73d94c3c1da56bebe934cda5069d1d5fcb",
       "files": [
         {
           "path": "skin.json",
@@ -204,8 +204,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "1eea8cf0e8377eb5b6dc51e465145c7e418aacd7d54ce5f48b7b945865eb81a0",
-          "size": 415405
+          "sha256": "d012fa9adf01e35cc63b531497f0e5b6131c58343697597b0bcaf95ae8be980a",
+          "size": 419766
         },
         {
           "path": "composer-followup.mjs",
@@ -324,8 +324,8 @@
         },
         {
           "path": "schedule.mjs",
-          "sha256": "a64a4ee662ca04cc7c17b1e61445eaee267207b22ff97e1a579709800e9880f9",
-          "size": 28444
+          "sha256": "b997b0fc44449fd03b7d04dfefbf441fe64f047435bd5e2a0db8912d998470dd",
+          "size": 28547
         },
         {
           "path": "schedule-model.mjs",
@@ -377,7 +377,7 @@
       "version": "1.7.7",
       "api": 1,
       "agentnet": "v0.9.7",
-      "digest": "f9109f3d8b0de49ee2fe5ef590eb174f7b7b174fbca3f9373b210b94bf373807",
+      "digest": "12f7b6f2249fea67f12dec5457c5d13a5df01de1fe36e15fa204ee7a50a111cf",
       "files": [
         {
           "path": "skin.json",
@@ -386,13 +386,13 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "adacd6472bd58d82b37fa882bb09a0a35124da8a6c51ec8afa911b65dbcfb18b",
-          "size": 1357183
+          "sha256": "441e38f7b2a0da0d9d5ba8e13c5f422ff4a75c5d416eb8f8dfab0e8bb9b8b02c",
+          "size": 1374837
         },
         {
           "path": "style.css",
-          "sha256": "b45a715f64287356c35d947b400f8ceda84d05cc20aeb6571a6496c39eabe721",
-          "size": 86807
+          "sha256": "4b63775cd7cd5e3f831f041dcdc39ca15507d6941d432d3d46212106b21c42a8",
+          "size": 86324
         },
         {
           "path": "document.css",
@@ -494,7 +494,7 @@
       "version": "1.9.7",
       "api": 1,
       "agentnet": "v0.9.7",
-      "digest": "a86092fc748429e81a8bc3c74cd179134bd4054f8840d5b8727e4963a059f307",
+      "digest": "c18c04f2ce732ec22bf2c9bbcb726a888e0cf192cbe274f8671c2a35e5090887",
       "files": [
         {
           "path": "skin.json",
@@ -503,13 +503,13 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "69a303b2e6f0757204d109e03a19afe80d7b8104f2fd4272b4ab129acdbe89bf",
-          "size": 1360497
+          "sha256": "80cd370ba8d04dfbc6f9d2f792027146dbb7217d1bbf299ba59707feab36c1ad",
+          "size": 1378151
         },
         {
           "path": "style.css",
-          "sha256": "a274c6cf6daea2c5874ca9f489cb3301ffe750bf9dfcba8368c7321d763e07ef",
-          "size": 89548
+          "sha256": "53143e3895e80d0c3da3a021eac94215a5286c927254078e6fae80b8632d60d1",
+          "size": 89065
         },
         {
           "path": "document.css",
@@ -651,7 +651,7 @@
       "version": "1.9.7",
       "api": 1,
       "agentnet": "v0.9.7",
-      "digest": "246704c6a21225d0e150ce5c982359e3a36ad1ee9b878d20d4fa94f0d10173f7",
+      "digest": "6b4110e6190ad32773c2c1ce8a4358886f70c92c7defcfe25d317312bc2c048b",
       "files": [
         {
           "path": "skin.json",
@@ -660,8 +660,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "5e0915d1ac05f35f1860f00f0510d3a063827538fe1ade2a1a9d3f1a7353c37c",
-          "size": 476028
+          "sha256": "336eb8ae3c8497e4e617f47d68e89c6b361348f357fa6a492a87dd67fdb2ebdc",
+          "size": 479927
         },
         {
           "path": "composer-followup.mjs",
@@ -790,8 +790,8 @@
         },
         {
           "path": "schedule.mjs",
-          "sha256": "a64a4ee662ca04cc7c17b1e61445eaee267207b22ff97e1a579709800e9880f9",
-          "size": 28444
+          "sha256": "b997b0fc44449fd03b7d04dfefbf441fe64f047435bd5e2a0db8912d998470dd",
+          "size": 28547
         },
         {
           "path": "schedule-model.mjs",

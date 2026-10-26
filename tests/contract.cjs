@@ -137,9 +137,12 @@ for (const m of ['add', 'delete', 'clear']) { const f = document.fonts[m].bind(d
 window.__pageSheetsKept = () => { const now = sheets.get.call(document); return now.length === pageSheets.length && now.every((s, i) => s === pageSheets[i]); };
 const holder = document.getElementById('skin'), shadow = holder.attachShadow({ mode: 'open' });
 // The public root contract includes the host base sheet and a page-filling box.
+window.__mountPhase='base-css';
 const baseLink = document.createElement('link'); baseLink.rel = 'stylesheet'; baseLink.href = '/assets/skin-base.css'; shadow.append(baseLink);
 await new Promise(r => { baseLink.onload = r; baseLink.onerror = r; });
+window.__mountPhase='skin-css';
 if (manifest.style) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = base + manifest.style; shadow.append(l); await new Promise((r) => { l.onload = r; l.onerror = r; }); }
+window.__mountPhase='entry-import';
 const module = await import(base + manifest.entry);
 new MutationObserver((list) => { for (const m of list) report.outside.push(m.type + ' ' + m.target.nodeName + (m.attributeName ? '@' + m.attributeName : '')); })
   .observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
@@ -156,6 +159,7 @@ window.__unmount = async () => {
   return left;
 };
 window.__open = (conv) => openHandler && openHandler(conv, 'conversation');
+window.__mountPhase='mount';
 await window.__mount();
 window.__ready = true;
 `;
@@ -357,7 +361,7 @@ const journeys = {
       directHits.length = 0; undeclared.length = 0;
       await page.goto(origin + '/?pkg=' + encodeURIComponent(p.base));
       await page.waitForFunction(() => window.__ready === true, null, { timeout: 20000 })
-        .catch((e) => { throw new Error(p.manifest.id + ': the harness did not mount it: ' + errors.join('; ') + ' (' + e.message + ')'); });
+        .catch(async (e) => { const phase=await page.evaluate(()=>window.__mountPhase||'harness-not-started');throw new Error(p.manifest.id + ': the harness did not mount it at '+phase+': ' + errors.join('; ') + ' (' + e.message + ')'); });
       const journey = journeys[p.manifest.id] || journeys.classic;
       const runJourney = journey && (async (pg) => {
         try { await journey(pg); } catch (e) {

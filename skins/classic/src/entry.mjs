@@ -397,7 +397,7 @@ async function loadOverview() {
   const gen = state.gen;
   const o = await api("/api/overview");
   if (gen !== state.gen) return o; // answered for a workspace no longer shown: nothing of it is drawn
-  state.overview = o;updateOutboxBadge();
+  state.overview = o;paintReminderChanges();
   for (const id of ["profile-btn", "new-btn", "conversation-details"]) $(id).disabled = false;
   if (!state.version) state.version = o.version;
   else if (o.version && o.version !== state.version) updated(o.version);
@@ -701,7 +701,6 @@ function releaseOpened() {
 // sees it. A reply to that message ends it; so do Done and Cancel.
 
 const canRemind = () => !!(state.overview && state.overview.remind);
-const reminderOf = (id) => ((state.overview && state.overview.reminders) || []).find((r) => r.message === id);
 
 function dueText(iso) {
   const d = new Date(iso), now = new Date();
@@ -714,26 +713,85 @@ function dueText(iso) {
 // localInput is d as a datetime-local input's value (this computer's time).
 const localInput = (d) => new Date(+d - d.getTimezoneOffset() * 60e3).toISOString().slice(0, 16);
 
-// reminderLine is a stored message's reminder: set one, or the one it
-// has, with its time, and change, done and cancel.
-function reminderLine(m) {
-  if (!canRemind() || m.event) return null;
-  const r = reminderOf(m.id);
-  if (!r) return el("button", { type: "button", class: "text-btn", onclick: () => remindDialog(m) }, "Remind me…");
-  const act = (path) => () => remindAct(path, m.id).catch((e) => announce(e.message));
-  return el("span", { class: "reminder" + (r.overdue ? " overdue" : "") },
-    (r.overdue ? "Reminder due since " : "Reminder ") + dueText(r.due) + " · ",
-    el("button", { type: "button", class: "text-btn", onclick: () => remindDialog(m, r) }, "Change…"), " · ",
-    el("button", { type: "button", class: "text-btn", onclick: act("/api/remind/done") }, "Done"), " · ",
-    el("button", { type: "button", class: "text-btn", onclick: act("/api/remind/cancel") }, "Cancel"));
+// Local presentation is separate from the synchronized reminder generation.
+// Flights stay scoped to their exact host; a newer generation wins projection.
+const reminderIntents = new WeakMap();
+const reminderFlights = () => { let rows=reminderIntents.get(currentHost);if(!rows){rows=new Map();reminderIntents.set(currentHost,rows);}return rows; };
+const sameReminder = (a,b) => !a&&!b || !!a&&!!b&&a.revision===b.revision&&a.writer===b.writer&&a.due===b.due;
+const canonicalReminder = id => (state.overview?.reminders||[]).find(r=>r.message===id);
+function projectedReminders() {
+ const rows=new Map((state.overview?.reminders||[]).map(r=>[r.message,r]));
+ for(const [id,flight]of reminderFlights())if((flight.phase!=='failed'||flight.committed)&&sameReminder(rows.get(id),flight.base)){
+  if(flight.due===undefined)rows.delete(id);
+  else rows.set(id,{...flight.base,message:id,conv:flight.conv,title:flight.title,due:new Date(flight.due*1000).toISOString(),overdue:false});
+ }
+ return [...rows.values()];
 }
-
-async function remindAct(path, id, due) {
-  const r = await api(path, due === undefined ? { id } : { id, due });
-  if (r.note) announce(r.note);
-  await loadOverview();
-  if (state.dm) await loadDM();
-  else if (state.thread) await loadThread();
+function reminderOf(id) {
+ const current=canonicalReminder(id),flight=reminderFlights().get(id);
+ if(!flight||flight.phase==='failed'&&!flight.committed||!sameReminder(current,flight.base))return current;
+ return flight.due===undefined?undefined:{...flight.base,message:id,conv:flight.conv,title:flight.title,due:new Date(flight.due*1000).toISOString(),overdue:false};
+}
+function paintReminderChanges() {
+ if(!alive)return;
+ for(const node of root.querySelectorAll('[data-reminder-message]'))node.replaceWith(reminderLine(node.reminderMessage));
+ updateOutboxBadge();scheduleUI?.update();
+}
+function reminderStatus(id) {
+ const flight=reminderFlights().get(id);if(!flight)return null;
+ const box=el('span',{class:'hint',role:'status'},flight.phase==='failed'?flight.error:flight.phase==='confirming'?'Reminder saved; confirming current state…':flight.due!==undefined?'Saving reminder…':flight.path.endsWith('/done')?'Completing reminder…':'Canceling reminder…');
+ if(flight.phase==='failed'){
+  const same=sameReminder(canonicalReminder(id),flight.base);
+  if(flight.committed||same)box.append(el('button',{type:'button',class:'text-btn',onclick:()=>void retryReminder(id).catch(e=>announce(e.message))},flight.committed?'Check current state':'Retry'));
+  else box.append(el('span',{},' A newer reminder is shown.'));
+  box.append(el('button',{type:'button',class:'text-btn',onclick:()=>{reminderFlights().delete(id);paintReminderChanges();}},'Dismiss error'));
+ }
+ return box;
+}
+function reminderLine(m) {
+ if(!canRemind()||m.event)return null;
+ const r=reminderOf(m.id),flight=reminderFlights().get(m.id),box=el('span',{'data-reminder-message':m.id});box.reminderMessage=m;
+ if(!r)box.append(el('button',{type:'button',class:'text-btn',disabled:!!flight,onclick:()=>remindDialog(m)},'Remind me…'));
+ else {
+  const act=path=>()=>void remindAct(path,m.id).catch(e=>announce(e.message));
+  box.append(el('span',{class:'reminder'+(r.overdue?' overdue':'')},(r.overdue?'Reminder due since ':'Reminder ')+dueText(r.due)+' · ',
+   el('button',{type:'button',class:'text-btn',disabled:!!flight,onclick:()=>remindDialog(m,r)},'Change…'),' · ',
+   el('button',{type:'button',class:'text-btn',disabled:!!flight,onclick:act('/api/remind/done')},'Done'),' · ',
+   el('button',{type:'button',class:'text-btn',disabled:!!flight,onclick:act('/api/remind/cancel')},'Cancel')));
+ }
+ const status=reminderStatus(m.id);if(status)box.append(status);return box;
+}
+function remindAct(path,id,due,message) {
+ const flights=reminderFlights(),existing=flights.get(id);if(existing)return existing.promise;
+ const base=canonicalReminder(id),host=currentHost,gen=state.gen;
+ const flight={path,id,due,base,host,gen,conv:base?.conv||state.dm||undefined,title:base?.title||firstLine(message?.body||'',90),phase:'pending',committed:false};
+ flights.set(id,flight);paintReminderChanges();
+ flight.promise=runReminder(flight,flights);return flight.promise;
+}
+function retryReminder(id) {
+ const flights=reminderFlights(),flight=flights.get(id);if(!flight||flight.phase!=='failed')return flight?.promise;
+ if(!flight.committed&&!sameReminder(canonicalReminder(id),flight.base))return Promise.resolve();
+ flight.phase=flight.committed?'confirming':'pending';paintReminderChanges();flight.promise=runReminder(flight,flights);return flight.promise;
+}
+async function runReminder(flight,flights) {
+ const current=()=>alive&&currentHost===flight.host&&state.gen===flight.gen;
+ try {
+  if(!flight.committed){
+   const expected=flight.base?Number.isSafeInteger(flight.base.revision)?{revision:flight.base.revision,...(flight.base.writer?{writer:flight.base.writer}:{})}:undefined:{revision:0};
+   await api(flight.path,{id:flight.id,...(flight.due===undefined?{}:{due:flight.due}),...(expected?{expected}:{})},flight.host);
+   flight.committed=true;flight.phase='confirming';if(current())paintReminderChanges();
+  }
+  if(!current())return;
+  await loadOverview();if(!current())return;
+  if(sameReminder(canonicalReminder(flight.id),flight.base))throw Error('The saved reminder is not visible yet.');
+  flights.delete(flight.id);paintReminderChanges();
+ }catch(e){
+  flight.phase='failed';flight.error=flight.committed?'Reminder saved, but current state could not be read. Check current state.':e.message||'Reminder could not be saved.';
+  // A late failure belongs to the workspace that started this intent.
+  if(!current())return;
+  paintReminderChanges();
+  throw e;
+ }finally{if(!current())flights.delete(flight.id);}
 }
 
 // remindDialog sets or moves a reminder: a few times, or one chosen.
@@ -758,7 +816,8 @@ function remindDialog(m, r) {
       if (!pick) throw new Error("Choose when.");
       const due = pick === custom ? new Date(at.value) : presets[Number(pick.input.value)][1];
       if (isNaN(+due) || +due <= Date.now()) throw new Error("Choose a time in the future.");
-      await remindAct("/api/remind", m.id, Math.floor(+due / 1000));
+      $("dialog").close();
+      void remindAct("/api/remind", m.id, Math.floor(+due / 1000), m).catch(e=>announce(e.message));
     },
   });
 }
@@ -802,7 +861,7 @@ async function resumeOutboxDraft(key,draft) {
  restoreDraft(key,view);state.draftKey=key;syncComposer();$('body').focus();
 }
 function outboxReminders() {
- return [...(canRemind()?state.overview?.reminders||[]:[])].sort((a,b)=>(Number(b.overdue)-Number(a.overdue))||a.due.localeCompare(b.due)).map(r=>({id:r.message,title:r.title||'A message',chat:r.conv?outboxChatText(r.conv):whoText(r.from),when:dueText(r.due),detail:'From '+whoText(r.from),overdue:r.overdue,open:()=>openReminder(r),change:()=>remindDialog({id:r.message,body:r.title||''},r),done:()=>remindAct('/api/remind/done',r.message),cancel:()=>remindAct('/api/remind/cancel',r.message)}));
+ return [...(canRemind()?projectedReminders():[])].sort((a,b)=>(Number(b.overdue)-Number(a.overdue))||a.due.localeCompare(b.due)).map(r=>({id:r.message,title:r.title||'A message',chat:r.conv?outboxChatText(r.conv):whoText(r.from),when:dueText(r.due),detail:'From '+whoText(r.from),overdue:r.overdue,open:()=>openReminder(r),change:()=>remindDialog({id:r.message,body:r.title||''},r),done:()=>remindAct('/api/remind/done',r.message),cancel:()=>remindAct('/api/remind/cancel',r.message)}));
 }
 function outboxChanged(open) {
  const nav=$('nav-outbox');if(nav){nav.classList.toggle('selected',open);nav.setAttribute('aria-current',open?'page':'false');}
@@ -813,11 +872,11 @@ function outboxChanged(open) {
  if(!open&&state.dm)void markDMRead();
 }
 function outboxOptions() {
- return {outboxRoot:root,onOutboxChange:outboxChanged,chatText:outboxChatText,getDrafts:outboxDrafts,resumeDraft:resumeOutboxDraft,getReminders:outboxReminders,openOriginalSave:async conv=>{const host=currentHost,gen=state.gen;await openDM(conv);if(!alive||host!==currentHost||gen!==state.gen||state.dm!==conv)return;if(typeof syncScheduleControls==='function')syncScheduleControls();await scheduleUI?.openCreate();}};
+ return {outboxRoot:root,onOutboxChange:outboxChanged,chatText:outboxChatText,getDrafts:outboxDrafts,resumeDraft:resumeOutboxDraft,getReminders:outboxReminders,getReminderStatus:()=>[...reminderFlights().keys()].map(reminderStatus),openOriginalSave:async conv=>{const host=currentHost,gen=state.gen;await openDM(conv);if(!alive||host!==currentHost||gen!==state.gen||state.dm!==conv)return;if(typeof syncScheduleControls==='function')syncScheduleControls();await scheduleUI?.openCreate();}};
 }
 function updateOutboxBadge() {
  const button=$('nav-outbox'),badge=$('outbox-due');if(!button||!badge)return;
- const count=(state.overview?.reminders||[]).filter(r=>r.overdue).length;badge.hidden=!count;badge.textContent=String(count);button.setAttribute('aria-label','Outbox'+(count?', '+count+' reminders due':''));
+ const count=projectedReminders().filter(r=>r.overdue).length;badge.hidden=!count;badge.textContent=String(count);button.setAttribute('aria-label','Outbox'+(count?', '+count+' reminders due':''));
 }
 function setupOutboxNav() {
  if($('nav-outbox'))return;
@@ -5540,7 +5599,7 @@ function hasUnsentDrafts() {
 // can be lost and no send or confirmation is on its way.
 function updated(v) {
   state.newVersion = v;
-  if (state.sending || state.dialogBusy) return; // retried when they finish
+  if (state.sending || state.dialogBusy || reminderFlights().size) return; // retained local intent must survive
   if (hasUnsentDrafts()) {
     $("updating").hidden = false;
     $("updating-text").textContent = "AgentNet was updated to " + v + ". Your unsent drafts stay in this window. Send or clear drafts in every workspace before reloading.";

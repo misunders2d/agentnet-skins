@@ -18,10 +18,11 @@ async function tap(loc,label){
   try{
    const position=await loc.evaluate(n=>({x:n.clientWidth/2,y:n.clientHeight/2}));
    await loc.tap({trial:true,position}); // Request the measured centre, including when the control is partly clipped.
-   const box=await loc.evaluate(n=>{const root=n.getRootNode();if(!root.elementFromPoint)throw Error('detached by a redraw');const r=n.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,top=root.elementFromPoint(x,y);return {w:Math.round(r.width),h:Math.round(r.height),cw:n.clientWidth,ch:n.clientHeight,hit:!!top&&(top===n||n.contains(top))};});
+   const box=await loc.evaluate(n=>{const root=n.getRootNode();if(!root.elementFromPoint)throw Error('detached by a redraw');const r=n.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,top=root.elementFromPoint(x,y);return {w:Math.round(r.width),h:Math.round(r.height),cw:n.clientWidth,ch:n.clientHeight,hit:!!top&&(top===n||n.contains(top)),rect:r.toJSON(),top:top?.outerHTML.slice(0,500)};});
    if(box.cw!==position.x*2||box.ch!==position.y*2)throw Error('detached by a redraw');
    result.taps.push(label+' '+box.w+'x'+box.h);
    check(box.w>=44&&box.h>=44,label+' is '+box.w+'x'+box.h+', under 44px');check(box.hit,label+' is covered where it is tapped');
+   if(!box.hit){(result.hitFailures||=[]).push({label,box,position});await page.screenshot({path:path.join(evidence,'screenshots',m.id+'-touch-hit-'+result.hitFailures.length+'.png')});}
    await loc.tap({position});return;
   }catch(e){if(attempt<3&&/not attached|detached/i.test(e.message)){await page.waitForTimeout(300);continue;}throw e;}
  }

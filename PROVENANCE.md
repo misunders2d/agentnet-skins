@@ -1,6 +1,14 @@
 # Source provenance
 
-## v0.9.7 updater hotfix compatibility
+## v0.9.7 responsiveness candidate
+
+Current core pin: `54abbf4c7a6a76d20ea5a2b8ea70dcb85f4e513b`. Office/Pulp inherit the core local mutation, reminder generation and history-rendering fixes. Classic/Holonet/Zoom now project reminder creation, movement, completion and cancellation immediately, with duplicate guards, generation-conditioned writes, retained failure/retry and read-only post-write confirmation. Rendered delayed/failed/newer-generation tests pass all three skins at 390/1440 widths with 100/1,000 reminder records. Functional compatibility still does not qualify the complete responsiveness gate. The local package generator rebuilds overlays; existing preview images are retained, with visual refresh/review still required before gallery publication. The prior exact-pin run passed 306 Node checks and all runtime groups except one Zoom touch center-hit observation. That failure is retained; the new integrated candidate requires a fresh complete run. No release or deployment is claimed.
+
+The preceding d70235ad full run passed 307 static/Node checks, then failed Zoom's device-conversation center hit (covered by the bottom Activity rail) and the disposable qa-orbit mount timeout. Other runtime summary entries passed; inapplicable entries remain explicit. Those failures are retained. Zoom now uses native immediate disclosure, as Classic/Holonet already do; paused-animation controls pass at 390/1440 for all three. Reminder creation and stale-workspace error suppression now have executed coverage. Mount-phase diagnostics were added without changing the timeout. A new full exact-pin run remains required; no publication/deployment is claimed.
+
+The full `54abbf4c` run passed 308 Node/static checks with no skips and 36 applicable runtime groups. Zoom's actual browser-provider journey failed because it waited for an empty list to have a visible box. Its failure screenshot instead shows the correct “No messages yet” DM and enabled Write action. The fixture now requires that visible enabled action and the attached timeline; the complete affected enrollment/send/file/open/reload journey passes separately. All 37 applicable runtime groups therefore have passing evidence, with the original failed run preserved and five inapplicable entries excluded. The previously failing Zoom touch and qa-orbit mount groups passed this run. Final core pin, full responsiveness coverage and refreshed/reviewed gallery previews remain required before publication.
+
+## Earlier v0.9.7 updater-only baseline compatibility
 
 This collection pins AgentNet `3f9797f641a9707f3f945d35d6de6d5d810165de`.
 Every manifest names v0.9.7. Classic, Holonet, Pulp and Zoom are 1.9.7;

@@ -10,7 +10,7 @@ const zone=()=>Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
 const freezeAudience=a=>Object.freeze({...a,persons:Object.freeze([...(a.persons||[])]),pids:Object.freeze([...(a.pids||[])])});
 const defaultAudience=a=>[...(a.persons||[]).map(id=>'Verified participant ('+id.slice(0,8)+')'),...(a.pids||[]).map(id=>'Invited participant ('+id.slice(0,8)+')')].join(', ')||'No recipients';
 
-export function mountSchedule({root,host,owner,context,capture,getDraft,setDraft,audienceText=defaultAudience,topicText=()=> 'Named topic',subscribe,isCurrent=()=>true,onBlockingChange,outboxRoot,onOutboxChange,chatText=()=> 'Chat',getDrafts=()=>[],resumeDraft,getReminders=()=>[],openOriginalSave}) {
+export function mountSchedule({root,host,owner,context,capture,getDraft,setDraft,audienceText=defaultAudience,topicText=()=> 'Named topic',subscribe,isCurrent=()=>true,onBlockingChange,outboxRoot,onOutboxChange,chatText=()=> 'Chat',getDrafts=()=>[],resumeDraft,getReminders=()=>[],getReminderStatus=()=>[],openOriginalSave}) {
   if(typeof owner!=='string'||!owner)throw Error('Supply the creating skin draft namespace.');
   const doc=root.ownerDocument,win=doc.defaultView,handle=host.workspace.handle;
   const node=(tag,text='',props={})=>{const n=doc.createElement(tag);n.textContent=text;Object.assign(n,props);return n;};
@@ -232,6 +232,7 @@ export function mountSchedule({root,host,owner,context,capture,getDraft,setDraft
   function paintReminders(){
     const reminders=getReminders();
     content.append(para('Personal reminders only. Nothing is sent.'));
+    for(const status of getReminderStatus())if(status)content.append(status);
     if(!reminders.length)content.append(para('No pending reminders on this device.'));
     for(const reminder of reminders){
       const article=node('article','',{className:'an-outbox-row'}),open=button('',()=>{selectedReminder=reminder.id;paint();},busy);

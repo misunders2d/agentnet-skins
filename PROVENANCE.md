@@ -1,5 +1,39 @@
 # Source provenance
 
+## v0.9.7 updater hotfix compatibility
+
+This collection pins AgentNet `3f9797f641a9707f3f945d35d6de6d5d810165de`.
+Every manifest names v0.9.7. Classic, Holonet, Pulp and Zoom are 1.9.7;
+Office is 1.7.7. The core hotfix reads its existing lightweight app endpoint
+when checking the running version, so loading chat history does not block
+an update check. UI, protocol, mobile and skin contracts are unchanged.
+The standalone skin sources and overlay slots are unchanged; Office and Pulp
+are rebuilt normally from the exact pin. Existing preview captures and their
+recorded provenance are retained.
+
+The complete final-pin, browser-enabled `npm test` passes locally on Linux
+with Node 26.12.1, Go 1.26.8 and Chromium 155.0.8059.84: 306 Node checks passed,
+zero failed and zero skipped. All applicable runtime suites pass for the five
+skins and both disposable scaffolds: 37 passing summary entries and five
+explicitly inapplicable entries. Coverage includes the pinned contract checks,
+Comic journeys, actual gallery parsing and digest installation, standalone
+runtime/lifecycle and production-loader journeys, actual browser Engine and
+IndexedDB enrollment/sends/files/reload, touch and applicable motion. Classic
+and Zoom motion and standalone-world journeys for Comic overlays remain
+inapplicable, not passes. The disposable company was removed.
+
+The normal generator produces five packages, 129 package files and 20 previews.
+The pinned gallery parser lists, verifies previews and installs all five exact
+digests. Compared with the v0.9.6 gallery, only the five package manifests and
+three generated standalone manifest modules change their version metadata;
+all executable assets, styles and previews are byte-identical. Retained
+major-view visual evidence and capture provenance therefore remain applicable.
+No private test logs or screenshots are committed. Physical devices, native
+keyboards, live Google consent, real models and public deployment remain
+separate evidence. Gallery publication remains the owner's action; v0.9.6
+tags and published releases are unchanged.
+
+
 ## v0.9.6 topic continuation compatibility
 
 This collection pins AgentNet `f887e2613ab05a0090a7beda6dde123dee5bd6cd`. Every manifest names

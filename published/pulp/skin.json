@@ -2,7 +2,7 @@
   "api": 1,
   "id": "pulp",
   "name": "Pulp",
-  "agentnet": "v0.9.6",
+  "agentnet": "v0.9.7",
   "entry": "entry.mjs",
   "style": "style.css",
   "document": "document.css",

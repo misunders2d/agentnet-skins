@@ -1,5 +1,42 @@
 # Source provenance
 
+## v0.9.6 topic continuation compatibility
+
+This collection pins AgentNet `f887e2613ab05a0090a7beda6dde123dee5bd6cd`. Every manifest names
+v0.9.6. Classic, Holonet, Pulp and Zoom are 1.9.6; Office is 1.7.6.
+Office and Pulp are rebuilt from this exact Comic source. Their whole-topic
+continuation controls retain the candidate's audience review, bounded quotation
+pages, pause/resume/cancel state and private completed-location link. Comic,
+Office and Pulp offer these controls; Classic, Holonet and Zoom keep their
+existing standalone controls on the additive Host API v1 contract.
+
+The complete final-pin, browser-enabled `npm test` passes locally on Linux
+with Node 26.12.1, Go 1.26.8 and Chromium 155.0.8059.84: 306 Node checks passed,
+zero failed and zero skipped. All applicable runtime suites pass for the five
+skins and both disposable scaffolds: 37 passing summary entries and five
+explicitly inapplicable entries. These cover the pinned core contract checks,
+Comic journeys for overlays, gallery parsing/digest installation, standalone
+runtime/lifecycle, production-loader journeys, actual browser Engine/IndexedDB
+enrollment and sends/files/reload, touch and applicable motion checks.
+Classic/Zoom motion and standalone-world journeys for Comic overlays are
+inapplicable; they are not counted as passes. The disposable company was removed.
+
+The normal generator produces five gallery packages, 129 package files and
+20 previews. The candidate's gallery parser verifies and installs all five.
+The published catalog is byte-identical to the earlier qualified preparation
+on core `f3cc7bc94acf915d77c3621e16d9232049bd0ca5`; major-view visual evidence
+from those identical package bytes is retained. Existing gallery previews keep
+their recorded capture revision below. No new test evidence or screenshots are
+published with this change. Physical devices, native keyboards, live Google
+consent, real models and public deployment remain separate evidence.
+
+An earlier preparation completed its 306 Node checks, then stopped before
+runtime because inherited GOROOT selected Go 1.27.3 sources with the Go 1.26.8
+executable. The mismatch was removed from the test environment. Its resumed
+runtime passed, and the entire final-pin pipeline above subsequently passed
+with that corrected environment. The failed attempt remains in private logs.
+Gallery publication is pending the owner's release.
+
 ## v0.9.5 historical-device hook correction
 
 [Gallery v2026.10.23.3](https://github.com/misunders2d/agentnet-skins/releases/tag/v2026.10.23.3)

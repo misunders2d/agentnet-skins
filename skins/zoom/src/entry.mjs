@@ -6261,7 +6261,7 @@ function watchChatHead(content) {
 
 
 const Zoom = {
-  team: null,
+  team: null, opening: null,
   generation: 0, navigating: null, dirty: false, finish: null, revealEnd: false, level: 0, peer: null, person: null, dm: null, msg: null, origins: [], query: "",
 
   // Two kinds of path: a person (by their record) and their DMs, or a
@@ -6293,7 +6293,7 @@ const Zoom = {
     // Keep its destination, then resume only from the winning bound view.
     if(entry){
       if(!currentDM&&!groupContextWaiting()&&visit.loading>0)return;
-      if(currentDM)this.person=personKey(state.dmData.peer);
+      if(currentDM){this.person=personKey(state.dmData.peer);this.opening=null;}
     }
     if (this.navigating !== null) { this.dirty = true; return; }
     const localMotion = $("zoom").getAnimations({subtree: true}).filter(a => a.playState === "running" && !(a instanceof CSSAnimation));
@@ -6304,10 +6304,10 @@ const Zoom = {
       }
       return;
     }
-    if (this.person || groupContextWaiting()) {
+    if (!this.opening && (this.person || groupContextWaiting())) {
       if (this.level >= 2 && (!state.dmData || state.dm !== this.dm) && !groupContextWaiting()) this.level = 1;
       if (this.level === 3 && !state.dmData?.messages.some((m) => m.id === this.msg)) this.level = 2;
-    } else {
+    } else if (!this.opening) {
       if (this.level >= 2 && (!state.data || state.data.peer !== this.peer)) this.level = this.peer ? 1 : 0;
       if (this.level === 3 && !state.data.messages.some((m) => m.id === this.msg)) this.level = 2;
     }
@@ -6351,6 +6351,11 @@ const Zoom = {
   },
 
   content(views) {
+    const opening=this.opening;
+    if(opening&&opening.generation===this.generation&&opening.host===currentHost)return el('section',{class:'zoom-scene','aria-label':'Opening conversation'},
+      el('h2',{},opening.title),el('p',{class:'hint',role:opening.error?'alert':'status'},opening.error||'Loading this conversation…'),
+      opening.error&&el('button',{type:'button',class:'btn',onclick:()=>this.go(2,opening.patch)},'Try again'),
+      el('button',{type:'button',class:'text-btn',onclick:()=>this.go(0,{})},'Back to everyone'));
     if(this.team && this.level===1){const t=state.teams?.teams?.find(t=>t.id===this.team);return el('section',{class:'zoom-person'},el('h2',{},t?.name||'List'),...(t?teamHub(t):[el('p',{class:'hint'},'This list is no longer available.')]));}
     return this.query.trim() ? this.results() : views[this.level]();
   },
@@ -6359,7 +6364,7 @@ const Zoom = {
     placeDrivePanel(false);
     const views = (this.person || groupContextWaiting()) ? [() => this.everyone(), () => this.personLevel(), () => this.dmLevel(), () => this.dmMessage()]
       : [() => this.everyone(), () => this.person_(), () => this.thread(), () => this.message()];
-    topicUI.show(this.level>=2);
+    topicUI.show(this.level>=2&&!this.opening);
     prepareMediaRender(state.dm?state.dmData:state.data,state.dm?"dm":"thread");
     const content = el("div", { class: "zoom-content" }, this.content(views));
     watchChatHead(content);
@@ -6390,16 +6395,28 @@ const Zoom = {
     retireVisibleRead();retireViewMedia();retireSchedule();
     const generation = ++this.generation, host = currentHost;
     this.navigating = generation;
+    this.opening = null;
     toggleReview(false);
     const inward = level > this.level || (level === this.level && !!from);
     if (inward && from) this.origins[this.level] = from.getBoundingClientRect();
     const origin = from ? from.getBoundingClientRect() : inward ? null : this.origins[level];
     const { thread, dm, ...rest } = patch;
     Object.assign(this, {team:null}, rest, { level });
+    const showOpening = (title) => {
+      this.opening={generation,host,patch:{...patch},title};
+      const surface=$('zoom');fill(surface,this.layer());focusZoomLayer(surface);
+    };
     if (thread) {
       const changed = beginThread(thread,readEntry); // the same switch as the other views: drafts stay put
       this.person = null;
+      if(!localView)showOpening((state.overview?.threads||[]).find(t=>t.id===thread)?.title||'Conversation');
       await loadThread(true,localView,freshEntryView);
+      if(!alive||generation!==this.generation||host!==currentHost||state.thread!==thread||state.dm)return;
+      if(!state.data){
+        this.navigating=null;
+        if(this.opening){this.opening.error='Could not load this conversation. Try again.';this.refresh();}
+        return;
+      }
       this.peer = state.data?.peer || this.peer;
       this.contactKey = state.data ? directChatKey(state.data) : this.contactKey;
       if (changed&&!localView) refreshThread();
@@ -6409,19 +6426,21 @@ const Zoom = {
       this.dm = dm;
       this.peer = null;
       const visit=state.readVisit;
+      if(!localView){const summary=(state.overview?.dms||[]).find(d=>d.id===dm);showOpening(summary?.title||summary?.peer?.label||'Conversation');}
       await loadDM(true,localView,freshEntryView);
       if(!alive||generation!==this.generation||host!==currentHost||state.readVisit!==visit||state.dm!==dm)return;
       if(visit&&visit.opening!==generation){this.navigating=null;return;}
       const ready=state.dmData?.id===dm&&dmLoadViews.get(state.dmData)?.host===host;
       if(!ready&&!groupContextWaiting()){
         this.navigating=null;
-        if(!visit?.loading){if(visit)visit.opening=null;this.refresh();}
+        if(!visit?.loading){if(visit)visit.opening=null;if(this.opening)this.opening.error='Could not load this conversation. Try again.';this.refresh();}
         return; // The current load will refresh this visit; a real failure was announced.
       }
       if (ready) this.person = personKey(state.dmData.peer); // a listed person is known by its id once checked
       if (changed&&!localView) api("/api/refresh", { id: dm }).catch(() => {});
     }
     if (!alive || generation !== this.generation || host !== currentHost) return;
+    this.opening = null;
     const root = $("zoom");
     for (const c of [...root.children].slice(0, -1)) c.remove(); // still leaving from a fast earlier zoom
     const old = root.lastElementChild, fresh = this.layer();

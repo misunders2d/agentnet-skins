@@ -3509,6 +3509,9 @@ function setDMAgent(a) {
 }
 
 function startSend(key, text, files, reply, answering, t, kind, retry, id, topic = "", topicRoot = "", addressedPID = state.dmAgent, group = "") {
+  // Reveal this local send in the current conversation, before its write.
+  // A retry for another conversation/topic must not move the current reader.
+  if (alive && state.draftKey === key && Zoom.level === 2 && (!state.dm || (topicSelections[state.dm] || "") === topic)) Zoom.revealEnd = true;
   sends.begin(key, { id, ...(state.dm ? { lid: id, origin: "ui", send_group: group, send_group_author: state.overview?.me?.fingerprint, pid: addressedPID || "" } : { author: {label: "You", about: ""}, to: t.peer }),
     topic, _topicRoot: topicRoot, dir: "out", from: state.overview?.me?.address || "", body: text, kind, at: new Date().toISOString(), reply_to: reply?.id || answering?.id || "", quote: reply?.id || "",
     attachments: files.map(f => ({name:f.name,size:f.size,openable:false})), files: files.map(f => ({name:f.name,size:f.size,openable:false})) }, retry);

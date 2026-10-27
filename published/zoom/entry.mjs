@@ -3984,7 +3984,7 @@ async function loadThread(scrollToEnd, localView, freshEntryView = false) {
 }
 
 // Zoom owns its own device-thread presentation.
-function renderBody() { /* Zoom renders after the bound load completes. */ }
+function renderBody() { Zoom.refresh(); }
 
 // Zoom owns one presentation; interface selection belongs to the host.
 function showZoom() { $('draft-state').hidden = true; $('zoom').hidden = false; Zoom.refresh(); }

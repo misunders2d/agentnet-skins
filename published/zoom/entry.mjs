@@ -939,7 +939,63 @@ function renderNotify(n) {
   }
 }
 
+// Like reminder intents, mute choices are local presentation over verified state.
+// Native notification permission and the canonical preference stay unchanged.
+const muteIntents = new WeakMap();
+const muteFlights = () => { let rows=muteIntents.get(currentHost);if(!rows){rows=new Map();muteIntents.set(currentHost,rows);}return rows; };
+const canonicalMute = conv => (state.overview?.notify?.mutes||[]).includes(conv);
+function shownMute(conv) {
+ const base=canonicalMute(conv),flight=muteFlights().get(conv);
+ return flight&&flight.phase!=='failed'&&base===flight.base?flight.muted:base;
+}
+function muteControl(conv) {
+ const muted=shownMute(conv),pending=muteFlights().has(conv);
+ return el('span',{'data-mute-conv':conv},el('button',{type:'button',class:'peer-chip'+(muted?'':' on'),disabled:pending,
+  onclick:()=>muteAct(conv,!muted),title:muted?'This chat is muted':'New activity in this chat notifies you when device alerts are on'},muted?'Unmute chat':'Mute chat'),muteStatus(conv));
+}
+function paintMuteChanges(conv) {
+ if(!alive)return;
+ for(const node of root.querySelectorAll('[data-mute-conv]'))if(node.dataset.muteConv===conv)fill(node,...muteControl(conv).childNodes);
+}
+function muteStatus(conv) {
+ const flight=muteFlights().get(conv);if(!flight)return null;
+ const failed=flight.phase==='failed',box=el('span',{class:'hint',role:failed?'alert':'status'},failed?flight.error:flight.committed?'Mute choice saved; checking current state…':'Saving mute choice…');
+ if(failed){
+  if(flight.committed||canonicalMute(conv)===flight.base)box.append(el('button',{type:'button',class:'text-btn',onclick:()=>retryMute(conv)},flight.committed?'Check current state':'Retry mute choice'));
+  else box.append(el('span',{},' A newer mute choice is shown.'));
+  box.append(el('button',{type:'button',class:'text-btn',onclick:()=>{muteFlights().delete(conv);paintMuteChanges(conv)}},'Dismiss mute error'));
+ }
+ return box;
+}
+function muteAct(conv,muted) {
+ const flights=muteFlights(),existing=flights.get(conv);if(existing)return existing.promise;
+ const flight={conv,muted,base:canonicalMute(conv),host:currentHost,gen:state.gen,phase:'pending',committed:false};
+ flights.set(conv,flight);paintMuteChanges(conv);
+ flight.promise=Promise.resolve().then(()=>runMute(flight,flights));return flight.promise;
+}
+function retryMute(conv) {
+ const flights=muteFlights(),flight=flights.get(conv);if(!flight||flight.phase!=='failed')return flight?.promise;
+ if(!flight.committed&&canonicalMute(conv)!==flight.base)return;
+ flight.phase=flight.committed?'confirming':'pending';paintMuteChanges(conv);
+ flight.promise=Promise.resolve().then(()=>runMute(flight,flights));return flight.promise;
+}
+async function runMute(flight,flights) {
+ const current=()=>alive&&currentHost===flight.host&&state.gen===flight.gen&&flights.get(flight.conv)===flight;
+ try {
+  if(!flight.committed){await api('/api/notify/mute',{conv:flight.conv,muted:flight.muted},flight.host);flight.committed=true;flight.phase='confirming';if(current())paintMuteChanges(flight.conv);}
+  if(!current())return;
+  await loadOverview();if(!current())return;
+  if(canonicalMute(flight.conv)!==flight.muted)throw Error('The saved mute choice is not shown in current state.');
+  flights.delete(flight.conv);paintMuteChanges(flight.conv);
+ }catch(e){
+  if(!current())return;
+  flight.phase='failed';flight.error=flight.committed?'Mute choice saved, but current state could not be confirmed. Check current state.':e.message||'Mute choice could not be saved.';
+  paintMuteChanges(flight.conv);announce(flight.error);
+ }finally{if(!current()&&flights.get(flight.conv)===flight)flights.delete(flight.conv);}
+}
+
 async function notifyAct(path, body) {
+  if(path==='/api/notify/mute')return muteAct(body.conv,body.muted);
   try {
     const r = await api(path, body || {});
     if (r.note) announce(r.note);
@@ -1056,9 +1112,7 @@ function dmNotifyChips(t) {
   const resource = resourceMember(t) ? [el("button", { type: "button", class: "peer-chip", onclick: () => setTimeout(() => { if (state.dmData?.id === t.id) resourcesDialog(state.dmData); }, 0) }, "Shared links · " + t.resources.links.length)] : [];
   const n = state.overview && state.overview.notify;
   if (!n || !n.available || !t.id) return resource;
-  const muted = (n.mutes || []).includes(t.id);
-  return [...resource, el("button", { type: "button", class: "peer-chip" + (muted ? "" : " on"), onclick: () => notifyAct("/api/notify/mute", { conv: t.id, muted: !muted }),
-    title: muted ? "This chat is muted" : "New activity in this chat notifies you when device alerts are on" }, muted ? "Unmute chat" : "Mute chat")];
+  return [...resource, muteControl(t.id)];
 }
 
 // reportSeen tells the relay which messages of the open DM the person has
@@ -5425,6 +5479,7 @@ async function reconnect() {
 // in memory until the person sends or clears it, including other workspaces,
 // and every send until it is stored (its draft is cleared as it begins).
 function hasUnsentDrafts() {
+  if([...muteFlights().values()].some(f=>f.phase!=='failed'))return true;
   if ($("dialog").open && $("dialog-body").querySelector(".shared-resource-editor")) return true;
   if(state.scheduleBlocking)return true;
   const pending = (d) => d && (d.text || d.answering || d.reply || d.agent || d.agent_id || d.reply_receiver || d.reply_receiver_host || d.typedFor || (d.files && d.files.length));

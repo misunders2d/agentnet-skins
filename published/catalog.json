@@ -377,7 +377,7 @@
       "version": "1.7.7",
       "api": 1,
       "agentnet": "v0.9.7",
-      "digest": "7f5f7a7a969188275c8b96b6903ee3165183e6ed11a43597c45fb163871730e1",
+      "digest": "3dbb154fdef2d327e5c8f8bb408a46ac73bd2d49d66db0b941e182ad3abe2ea5",
       "files": [
         {
           "path": "skin.json",
@@ -386,8 +386,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "22cbc0d12e4334ab6db5668beb3c17cb14896c00ce1017a0034c053aaf9dd091",
-          "size": 1377105
+          "sha256": "8dfd272f59302300795ba880bccfd6f00fc96444efeeb2810e4ee1a2912a23e9",
+          "size": 1386886
         },
         {
           "path": "style.css",
@@ -494,7 +494,7 @@
       "version": "1.9.7",
       "api": 1,
       "agentnet": "v0.9.7",
-      "digest": "b83ba1831990490059d3bf3fead68327529e8f76ebac289ded9c7f841c17a547",
+      "digest": "5ed3d83b1c950579556177f8ed6ad837cfa94cfcf6564b142ec3260f715a5712",
       "files": [
         {
           "path": "skin.json",
@@ -503,8 +503,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "bc94e87ac571b9e332cb70b702dbfad53d3828ba9872773b8ef07cecbc5d64d4",
-          "size": 1380419
+          "sha256": "ec40448153b9cfc5eab493ac64c7f178a2355b8aec2743faa201822b7c460a7f",
+          "size": 1390200
         },
         {
           "path": "style.css",

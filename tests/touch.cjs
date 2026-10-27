@@ -53,6 +53,15 @@ async function backToChat(){const rungs=z().locator('.ladder .rung');await rungs
  browser=await chromium.launch({headless:true,executablePath:process.env.AGENTNET_CHROMIUM||undefined});
  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
  const shot=name=>page.screenshot({path:path.join(evidence,'screenshots',m.id+'-touch-'+name+'.png')});
+ await page.addInitScript(()=>{
+  const events=window.__touchEvents=[];let pressed;
+  for(const type of ['pointerdown','pointerup','pointercancel','click'])document.addEventListener(type,e=>{
+   const button=e.composedPath().find(n=>n?.tagName==='BUTTON');
+   if(type==='pointerdown')pressed=button;
+   events.push({type,at:Math.round(performance.now()),trusted:e.isTrusted,label:(button?.getAttribute('aria-label')||button?.textContent||'').slice(0,100),pressedConnected:pressed?.isConnected,samePressed:!!button&&button===pressed});
+   if(events.length>24)events.shift();
+  },true);
+ });
  await page.goto(urls.sergey.page);await page.goto(origin+'/?skin='+m.id);await page.getByRole('button',{name:'Use this skin',exact:true}).tap();await page.locator(rootClass).waitFor();
  // Settings and You, from the main list.
  if(family==='zoom')await z().locator('.person-card').first().waitFor();
@@ -181,4 +190,4 @@ async function backToChat(){const rungs=z().locator('.ladder .rung');await rungs
  result.checks.push('390 touch: '+result.taps.length+' taps, each 44px or more, uncovered and effective');
  assert.deepEqual(errors,[]);assert.deepEqual(result.failures,[],m.id+': failed touch checks');result.pass=true;
  fs.writeFileSync(path.join(evidence,m.id+'-touch.json'),JSON.stringify(result,null,2),{mode:0o600});console.log('PASS '+m.id+' touch: '+result.taps.length+' taps');
-})().catch(async e=>{if(page)await page.screenshot({path:path.join(evidence,'screenshots',m.id+'-touch-FAIL.png')}).catch(()=>{});fs.writeFileSync(path.join(evidence,m.id+'-touch.json'),JSON.stringify(result,null,2),{mode:0o600});console.error('FAIL touch:',e.stack,'failures:',result.failures,'taps:',result.taps,'page errors:',errors);process.exitCode=1;}).finally(async()=>{await browser?.close();});
+})().catch(async e=>{if(page)result.inputEvents=await page.evaluate(()=>window.__touchEvents).catch(()=>[]);if(page)await page.screenshot({path:path.join(evidence,'screenshots',m.id+'-touch-FAIL.png')}).catch(()=>{});fs.writeFileSync(path.join(evidence,m.id+'-touch.json'),JSON.stringify(result,null,2),{mode:0o600});console.error('FAIL touch:',e.stack,'failures:',result.failures,'taps:',result.taps,'page errors:',errors);process.exitCode=1;}).finally(async()=>{await browser?.close();});

@@ -16,6 +16,9 @@ const check=(ok,msg)=>{if(!ok)result.failures.push(msg);};
 async function tap(loc,label){
  for(let attempt=1;;attempt++){
   try{
+   // Let scrolling and layout settle before capturing an explicit center.
+   // Otherwise a resized bubble leaves the old point in its surrounding stack.
+   await loc.tap({trial:true});
    const position=await loc.evaluate(n=>({x:n.clientWidth/2,y:n.clientHeight/2}));
    await loc.tap({trial:true,position}); // Request the measured centre, including when the control is partly clipped.
    const box=await loc.evaluate(n=>{const root=n.getRootNode();if(!root.elementFromPoint)throw Error('detached by a redraw');const r=n.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,top=root.elementFromPoint(x,y);return {w:Math.round(r.width),h:Math.round(r.height),cw:n.clientWidth,ch:n.clientHeight,hit:!!top&&(top===n||n.contains(top)),rect:r.toJSON(),top:top?.outerHTML.slice(0,500)};});

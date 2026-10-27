@@ -6,6 +6,14 @@ Current core pin: `3374c1c812499100d3cc9b8dedfdda1bb40892b8`. All five packages 
 
 The previously isolated signed Zoom touch journey passes after the concrete pending-send, navigation and mute corrections: 28 real taps using owned identities and 200-message histories. Earlier failed full runs remain below; their successful replacement evidence is not a claim that every interaction is qualified.
 
+### Final touch-driver qualification
+
+The duplicate [CI run 40467335202](https://github.com/misunders2d/agentnet-skins/actions/runs/40467335202) failed one Zoom phone tap when the surrounding message stack intercepted its measured center. Its original cause remains unproven; unchanged production and driver both pass the isolated 200-message journey in local Chromium 155 and CI-matching Chromium 145 / Playwright 1.58.2. The original failure remains evidence, not a passing CI run.
+
+A separate deterministic regression reproduces a concrete driver defect: measuring the tap position before scrolling can leave the old center outside a resized button. The helper now lets native scroll/actionability settle before measuring, retaining the explicit center hit, 44px size, real tap and original deadline. The regression fails before this correction and passes afterward; a genuinely covered control still fails. Both focused geometry/mute tests pass without skips. All three actual 200-DM/200-device touch journeys pass again with the corrected helper in CI's browser: Classic 26 taps, Holonet 26, Zoom 28. Private evidence is `/tmp/agentnet-touch-geometry-fixed-ci.log`, `/tmp/agentnet-touch-all-fixed.log` and `/tmp/agentnet-zoom-touch-u0SooY`. The disposable company was removed.
+
+This QA-only correction changes no published package, preview or application source. Retain the complete exact-pin gate above for unchanged groups. The immutable gallery tag remains `0371b53cd6174f7cb2a3d27a67c2088a19f4d62e`; subsequent QA/documentation commits do not alter its bytes.
+
 ### Earlier candidate evidence
 
 Earlier core pin: `f73551540693945559b2ac145c72477f34547ee6`. Office and Pulp now inherit the connection, device-link/copy, device-removal and group-invitation responsiveness corrections. This pin predates the later people-list selection and group-administration work; it is not the final release candidate.

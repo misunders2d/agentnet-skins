@@ -244,6 +244,31 @@ function fill(parent, ...kids) {
   return parent;
 }
 
+// A background timeline refresh keeps its currently open reaction picker.
+// Rebuild callbacks from current messages; preserve only presentation in this
+// exact host/chat/topic, never a picker from a different view or workspace.
+function fillTimeline(timeline, key, ...kids) {
+  const host=currentHost,previous=timeline.pickerScope,opened=new Map();
+  const active=timeline.getRootNode().activeElement;
+  if(previous?.host===host&&previous.key===key){
+    for(const picker of timeline.querySelectorAll('.react-pick[open]')){
+      const message=picker.closest('.msg[id]');if(!message)continue;
+      opened.set(message.id,picker.contains(active)?{tag:active.tagName,label:active.getAttribute('aria-label'),text:active.textContent}:null);
+    }
+  }
+  fill(timeline,...kids);timeline.pickerScope={host,key};
+  for(const picker of timeline.querySelectorAll('.react-pick')){
+    const id=picker.closest('.msg[id]')?.id;if(!opened.has(id))continue;
+    picker.open=true;
+    const focus=opened.get(id);
+    if(focus){
+      const target=[picker,...picker.querySelectorAll('summary,button')].find(node=>node.tagName===focus.tag&&node.getAttribute('aria-label')===focus.label&&node.textContent===focus.text);
+      target?.focus({preventScroll:true});
+    }
+  }
+  return timeline;
+}
+
 // el builds an element; string children become text nodes.
 function el(tag, attrs, ...kids) {
   const e = document.createElement(tag);
@@ -2775,7 +2800,7 @@ function renderDMBody(scrollToEnd) {
   if(topicSelections[t.id]&&!(t.topics||[]).some(x=>x.id===topicSelections[t.id])&&!sends.merge("dm:"+t.id,t.messages).some(m=>m._local&&m.topic===topicSelections[t.id]))topicSelections[t.id]="";
   topicUI.update({conv:t.id},t.topics,topicSelections[t.id],flatTopicScope(t),topicMetadata(t));
   prepareMediaRender(base,"dm");
-  fill(tl, shown.length ? groupedSends(shown).map(({m, compact}, i, rows) => dmMsg(m, t, rows[i - 1]?.m, compact))
+  fillTimeline(tl, "dm:"+t.id+":"+(topicSelections[t.id]||""), shown.length ? groupedSends(shown).map(({m, compact}, i, rows) => dmMsg(m, t, rows[i - 1]?.m, compact))
     : el("li", { class: "hint empty-list" }, "No messages yet. What you write here goes to " + (humanGroup(t) ? "the current members of " + t.title : t.peer.label) + " only."));
   if (scrollToEnd || atEnd) tl.scrollTop = tl.scrollHeight;
   syncVisibleRead();
@@ -4238,7 +4263,7 @@ function renderBody(scrollToEnd) {
   const tl = $("timeline");
   const atEnd = tl.scrollHeight - tl.scrollTop - tl.clientHeight < 60;
   prepareMediaRender(state.data,"thread");
-  fill(tl, ...t.messages.map((m, i) => renderMsg(m, byId, t.messages[i - 1], t)));
+  fillTimeline(tl, "thread:"+state.thread, ...t.messages.map((m, i) => renderMsg(m, byId, t.messages[i - 1], t)));
   if (scrollToEnd || atEnd) tl.scrollTop = tl.scrollHeight;
   syncVisibleRead();
 }

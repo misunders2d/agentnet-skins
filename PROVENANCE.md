@@ -1,5 +1,32 @@
 # Source provenance
 
+## v0.9.9 qualified candidate — October 29, 2026
+
+Candidate gallery v2026.10.29.1 pins frozen application source
+`7f15d4578b0bf6dd71fc13c837297914da0a891d`, version v0.9.9.
+Classic/Holonet/Pulp/Zoom are 1.9.9; Office is 1.7.9. The normal generator
+produces all five packages, 129 files and twenty byte-unchanged previews.
+Office/Pulp inherit Comic's explicit unconfirmed-read warning and Android
+local Sending after durable journaling, before native admission. Standalone
+sources keep their previously qualified behavior; no new public contract.
+
+The complete exact-pin browser-enabled `npm test` passes: 321 Node/browser
+checks, zero failures or skips, and all 37 applicable runtime groups. The five
+real packages and both scaffold fixtures pass pinned contract/Comic journeys,
+actual gallery digest/preview installation, production loader/provider, touch
+and applicable motion checks. Five inapplicable groups remain explicit and are
+not executed passes. Node 26, pinned Go 1.26.8 and existing Chromium 155 are used;
+the explicit upstream archive has the exact commit stamp. The disposable company
+is removed; logs and test screenshots remain private under
+`/tmp/agentnet-skins-EPUO5K`.
+
+Subsequent application QA-only commits repair test launcher/timing and add
+startup diagnostics/exact contention retry; application product bytes remain
+frozen at the pin. This skin qualification is retained for that unchanged product.
+Original failed application checks and unknown incident causes stay in its
+release record. No physical-device, exhaustive control/platform/history,
+installed-client activation or public release is established by this gate.
+
 ## v0.9.8 published — October 28, 2026
 
 [Gallery v2026.10.28.1](https://github.com/misunders2d/agentnet-skins/releases/tag/v2026.10.28.1) is public and Latest from immutable `e0a3a92f8ef2dbebf0204a42525af5dc1d4f89bd`, published at 18:35:04 UTC. It pins [AgentNet v0.9.8](https://github.com/misunders2d/agentnet/releases/tag/v0.9.8), source `f23d04169b5ce6e855cdd053441fbd723c9f39be`. Classic/Holonet/Pulp/Zoom are 1.9.8; Office is 1.7.8. The twenty inspected October 27 previews are byte-unchanged and retain their capture provenance.

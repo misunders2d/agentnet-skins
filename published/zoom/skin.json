@@ -2,7 +2,7 @@
   "api": 1,
   "id": "zoom",
   "name": "Zoom",
-  "agentnet": "v0.9.8",
+  "agentnet": "v0.9.9",
   "entry": "entry.mjs",
   "style": "style.css",
   "files": [

@@ -8,7 +8,7 @@ const {chromium}=require(process.env.AGENTNET_PLAYWRIGHT||'playwright');
 const pkg=process.env.AGENTNET_SKIN_PACKAGE,m=JSON.parse(fs.readFileSync(path.join(pkg,'skin.json'))),world=process.env.AGENTNET_SKIN_WORLD,evidence=process.env.AGENTNET_SKINS_EVIDENCE;
 const family=process.env.AGENTNET_SKIN_FAMILY||m.id,rootClass='.'+family+'-root';
 const urls=JSON.parse(fs.readFileSync(path.join(world,'urls.json'))),origin=new URL(urls.sergey.page).origin;
-const result={skin:m.id,checks:[],taps:[],failures:[]};let browser,page;const errors=[];
+const result={skin:m.id,checks:[],taps:[],failures:[]};let browser,page,reloadTracking=false;const errors=[],reloadRequests=[],pendingReload=new Map();
 const check=(ok,msg)=>{if(!ok)result.failures.push(msg);};
 // tap: the control is visible, 44px or more both ways, on top at its centre, then touched.
 // A view may redraw under the finger (a pushed change); the same control is
@@ -55,6 +55,10 @@ async function backToChat(){const rungs=z().locator('.ladder .rung');await rungs
  if(history)console.log('Zoom fixture: histories settled before browser launch (200+200)');
  browser=await chromium.launch({headless:true,executablePath:process.env.AGENTNET_CHROMIUM||undefined});
  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
+ page.on('request',r=>{if(!reloadTracking)return;const pathname=new URL(r.url()).pathname;if(!pathname.startsWith('/api/'))return;const row={path:pathname,method:r.method(),started:Date.now()};reloadRequests.push(row);pendingReload.set(r,row);});
+ page.on('response',r=>{const row=pendingReload.get(r.request());if(row)row.status=r.status();});
+ const finishReload=(r,failed)=>{const row=pendingReload.get(r);if(row){row.durationMs=Date.now()-row.started;row.failed=failed;pendingReload.delete(r);}};
+ page.on('requestfinished',r=>finishReload(r,false));page.on('requestfailed',r=>finishReload(r,true));
  const shot=name=>page.screenshot({path:path.join(evidence,'screenshots',m.id+'-touch-'+name+'.png')});
  await page.addInitScript(()=>{
   const events=window.__touchEvents=[];let pressed;
@@ -156,7 +160,11 @@ async function backToChat(){const rungs=z().locator('.ladder .rung');await rungs
   await bubbleFor(devText).waitFor();const deviceNow=history.device(),storedDevice=deviceNow.filter(x=>x.body===devText);assert(storedDevice.length<=1,'Duplicate persisted device write');
   check(storedDevice.length===1,'It joined that same device conversation');
   if(storedDevice.length===1){
-   await page.reload();await page.locator(rootClass).waitFor();await z().locator('.mini-chat').waitFor();await settled();
+   reloadTracking=true;
+   try{await page.reload();await page.locator(rootClass).waitFor();await z().locator('.mini-chat').waitFor();await settled();}
+   catch(e){result.reloadDiagnostic={requests:reloadRequests.map(r=>({path:r.path,method:r.method,status:r.status??null,durationMs:r.durationMs??Date.now()-r.started,pending:r.durationMs===undefined,failed:r.failed??false})),view:await z().evaluate(n=>({loading:n.textContent.includes('Loading this conversation'),layers:n.querySelectorAll('.zoom-layer').length,miniChats:n.querySelectorAll('.mini-chat').length,currentRungs:[...n.querySelectorAll('.rung')].map((r,i)=>r.getAttribute('aria-current')==='step'?i:null).filter(i=>i!==null),activeTag:n.getRootNode().activeElement?.tagName||null})).catch(()=>null)};console.error('Reload diagnostic:',JSON.stringify(result.reloadDiagnostic));throw e;}
+   finally{reloadTracking=false;}
+
    await tap(z().locator('.ladder .rung').first(),'Reload: Everyone');await z().locator('.person-card').first().waitFor();await settled();
    await tap(anna().locator('details.person-devices > summary'),'Reload: Anna devices');await tap(anna().getByRole('button',{name:/device conversations?$/}),'Reload: Device conversations');await tap(z().locator('.thread-row').filter({hasText:'Device history 001'}),'Reload: Long device conversation');await z().locator('.mini-chat').waitFor();await settled();
    await bubbleFor('Device history 001').tap();await z().locator('.zoom-message').waitFor();await settled();check(renderedIDMatches(await messageID(),history.thread),'Reloaded device chat has the exact original root');await backToChat();

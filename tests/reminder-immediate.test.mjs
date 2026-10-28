@@ -22,6 +22,18 @@ test('standalone reminder controls reconcile delayed, failed and newer state wit
  ${reminders}
  const base={message:'message',conv:'chat',title:'Exact message',due:'2030-01-01T10:00:00Z',overdue:true,revision:7,writer:'writer'};
  window.fixture={notices,empty(){notices.length=0;canonical=[];state.overview.reminders=[];reminderFlights().clear();calls.length=0;paintReminderChanges();},switchWorkspace(){currentHost={};state.gen++;canonical=[];state.overview.reminders=[];paintReminderChanges();},reset(count){canonical=[structuredClone(base),...Array.from({length:count},(_,i)=>({...base,message:'other'+i,overdue:false}))];state.overview.reminders=structuredClone(canonical);reminderFlights().clear();calls.length=0;failRead=false;document.getElementById('line').replaceChildren(reminderLine({id:'message',body:'Exact message'}));paintReminderChanges();},calls,act:(path,due)=>remindAct(path,'message',due).catch(()=>{}),async finish(fail=false,read=false){failRead=read;const call=calls.at(-1);if(fail){call.reject(Error('Write refused'));return;}canonical=canonical.filter(r=>r.message!==call.body.id);if(call.body.due)canonical.unshift({...base,due:new Date(call.body.due*1000).toISOString(),overdue:false,revision:8});call.resolve({});},sync(){canonical=canonical.filter(r=>r.message!=='message');canonical.unshift({...base,due:'2031-02-03T11:00:00Z',revision:9,writer:'newer'});state.overview.reminders=structuredClone(canonical);paintReminderChanges();},readable(){failRead=false;},canonical:()=>state.overview.reminders.find(r=>r.message==='message'),rows:()=>projectedReminders()};`});
+  const reminderLine=page.locator('#line');
+  await page.evaluate(()=>fixture.reset(100));
+  await reminderLine.getByRole('button',{name:'Change…',exact:true}).focus();
+  await page.evaluate(()=>fixture.sync());
+  assert(await reminderLine.getByRole('button',{name:'Change…',exact:true}).evaluate(el=>el===el.getRootNode().activeElement),'background reminder refresh lost its focused control');
+  await page.getByRole('textbox',{name:'Unrelated draft'}).focus();
+  await page.evaluate(()=>fixture.sync());
+  assert(await page.getByRole('textbox',{name:'Unrelated draft'}).evaluate(el=>el===el.getRootNode().activeElement),'reminder refresh stole unrelated focus');
+  await page.evaluate(()=>fixture.empty());
+  await reminderLine.getByRole('button',{name:'Remind me…',exact:true}).focus();
+  await page.evaluate(()=>fixture.empty());
+  assert(await reminderLine.getByRole('button',{name:'Remind me…',exact:true}).evaluate(el=>el===el.getRootNode().activeElement),'unchanged reminder refresh lost Remind me focus');
   for(const count of [100,1000]){
    await page.evaluate(n=>fixture.reset(n),count);
    const line=page.locator('#line');

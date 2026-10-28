@@ -83,6 +83,21 @@ function createClassic(root, host) {
 let currentHost = host, alive = true;
 const abort = new AbortController(), cleanups = [], timers = new Set();
 const nativeResponses = new Map(); cleanups.push(() => nativeResponses.clear());
+const nativeDropZones = new Map();
+cleanups.push(() => {
+  for (const draft of Object.values(state.drafts)) for (const file of draft.files || []) if (file.nativeReading) { file.nativeReading = false; file.nativeError = "Attachment interrupted. Remove it and drop it again."; }
+  for (const file of state.files) if (file.nativeReading) { file.nativeReading = false; file.nativeError = "Attachment interrupted. Remove it and drop it again."; }
+});
+if (typeof host.onFileDrop === "function") cleanups.push(host.onFileDrop(drop => {
+  for (const [zone, accept] of [...nativeDropZones].reverse()) {
+    if (!zone.isConnected) { nativeDropZones.delete(zone); continue; }
+    const r = zone.getBoundingClientRect();
+    const hit = zone.getRootNode().elementFromPoint(drop.x, drop.y);
+    if (r.width && r.height && drop.x >= r.left && drop.x <= r.right && drop.y >= r.top && drop.y <= r.bottom && hit && zone.contains(hit)) return accept(drop);
+  }
+  return false;
+}));
+
 const on = (target, kind, handler) => target.addEventListener(kind, handler, {signal: abort.signal});
 const setTimeout = (fn, ms) => { const timer = globalThis.setTimeout(() => { timers.delete(timer); if (alive) fn(); }, ms); timers.add(timer); return timer; };
 // AgentNet messenger page. Text from anyone is inserted as text nodes only.
@@ -429,6 +444,8 @@ function sniffImage(b) {
 
 // overLimit says why these files cannot go in one message ("" if they can).
 function overLimit(files) {
+  if (files.some(file => file.nativeReading)) return "Adding dropped files…";
+  if (files.some(file => file.nativeError)) return "A dropped file could not be read. Remove it and drop it again.";
   if (files.some((f) => f.reattachRequired)) return "AgentNet restarted. Remove and reattach the marked files before sending; your draft stays here.";
   const lim = fileLimits();
   if (!lim) return "Files cannot be sent here.";
@@ -439,6 +456,64 @@ function overLimit(files) {
     return "Together these files are more than " + size(lim.max_message) + ", this browser's limit for one message: send fewer at a time.";
   }
   return "";
+}
+
+// Native browser File objects only; never read paths from dropped text.
+function bindFileDrop(zone, allowed, add, report) {
+  nativeDropZones.set(zone, drop => {
+    if (drop.error) { report(drop.error); return true; }
+    if (!allowed()) { drop.files.forEach(file => file.discard()); report("Files can’t be attached here right now."); return true; }
+    const lim = fileLimits();
+    if (lim && state.files.length + drop.files.length > lim.max_count) { drop.files.forEach(file => file.discard()); report("Remove files first: one message takes at most " + lim.max_count + " files."); return true; }
+    const key = state.draftKey, owner = currentHost;
+    const pending = drop.files.map(file => ({ key: ++fileSeq, name: file.name, size: 0, file: new File([], file.name), nativeReading: true }));
+    state.files.push(...pending); keepDraft(); add([]);
+    const current = () => state.draftKey === key;
+    const files = () => current() ? state.files : state.drafts[key]?.files || [];
+    const update = (id, patch) => {
+      if (!alive || owner !== currentHost || !files().some(file => file.key === id)) return false;
+      const next = files().map(file => file.key === id ? { ...file, ...patch } : file);
+      if (current()) { state.files = next; keepDraft(); renderPending(); syncComposer(); if (zone.isConnected && zone.getClientRects().length) add([]); }
+      else if (state.drafts[key]) state.drafts[key] = { ...state.drafts[key], files: next };
+      return true;
+    };
+    void (async () => {
+      for (let i = 0; i < drop.files.length; i++) {
+        const selected = drop.files[i], id = pending[i].key;
+        if (!alive || owner !== currentHost || !files().some(file => file.key === id)) { selected.discard(); continue; }
+        try {
+          const file = await selected.read();
+          if (!file.size) throw Error("Empty files can’t be attached.");
+          const url = rasterTypes.includes(file.type) ? URL.createObjectURL(file) : "";
+          if (!update(id, { file, size: file.size, nativeReading: false, url }) && url) URL.revokeObjectURL(url);
+        } catch (error) {
+          if (update(id, { nativeReading: false, nativeError: error.message || String(error) }) && current()) report("Couldn’t attach " + selected.name + ": " + (error.message || String(error)));
+        }
+      }
+    })();
+    return true;
+  });
+  const carriesFiles = transfer => !!transfer && (transfer.files.length > 0 || [...(transfer.items || [])].some(item => item.kind === "file") || [...transfer.types].includes("Files"));
+  zone.addEventListener("dragover", (e) => {
+    if (!carriesFiles(e.dataTransfer) && ![...(e.dataTransfer?.types || [])].includes("text/uri-list")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = allowed() ? "copy" : "none";
+  });
+  zone.addEventListener("drop", (e) => {
+    const transfer = e.dataTransfer;
+    // A URL/path is never authority to read a local file.
+    const urls = transfer?.getData("text/uri-list") || "";
+    const localURL = urls.split(/\r?\n/).some(line => /^file:/i.test(line.trim()));
+    const unreadableURI = !!transfer && [...transfer.types].includes("text/uri-list") && !urls;
+    if (!carriesFiles(transfer) && !localURL && !unreadableURI) return;
+    e.preventDefault();
+    if (typeof host.onFileDrop === "function") return;
+    if (!allowed()) { report("Files can’t be attached here right now."); return; }
+    const files = transfer.files.length ? [...transfer.files] : [...(transfer.items || [])].filter(item => item.kind === "file").map(item => item.getAsFile()).filter(Boolean);
+    if (!files.length) { report("This drop did not include readable files. Use Attach to choose them."); return; }
+    add(files.filter(file => file.size > 0));
+    if (files.some(file => !file.size)) report("Folders and empty files can’t be attached.");
+  });
 }
 
 // pushFiles puts chosen, pasted or dropped files in the open DM's draft (a
@@ -478,6 +553,8 @@ function removeFile(key) {
   state.files = state.files.filter((x) => x.key !== key);
   $("compose-error").textContent = state.files.length ? overLimit(state.files) : "";
   renderPending();
+  keepDraft();
+  syncComposer();
 }
 
 // dropFiles removes the files a send took (others added meanwhile stay).
@@ -492,7 +569,7 @@ function pendingChips(ul, removed) {
   ul.hidden = !state.files.length;
   fill(ul, ...state.files.map((f) => el("li", { class: "attach-chip" },
     f.url ? el("img", { src: f.url, alt: "", class: "attach-thumb" }) : el("span", { class: "file-icon", "aria-hidden": "true" }, fileExt(f.name)),
-    el("span", { class: "file-text" }, el("span", { class: "file-name" }, f.name), el("span", { class: "file-size" }, size(f.size) + (f.reattachRequired ? " · Reattach after restart" : ""))),
+    el("span", { class: "file-text" }, el("span", { class: "file-name" }, f.name), el("span", { class: "file-size" }, (f.nativeReading ? "Adding…" : f.nativeError ? "Couldn’t attach · remove and drop again" : size(f.size)) + (f.reattachRequired ? " · Reattach after restart" : ""))),
     el("button", { type: "button", class: "icon-btn remove-file", "aria-label": "Remove " + f.name, title: "Remove",
       onclick: () => { removeFile(f.key); if (removed) removed(); } }, "×"))));
 }
@@ -692,7 +769,20 @@ function reminderOf(id) {
 }
 function paintReminderChanges() {
  if(!alive)return;
- for(const node of root.querySelectorAll('[data-reminder-message]'))node.replaceWith(reminderLine(node.reminderMessage));
+ for(const node of root.querySelectorAll('[data-reminder-message]')){
+  const focused=root.getRootNode().activeElement,owned=!!focused&&node.contains(focused);
+  const label=owned&&focused.tagName==='BUTTON'?focused.textContent:null;
+  const next=reminderLine(node.reminderMessage);
+  if(!next){node.remove();continue;}
+  node.replaceWith(next);
+  // Background projection must keep keyboard ownership of this exact row.
+  // If an action disappeared, its current row remains an Escape/Tab target.
+  if(owned){
+   const control=label&&[...next.querySelectorAll('button')].find(button=>!button.disabled&&button.textContent===label);
+   if(control)control.focus({preventScroll:true});
+   else{next.tabIndex=-1;next.focus({preventScroll:true});}
+  }
+ }
  updateOutboxBadge();scheduleUI?.update();
 }
 function reminderStatus(id) {
@@ -5083,7 +5173,7 @@ function syncComposer() {
     const blocked = !d || !!d.frozen || revoked || (dmHumanGuest(d) && !guestAuthor(d)) || (dmVisitor(d) && !(state.dmAgent && agentOf(state.dmAgent)?.can_ask));
     $("composer").hidden = dmVisitor(d) && blocked;
     $("body").disabled = blocked;
-    $("send").disabled = blocked || state.sending || askGone();
+    $("send").disabled = blocked || state.files.some(file => file.nativeReading || file.nativeError) || state.sending || askGone();
     const a = state.dmAgent && agentOf(state.dmAgent);
     // Asking an agent: a question, or a task when the invitation lets you give it tasks.
     $("kind").hidden = true;
@@ -5110,7 +5200,7 @@ function syncComposer() {
   if (t && !asks && kindValue() !== "message" && !state.answering) setKind("message");
   const blocked = !t || !!t.key.pending;
   $("body").disabled = blocked;
-  $("send").disabled = blocked || state.sending || deviceAgentMissing();
+  $("send").disabled = blocked || state.files.some(file => file.nativeReading || file.nativeError) || state.sending || deviceAgentMissing();
   $("kind").disabled = blocked || !!state.answering;
   $("body").placeholder = !t ? "" : t.key.pending ? "Sending is blocked until you trust the new key" : "Write to " + whoText(t.peer);
   renderTarget();
@@ -5939,12 +6029,7 @@ function start() {
     if (!filesAllowed()) return;
     pastedFiles(e, files => addFiles(files, true));
   });
-  $("composer").addEventListener("dragover", (e) => { if (filesAllowed() && e.dataTransfer && [...e.dataTransfer.types].includes("Files")) e.preventDefault(); });
-  $("composer").addEventListener("drop", (e) => {
-    if (!filesAllowed() || !e.dataTransfer || !e.dataTransfer.files.length) return;
-    e.preventDefault();
-    addFiles([...e.dataTransfer.files]);
-  });
+  bindFileDrop($("composer"), filesAllowed, addFiles, text => { $("compose-error").textContent = text; });
   $("review-btn").addEventListener("click", () => toggleReview());
   $("new-btn").addEventListener("click", () => newConversationDialog());
   $("search").addEventListener("input", () => { state.query = $("search").value; rerenderContacts(); });

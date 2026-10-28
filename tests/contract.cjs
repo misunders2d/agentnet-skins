@@ -312,16 +312,51 @@ const journeys = {
   },
   zoom: async (page) => {
     await page.locator('#zoom .thread-row').first().waitFor();
-    await page.evaluate(()=>window.__openDevice());await page.locator('#zoom .zoom-message').waitFor();
+    // Zoom keeps the outgoing layer mounted during navigation. Neither its
+    // message nor its Write button proves the requested destination is ready.
+    const settled = async (view) => {
+      await page.waitForFunction(view => {
+        const layers = document.querySelector('#skin').shadowRoot.querySelectorAll('#zoom .zoom-layer');
+        if (layers.length !== 1) return false;
+        const layer = layers[0], current = layer.querySelector('.rung[aria-current="step"]');
+        if (!current || /zoom-(?:arrive|away)-(?:in|out)/.test(layer.className)) return false;
+        return view === 'message'
+          ? current.textContent.trim() === 'Message' && !!layer.querySelector('.zoom-message')
+          : current.textContent.trim() !== 'Message' && !!layer.querySelector('.mini-chat');
+      }, view);
+      return page.locator('#zoom .zoom-layer');
+    };
+    await page.evaluate(() => {
+      const shadow = document.getElementById('skin').shadowRoot, root = shadow.querySelector('.skin-root');
+      const state = () => ({ documentActive: document.activeElement?.tagName || null, shadowActive: shadow.activeElement?.tagName || null,
+        rootOwnsFocus: !!shadow.activeElement && root.contains(shadow.activeElement), documentFocused: document.hasFocus(),
+        dialogOpen: !!shadow.querySelector('#dialog')?.open, settingsOpen: !!shadow.querySelector('#settings')?.open,
+        fileViewerOpen: !!shadow.querySelector('.file-viewer[open]'), reviewHidden: shadow.querySelector('#review')?.hidden });
+      const trace = window.__zoomEscapeTrace = { focus: [], keys: [] };
+      const focus = event => { if (trace.focus.length < 20) trace.focus.push({ type: event.type, tag: event.target?.tagName || null, connected: !!event.target?.isConnected, ...(event.type === 'focusout' ? { stack: new Error('Zoom focusout').stack.split('\n').slice(0, 9).join('\n') } : {}), ...state() }); };
+      const key = where => event => { if (event.key === 'Escape') trace.keys.push({ where, rootInPath: event.composedPath().includes(root), zoomInPath: event.composedPath().some(node => node?.id === 'zoom'), defaultPrevented: event.defaultPrevented, ...state() }); };
+      const documentKey = key('document-capture'), rootCapture = key('root-capture'), rootBubble = key('root-bubble');
+      document.addEventListener('keydown', documentKey, true);root.addEventListener('keydown', rootCapture, true);root.addEventListener('keydown', rootBubble);
+      shadow.addEventListener('focusin', focus);shadow.addEventListener('focusout', focus);
+      window.__zoomEscapeBefore = () => { trace.before = state(); };
+      window.__zoomEscapeAfter = () => {
+        trace.after = state();document.removeEventListener('keydown', documentKey, true);root.removeEventListener('keydown', rootCapture, true);root.removeEventListener('keydown', rootBubble);
+        shadow.removeEventListener('focusin', focus);shadow.removeEventListener('focusout', focus);
+      };
+    });
+    await page.evaluate(()=>window.__openDevice());await settled('message');
     await messageShot(page,'zoom');
-    await page.keyboard.press('Escape');await page.locator('#zoom .mini-chat').waitFor();
+    await page.evaluate(()=>window.__zoomEscapeBefore());
+    await page.keyboard.press('Escape');
+    await page.evaluate(()=>window.__zoomEscapeAfter());
+    const conversation = await settled('conversation');
     const text='Zoom contract send '+runTag+' '+(++sent);zoomRunText=text;
-    await page.locator('#zoom').getByRole('button',{name:/^Write in this (DM|group|conversation)…$/}).click(); // the opened company-world conversation
+    await conversation.getByRole('button',{name:/^Write in this (DM|group|conversation)…$/}).click(); // the opened company-world conversation
     await page.locator('#write-body').fill(text);await page.locator('#dialog-ok').click();
-    await page.locator('#zoom .mini-chat').getByText(text,{exact:true}).waitFor();
+    await conversation.locator('.mini-chat').getByText(text,{exact:true}).waitFor();
     await messageShot(page,'zoom-chat',{chat:true});
-    await page.locator('#zoom button.mc-bubble').filter({hasText:text}).click();
-    await page.waitForFunction(()=>document.querySelector('#skin').shadowRoot.querySelectorAll('#zoom .zoom-layer').length===1);
+    await conversation.locator('button.mc-bubble').filter({hasText:text}).click();
+    await settled('message');
     await page.locator('#zoom .zoom-message').focus();
     // The ladder's depth follows the opened conversation (a group adds its
     // group step; a DM opened from a notification has none): each Escape
@@ -370,7 +405,7 @@ const journeys = {
               const sr = document.getElementById('skin').shadowRoot, rungs = [...sr.querySelectorAll('#zoom .rung')];
               const matches = [...sr.querySelectorAll('#zoom .mc-bubble')].filter(n => text && n.textContent.includes(text));
               return { rungCount: rungs.length, currentRungIndex: rungs.findIndex(n => n.getAttribute('aria-current') === 'step'), layerCount: sr.querySelectorAll('#zoom .zoom-layer').length, messageCount: sr.querySelectorAll('#zoom .zoom-message').length,
-                storedButtonMatchCount: matches.filter(n => n.tagName === 'BUTTON').length, pendingDivMatchCount: matches.filter(n => n.tagName === 'DIV').length, activeElementTag: sr.activeElement?.tagName || null, errors: (window.__report?.errors || []).slice(-8) };
+                storedButtonMatchCount: matches.filter(n => n.tagName === 'BUTTON').length, pendingDivMatchCount: matches.filter(n => n.tagName === 'DIV').length, activeElementTag: sr.activeElement?.tagName || null, escapeTrace: window.__zoomEscapeTrace || null, errors: (window.__report?.errors || []).slice(-8) };
             }, zoomRunText);
             const capturedErrors = [...errors, ...dom.errors].slice(-8).map(value => {
               const s = String(value);

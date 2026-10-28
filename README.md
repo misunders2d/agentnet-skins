@@ -2,7 +2,7 @@
 
 Portable interfaces for [AgentNet](https://github.com/misunders2d/agentnet). Build one, share its folder, install it on a computer or relay, import it into one browser, or pick it from AgentNet’s in-app **skin gallery**. Every skin uses AgentNet’s existing encrypted conversations, topics, people, agents and permissions through **Host API v1**.
 
-Gallery candidate **v2026.10.29.1** targets **AgentNet v0.9.9**, pinned to [`7f15d4578b0bf6dd71fc13c837297914da0a891d`](https://github.com/misunders2d/agentnet/tree/7f15d4578b0bf6dd71fc13c837297914da0a891d). Classic, Holonet, Pulp and Zoom are 1.9.9; Office is 1.7.9. Office and Pulp inherit truthful read-save failure feedback and Android local Sending before native admission. All 321 Node/browser checks pass with zero skips; all 37 applicable runtime groups pass. The twenty previously inspected previews are unchanged. Publication is pending the application release gates. Exhaustive interaction and physical-device coverage remain incomplete. See [PROVENANCE.md](PROVENANCE.md).
+[Gallery v2026.10.29.1](https://github.com/misunders2d/agentnet-skins/releases/tag/v2026.10.29.1) is public for **AgentNet v0.9.9**, pinned to [`7f15d4578b0bf6dd71fc13c837297914da0a891d`](https://github.com/misunders2d/agentnet/tree/7f15d4578b0bf6dd71fc13c837297914da0a891d). Classic, Holonet, Pulp and Zoom are 1.9.9; Office is 1.7.9. Office/Pulp inherit truthful read-save feedback and Android local Sending before admission. All 321 checks and 37 applicable runtime groups pass; the public parser verifies five packages, 129 files and twenty unchanged previews. Exhaustive interaction and physical-device coverage remain incomplete. See [PROVENANCE.md](PROVENANCE.md).
 
 ## Gallery
 

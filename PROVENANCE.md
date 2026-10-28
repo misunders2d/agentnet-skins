@@ -1,8 +1,10 @@
 # Source provenance
 
-## v0.9.9 qualified candidate — October 29, 2026
+## v0.9.9 published — October 29, 2026
 
-Candidate gallery v2026.10.29.1 pins frozen application source
+Gallery v2026.10.29.1 is public and Latest from immutable
+`04b5f08d8792de5e49a7954cb5e0bc102a5a853d`, published at 22:54:51 UTC October 28.
+It pins frozen application source
 `7f15d4578b0bf6dd71fc13c837297914da0a891d`, version v0.9.9.
 Classic/Holonet/Pulp/Zoom are 1.9.9; Office is 1.7.9. The normal generator
 produces all five packages, 129 files and twenty byte-unchanged previews.
@@ -24,8 +26,13 @@ Subsequent application QA-only commits repair test launcher/timing and add
 startup diagnostics/exact contention retry; application product bytes remain
 frozen at the pin. This skin qualification is retained for that unchanged product.
 Original failed application checks and unknown incident causes stay in its
-release record. No physical-device, exhaustive control/platform/history,
-installed-client activation or public release is established by this gate.
+release record. Physical-device, exhaustive control/platform/history and fleet-activation
+evidence remain outside this skin gate. Separate public
+verification uses the frozen application's actual gallery parser and prepare
+function over 151 unauthenticated HTTPS requests: all five packages, 129 files
+and twenty preview digests match. App v0.9.9 is public/Latest from the exact pin;
+its twelve payloads and checksum file match the qualified draft. Private logs,
+source extracts and QA screenshots remain outside the repository.
 
 ## v0.9.8 published — October 28, 2026
 

@@ -27,7 +27,17 @@ async function tap(loc,label){
    check(box.w>=44&&box.h>=44,label+' is '+box.w+'x'+box.h+', under 44px');check(box.hit,label+' is covered where it is tapped');
    if(!box.hit){(result.hitFailures||=[]).push({label,box,position});await page.screenshot({path:path.join(evidence,'screenshots',m.id+'-touch-hit-'+result.hitFailures.length+'.png')});}
    await loc.tap({position});return;
-  }catch(e){if(attempt<3&&/not attached|detached/i.test(e.message)){await page.waitForTimeout(300);continue;}throw e;}
+  }catch(e){if(attempt<3&&/not attached|detached/i.test(e.message)){await page.waitForTimeout(300);continue;}
+   const diagnostic=await loc.evaluate(n=>{
+    const scope=n.getRootNode(),rect=r=>({x:r.x,y:r.y,width:r.width,height:r.height,top:r.top,right:r.right,bottom:r.bottom,left:r.left});
+    const describe=el=>{const s=getComputedStyle(el);return {tag:el.tagName,classes:[...el.classList].slice(0,12),rect:rect(el.getBoundingClientRect()),display:s.display,visibility:s.visibility,opacity:s.opacity,pointerEvents:s.pointerEvents,overflow:s.overflow,overflowX:s.overflowX,overflowY:s.overflowY,transform:s.transform,contain:s.contain,contentVisibility:s.contentVisibility};};
+    const r=n.getBoundingClientRect(),points=[{x:r.left+r.width/2,y:r.top+r.height/2},{x:Math.max(0,r.left)+Math.max(0,Math.min(innerWidth,r.right)-Math.max(0,r.left))/2,y:Math.max(0,r.top)+Math.max(0,Math.min(innerHeight,r.bottom)-Math.max(0,r.top))/2}];
+    const ancestors=[];for(let el=n;el&&ancestors.length<10;el=el.parentElement)ancestors.push(describe(el));
+    const zoom=scope.querySelector('#zoom');
+    return {connected:n.isConnected,viewport:{width:innerWidth,height:innerHeight,visual:window.visualViewport?{width:visualViewport.width,height:visualViewport.height,offsetLeft:visualViewport.offsetLeft,offsetTop:visualViewport.offsetTop,scale:visualViewport.scale}:null},targetAndAncestors:ancestors,hitTests:points.map(p=>({...p,elements:scope.elementsFromPoint?scope.elementsFromPoint(p.x,p.y).slice(0,10).map(describe):[]})),layerCount:zoom?.querySelectorAll('.zoom-layer').length||0,layers:zoom?[...zoom.querySelectorAll('.zoom-layer')].map(describe):[],animations:zoom?zoom.getAnimations({subtree:true}).slice(0,12).map(a=>({playState:a.playState,currentTime:a.currentTime,animationName:a.animationName||null,target:a.effect?.target?describe(a.effect.target):null})):[]};
+   },undefined,{timeout:1000}).catch(()=>({targetUnavailable:true}));
+   (result.tapFailureDiagnostics||=[]).push({attempt,...diagnostic});console.error('Tap failure diagnostic:',JSON.stringify(diagnostic));throw e;}
+
  }
 }
 // inReach: with no scrolling at all, the control is wholly inside the window

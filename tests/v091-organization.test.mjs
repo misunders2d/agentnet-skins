@@ -52,9 +52,10 @@ test('standalone direct organization displays production Engine placements and s
      catalogs.set(peer.address,await Promise.all([pi,claude].map(async r=>JSON.parse(wire.agentJSON(await wire.signAgent(peer.keys,r))))));
      e.agentDevices=[peer.address];e.members={listed:'listed',current:true,at:now.value,list:[{address:peer.address,presence:'connected',joined:1}],truncated:false};
      // No live transport or harness is attached. Originals are created with the
-     // real sender, signatures, encrypted file manifest and retained file bytes.
+     // real sender, signatures, encrypted file manifest and retained file bytes:
+     // the engine's older-device sender, which no route reaches since v0.10.0.
      let queueCalls=0;e.queueOutbox=()=>{queueCalls++;};
-     const original=async(body,agent=pi,extra={})=>{now.value+=1000;return e.api('/api/send',{to:peer.address,agent_id:agent.id,kind:'question',body,...extra});};
+     const original=async(body,agent=pi,extra={})=>{now.value+=1000;return e.sendDirect({to:peer.address,agent_id:agent.id,kind:'question',body,...extra});};
      const first=await original('Pi source original',pi,{kind:'task',files:[{name:'proof.txt',bytes:new TextEncoder().encode('ORIGINAL_ORGANIZATION_FILE')}]});
      const child=await original('Pi linked reply',pi,{reply_to:first.id});
      const second=await original('Pi destination original'),third=await original('Pi third original'),fourth=await original('Pi fourth original'),other=await original('Claude separate original',claude);

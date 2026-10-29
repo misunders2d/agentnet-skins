@@ -311,20 +311,10 @@ test('standalone natural tagged corrections preserve exact attempts, files and d
     await reset();await type('cancelled correction');await page.locator('#dialog-cancel').click();await page.waitForTimeout(20);assert.equal(await page.evaluate(()=>posts.length),0);
     await reset();await type('closed correction');await field.press('Escape');await page.waitForTimeout(20);assert.equal(await page.evaluate(()=>posts.length),0);
    }
-  activeCapture.stage='ordinary device sender';
-   // The actual device sender remains the ordinary send path, with its files.
-   await reset();await page.evaluate(async()=>{
-    const root=document.getElementById('skin').shadowRoot;root.querySelector('#dialog').close();fixture.state.dialogRestore=null;
-    fixture.setDMAgent(null);const id='8'.repeat(64),source={id,dir:'in',kind:'message',from:'briar/phone',to:'atlas/desk',body:'Existing device conversation',author:{label:'Briar',about:'Fixture human'},at:'2026-10-14T10:00:00Z',actions:[],can:[],attachments:[]};
-    Object.assign(fixture.state,{dm:null,dmData:null,thread:null,data:{id,peer:'briar/phone',key:{pending:false},messages:[source]},draftKey:id,deviceAgentID:'',dmReply:null,answering:null});root.querySelector('#body').value='Device unchanged';root.querySelector('#kind').value='message';
-    const file=new File(['device bytes'],'device.txt');fixture.state.files=[{key:'device',name:file.name,size:file.size,file}];fixture.syncComposer();await fixture.send();
-   });
-   const device=await page.evaluate(()=>posts.find(p=>p.path==='/api/send'));assert(device);assert.equal(device.body.to,'briar/phone');assert.equal(device.body.body,'Device unchanged');assert.equal(device.body.kind,'message');assert.equal(device.body.reply_to,'8'.repeat(64));assert.equal(device.body.files.length,1);
-   assert.equal(await page.evaluate(()=>posts.some(p=>p.path==='/api/request/followup'||p.path==='/api/dm/agent/ask')),false);
-   assert.deepEqual(await page.evaluate(()=>calls.filter(c=>c.path==='stage').map(c=>[c.name,c.bytes])),[['device.txt','device bytes']]);
-
-  activeCapture.stage='direct routing setup';
-   // Direct-thread routing uses the actual entry sender and rendered draft/files.
+  activeCapture.stage='read-only device conversation';
+   // AgentNet v0.10.0 (MEL-713): an old device conversation takes no new
+   // turn, neither a message nor a correction of its running request. Send
+   // says so and posts, stages and clears nothing.
    await page.evaluate(()=>{
     const root=document.getElementById('skin').shadowRoot;
     window.resetDirect=(named=false)=>{
@@ -338,60 +328,27 @@ test('standalone natural tagged corrections preserve exact attempts, files and d
      fixture.topicFresh[id]=false;fixture.state.overview.agent_devices=[peer];for(const radio of root.querySelectorAll('input[name="kind"]'))radio.checked=radio.value==='question';root.querySelector('#body').value='Exact direct correction';fixture.syncComposer();fixture.renderPending();window.calls=[];window.posts=[];
     };
    });
-  activeCapture.stage='direct default and named routing';
-   for(const named of [false,true]){
-    activeCapture.stage='direct '+(named?'named':'default')+' correction';
-    await page.evaluate(named=>{resetDirect(named);const file=new File(['direct bytes'],'direct.txt');fixture.state.files=[{key:'direct',name:file.name,size:file.size,file}];fixture.renderPending();},named);
-    await page.evaluate(()=>fixture.send());
-    let directPost=await page.evaluate(()=>posts.find(p=>p.path==='/api/request/followup'));
-    assert(directPost,skin+' direct '+(named?'named':'default')+' must steer the current request');
-    assert.equal(await page.evaluate(()=>calls.filter(c=>c.path.startsWith('/api/thread?')).length),0,'direct send adds zero preflight thread GETs');
-    assert.equal(directPost.body.conv,'');assert.equal(directPost.body.ref.id,'8'.repeat(32));assert.equal(directPost.body.ref.fingerprint,'33333333-33333333-33333333-33333333');assert.equal(directPost.body.attempt,7);assert.equal(directPost.body.body,'Exact direct correction');assert.equal(directPost.body.files.length,1);
-    assert.equal(await page.evaluate(()=>posts.some(p=>p.path==='/api/send')),false);
-    assert.deepEqual(await page.evaluate(()=>calls.filter(c=>c.path==='stage').map(c=>[c.name,c.bytes])),[['direct.txt','direct bytes']]);
-    for(const change of ['key','pending','stale','attempt','completed','author']){
-     activeCapture.stage='direct '+(named?'named':'default')+' authority negative: '+change;
-     await page.evaluate(({named,change})=>{resetDirect(named);const m=direct.messages[0];if(change==='key')direct.key.pinned='44444444-44444444-44444444-44444444';if(change==='pending')direct.key.pending='44444444-44444444-44444444-44444444';if(change==='stale')m.exec.stale=true;if(change==='attempt')m.exec.attempt=8;if(change==='completed')m.exec.state='completed';if(change==='author')m.from_key='44444444-44444444-44444444-44444444';}, {named,change});
-     await page.evaluate(()=>fixture.send());
-     assert.equal(await page.evaluate(()=>posts.filter(p=>p.path==='/api/request/followup').length),1,skin+' authority refusal '+change);assert.equal(await page.evaluate(()=>effects.length),0,'refusal has zero accepted effect');assert.equal(await page.evaluate(()=>posts.some(p=>p.path==='/api/send')),false,'refusal never falls back');assert.equal(await page.evaluate(()=>calls.filter(c=>c.path.startsWith('/api/thread?')).length),0,'refusal adds no preflight GET');
-     assert.match(await page.locator('#compose-error').textContent(),/exact request|changed/);
-    }
-    activeCapture.stage='direct '+(named?'named terminal ordinary question':'legacy terminal requires configured agent');
-    await page.evaluate(named=>{
-     resetDirect(named);direct.messages[0].exec.state='completed';fixture.state.data=structuredClone(direct);
-     const file=new File(['terminal draft bytes'],'terminal.txt');fixture.state.files=[{key:'terminal',name:file.name,size:file.size,file}];fixture.renderPending();
-     window.terminalDraft={text:document.getElementById('skin').shadowRoot.querySelector('#body').value,file};
-    },named);
-    await page.evaluate(()=>fixture.send());
-    if(named){
-     const ordinary=await page.evaluate(()=>posts.find(p=>p.path==='/api/send'));
-     assert(ordinary,'a selected concrete agent receives new work after its earlier request finishes');
-     assert.equal(ordinary.body.kind,'question');assert.equal(ordinary.body.agent_id,'b'.repeat(32));assert.equal(ordinary.body.to,'briar/phone');assert.equal(ordinary.body.body,'Exact direct correction');assert.equal(ordinary.body.files.length,1);
-     assert.equal(await page.evaluate(()=>posts.some(p=>p.path==='/api/request/followup')),false,'terminal work never receives a correction');
-     assert.deepEqual(await page.evaluate(()=>calls.filter(c=>c.path==='stage').map(c=>[c.name,c.bytes])),[['terminal.txt','terminal draft bytes']]);
-    }else{
-     assert.equal(await page.evaluate(()=>posts.length),0,'terminal legacy work cannot select the current default');
-     assert.equal(await page.evaluate(()=>calls.some(c=>c.path==='stage')),false,'legacy refusal keeps files unstaged');
-     assert.equal(await page.evaluate(()=>{const root=document.getElementById('skin').shadowRoot;return root.querySelector('#body').value===terminalDraft.text&&fixture.state.files.length===1&&fixture.state.files[0].file===terminalDraft.file;}),true,'legacy refusal retains the exact text and File');
-     assert.match(await page.locator('#compose-error').textContent(),/Choose a configured agent/);
-    }
-    await page.evaluate(named=>{resetDirect(named);window.failNext=true;const f=new File(['retry direct bytes'],'retry.txt');fixture.state.files=[{key:'retry-direct',name:f.name,size:f.size,file:f}];fixture.renderPending();},named);
-    await page.evaluate(()=>fixture.send());const first=await page.evaluate(()=>structuredClone(posts.find(p=>p.path==='/api/request/followup')));
-    assert.match(await page.locator('#compose-error').textContent(),/exact follow-up/);
-    await page.evaluate(()=>{document.getElementById('skin').shadowRoot.querySelector('#body').value='A newer draft';fixture.state.deviceAgentID='9'.repeat(32);});
-    await page.evaluate(()=>{const row=fixture.sends.merge('8'.repeat(32),[]).find(m=>m._failed);return row._retry();});
-    await page.waitForFunction(()=>posts.filter(p=>p.path==='/api/request/followup').length===2);
-    directPost=await page.evaluate(()=>posts.filter(p=>p.path==='/api/request/followup')[1]);
-    for(const key of ['id','conv','body','attempt'])assert.equal(directPost.body[key],first.body[key]);assert.deepEqual(directPost.body.ref,first.body.ref);assert.equal(await page.evaluate(()=>calls.filter(c=>c.path.startsWith('/api/thread?')).length),0,'captured retry adds zero thread GETs');assert.equal(await page.evaluate(()=>effects.length),1,'idempotent retry accepts one effect');
-    assert.equal(await page.locator('#body').inputValue(),'A newer draft');
-    assert.deepEqual(await page.evaluate(()=>calls.filter(c=>c.path==='stage').map(c=>[c.name,c.bytes])),[['retry.txt','retry direct bytes'],['retry.txt','retry direct bytes']]);
-    await page.evaluate(named=>{resetDirect(named);direct.messages.push({...direct.messages[0],id:'7'.repeat(32)});fixture.state.data=structuredClone(direct);},named);
-    await page.evaluate(()=>fixture.send());assert.equal(await page.evaluate(()=>posts.length),0);assert.equal(await page.locator('#body').inputValue(),'Exact direct correction');
+   for(const [label,prepare] of [['ordinary message',()=>{
+     const root=document.getElementById('skin').shadowRoot;
+     window.reset();root.querySelector('#dialog').close();fixture.state.dialogRestore=null;
+     fixture.setDMAgent(null);const id='8'.repeat(64),source={id,dir:'in',kind:'message',from:'briar/phone',to:'atlas/desk',body:'Existing device conversation',author:{label:'Briar',about:'Fixture human'},at:'2026-10-14T10:00:00Z',actions:[],can:[],attachments:[]};
+     Object.assign(fixture.state,{dm:null,dmData:null,thread:null,data:{id,peer:'briar/phone',key:{pending:false},messages:[source]},draftKey:id,deviceAgentID:'',dmReply:null,answering:null});root.querySelector('#body').value='Device unchanged';root.querySelector('#kind').value='message';
+    }],['default correction',()=>resetDirect(false)],['named correction',()=>resetDirect(true)],['named finished request',()=>{resetDirect(true);direct.messages[0].exec.state='completed';fixture.state.data=structuredClone(direct);}]]){
+    activeCapture.stage='read-only device '+label;
+    const kept=await page.evaluate(async prepare=>{
+     (0,eval)('('+prepare+')')();
+     const root=document.getElementById('skin').shadowRoot,file=new File(['device bytes'],'device.txt');
+     fixture.state.files=[{key:'device',name:file.name,size:file.size,file}];fixture.renderPending();window.posts=[];window.calls=[];
+     const text=root.querySelector('#body').value;await fixture.send();
+     return {posts:posts.length,stages:calls.filter(c=>c.path==='stage').length,text:root.querySelector('#body').value===text,file:fixture.state.files.length===1&&fixture.state.files[0].file===file,error:root.querySelector('#compose-error').textContent};
+    },prepare.toString());
+    assert.equal(kept.posts,0,skin+' '+label+': a read-only device conversation sends nothing');assert.equal(kept.stages,0,label+' stages no file');
+    assert(kept.text&&kept.file,label+' keeps the exact text and File');assert.match(kept.error,/read only/,label+' says why');
    }
   activeCapture.stage='final lifecycle and page error assertions';
    assert.equal(await page.title(),'Standalone steering fixture');assert.equal(page.url(),origin+'/');
    if(process.env.AGENTNET_STEERING_EVIDENCE){fs.mkdirSync(process.env.AGENTNET_STEERING_EVIDENCE,{recursive:true});await page.screenshot({path:path.join(process.env.AGENTNET_STEERING_EVIDENCE,skin+'-'+width+'.png')});}
-   console.log(JSON.stringify({skin,width,naturalCurrent:true,noChooser:true,multipleReply:true,freshNegatives:11,noTypingScan:true,stagingFailure:true,capturedRetry:true,nativeNotes:true,sharedFanout:skin!=='holonet',ordinaryDM:true,plainReplyContinuation:true,typedBeforeReply:true,handledRefusal:true,deviceSender:true,cancelClose:skin==='zoom'}));
+   console.log(JSON.stringify({skin,width,naturalCurrent:true,noChooser:true,multipleReply:true,freshNegatives:11,noTypingScan:true,stagingFailure:true,capturedRetry:true,nativeNotes:true,sharedFanout:skin!=='holonet',ordinaryDM:true,plainReplyContinuation:true,typedBeforeReply:true,handledRefusal:true,deviceReadOnly:true,cancelClose:skin==='zoom'}));
   await stopObserver(activeCapture);
   assert.deepEqual(errors,[]);await page.evaluate(()=>window.unmount());await context.close();
  }

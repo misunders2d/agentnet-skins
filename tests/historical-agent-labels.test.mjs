@@ -21,13 +21,15 @@ for(const skin of ['classic','holonet','zoom'])test(skin+': exact historical tar
  const records=[{id:pi,host,host_key:key,label:'Pi',harness:'claude'},{id:claude,host,host_key:key,label:'Claude',harness:'pi'}];
  const state={overview:{me:{address:'atlas/laptop',responder:'codex'},person:{person:'atlas'},dms:[{id:conv,title:'One shared group'}],needs_you:[{conv,id:'1'.repeat(32),target:target(pi),reason:'agent_needs_human',why:'Pi exact reason'},{conv,id:'2'.repeat(32),target:target(claude),reason:'agent_needs_human',why:'Claude exact reason'}],threads:[],links:[],held:[]}};
  const context=vm.createContext({state,Date,Map,Set,console,structuredClone,el:element,catalogRecords:h=>h===host?records:[],deviceWords:h=>h,
-  $:id=>{if(!controls.has(id))controls.set(id,element('div'));return controls.get(id);},fill:(n,...children)=>{n.children=children.flat(Infinity).filter(v=>v!==false&&v!=null);delete n._text;return n;},
+  $:id=>{if(!controls.has(id))controls.set(id,Object.assign(element('div'),{close(){}}));return controls.get(id);},alive:true,fill:(n,...children)=>{n.children=children.flat(Infinity).filter(v=>v!==false&&v!=null);delete n._text;return n;},
   unreadUI:{update(){}},wsNow:()=> 'default',plural:(n,s,p)=>n+' '+(n===1?s:p),contactsOf:()=>[],linkNotices:()=>[],
   guestInvitationRow:()=>assert.fail('unrelated invitation'),toggleReview(){},openMessage:r=>landings.push(structuredClone(r)),currentHost:{id:'captured-host'},sendID:()=> 'e'.repeat(32),
   api:async(p,body,captured)=>{calls.push({p,body:structuredClone(body),captured});return {};},act:async(body,captured)=>{calls.push({p:'/api/act',body:structuredClone(body),captured});return {};},announce(){},refetch:async()=>{},
  });
  const author=code.match(/^const namedAuthor = [^]*?^};/m)?.[0];assert(author,'actual historical author-name formatter');
- vm.runInContext([author,...['historicalTargetLabel','agentNeedsYouHeading','agentDetailFor','agentNeedsYouTurn','renderReview','decide'].map(name=>block(code,name))].join('\n'),context);
+ // A detached answer opens the shared retained-answer dialog (MEL-710).
+ const intents=code.match(/^const answerIntents = [^\n]*/m)?.[0]||'';
+ vm.runInContext([author,intents,...['historicalTargetLabel','agentNeedsYouHeading','agentDetailFor','agentNeedsYouTurn','renderReview','answerScope','answerIntent','paintAnswers','answerDialog','decide'].map(name=>block(code,name))].join('\n'),context);
  context.renderReview([]);
  const review=controls.get('review-list'),rows=review.children;
  assert.equal(rows.length,2);assert.match(words(rows[0]),/^Pi on atlas\/host couldn’t finish/);assert.match(words(rows[1]),/^Claude on atlas\/host couldn’t finish/);

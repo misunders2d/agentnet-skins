@@ -132,7 +132,7 @@ function seedFixture(t,intercept=()=>null){
  let clock=10000;const calls=[],id=n=>n.toString(16).padStart(32,'0'),from='fixture/laptop',to='fixture/desk';
  const dms=Array.from({length:198},(_,i)=>({id:id(i+1),lid:id(i+1001),body:'Long history '+String(i+1).padStart(3,'0'),queued:false})),messages=[];
  t.mock.method(Date,'now',()=>clock);t.mock.method(fs,'existsSync',()=>false);t.mock.method(fs,'writeFileSync',()=>{});
- const run=()=>seedPublicHistory({world:'/owned/disposable-world',binary:'fixture-agentnet',conv,to,from,spawnSync:(binary,args,options)=>{
+ const run=()=>seedPublicHistory({world:'/owned/disposable-world',binary:'fixture-agentnet',conv,to,from,device:true,spawnSync:(binary,args,options)=>{
   const command=args.slice(2),call={command,timeout:options.timeout,at:clock};calls.push(call);
   const override=intercept({call,calls,dms,messages,advance:ms=>{clock+=ms;}});if(override)return override;
   let stdout='';

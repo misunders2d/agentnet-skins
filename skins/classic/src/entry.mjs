@@ -4976,8 +4976,10 @@ function dialog({ title, body, ok, run, gate, focus }) {
   okBtn.textContent = ok;
   okBtn.disabled = !!gate;
   if (gate) gate.addEventListener("change", () => { okBtn.disabled = !gate.checked; });
-  const dialogToken={},dialogHost=currentHost,dialogWorkspace=wsNow();state.dialogToken=dialogToken;state.dialogBusy=false;
-  const ownsDialog=()=>alive&&state.dialogToken===dialogToken&&currentHost===dialogHost&&wsNow()===dialogWorkspace;
+  // Only a dialog opened since replaces this one; a run refused after a
+  // workspace change still says why here and lets the person close it.
+  const dialogToken={};state.dialogToken=dialogToken;state.dialogBusy=false;
+  const ownsDialog=()=>alive&&state.dialogToken===dialogToken;
   let busy = false; // a double click confirms once
   okBtn.onclick = async () => {
     if (busy) return;
@@ -5002,6 +5004,9 @@ function dialog({ title, body, ok, run, gate, focus }) {
   (focus || $("dialog-cancel")).focus();
 }
 
+// AgentNet v0.10.0 (MEL-713): a device conversation takes no new turn. Its
+// received requests are still answered here; new messages go in a chat.
+const deviceReadOnly='Old device conversations are read only now. Write to the person in a chat, and to an agent in your My agents room or a chat. Your text is kept.';
 function newConversationDialog(prefill) {
   const host=currentHost,gen=state.gen,ws=wsNow(),current=()=>alive&&host===currentHost&&gen===state.gen&&ws===wsNow();
   const to=el("input",{id:"new-to",type:"text",placeholder:"person/device",autocomplete:"off",spellcheck:"false"});
@@ -5021,6 +5026,7 @@ function newConversationDialog(prefill) {
   dialog({title:'New conversation',body:[el('label',{for:'new-to',class:'field-label'},'To'),to,el('label',{for:'new-kind',class:'field-label'},'Send as'),kind,
    el('label',{for:'new-agent',class:'field-label'},'Configured agent'),agent,el('button',{type:'button',class:'text-btn',onclick:()=>void load()},'Refresh agents'),note,
    el('label',{for:'new-body',class:'field-label'},'Message'),body],ok:'Send',focus:to.value?body:to,run:async()=>{
+    throw Error(deviceReadOnly);
     if(!current())throw Error('Workspace changed. Reopen this conversation.');
     const address=to.value.trim(),selected=records.find(a=>a.id===agent.value),draft={to:address,kind:kind.value,body:body.value};
     if(kind.value!=='message'){
@@ -5581,6 +5587,7 @@ async function send(ev, retry) {
   // Everything this send needs is fixed now: switching conversation or a
   // refresh while it is on its way changes none of it.
   let key = retry?.key || state.draftKey, text = retry ? retry.text : $("body").value, answering = retry ? retry.answering : state.answering, files = retry ? retry.files : answering ? [] : state.files.slice();
+  if (!retry && !answering) { $("compose-error").textContent = deviceReadOnly; return; }
   const group = retry?.group || "";
   const id = retry?.id || sendID(), mentions = retry?.mentions || (state.mentions || []).slice();
   const newTopic = retry ? retry.newTopic : !!topicFresh[t.id];

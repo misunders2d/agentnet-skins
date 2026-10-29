@@ -49,7 +49,11 @@ function publicCLI({binary,home,cwd,env,conv,thread=()=>null,spawnSync=require('
   }
  };
 }
-function seedPublicHistory({world,binary,conv,to,from,spawnSync}){
+// device: also a 200-message device conversation. Old device conversations
+// are read only since AgentNet v0.10.0 (MEL-713), so the touch journey seeds
+// the DM alone; the device phase stays for its unit tests until AgentNet
+// drops version 1.
+function seedPublicHistory({world,binary,conv,to,from,spawnSync,device=false}){
  const fs=require('node:fs'),path=require('node:path');assert(binary,'Missing public fixture CLI');assert.match(conv,conversationID);
  const env={PATH:path.join(world,'bin')+':/usr/bin:/bin',HOME:path.join(world,'cli-home'),SSL_CERT_FILE:path.join(world,'cert.pem'),AGENTNET_NOTIFY:'off'};
  let meta;const native=publicCLI({binary,home:path.join(world,'sergey'),env,cwd:path.join(world,'work'),conv,thread:()=>meta.thread,spawnSync});
@@ -67,6 +71,7 @@ function seedPublicHistory({world,binary,conv,to,from,spawnSync}){
   const remaining=dmSettledBy-Date.now();assert(remaining>0,'DM fixture delivery did not settle in 15s');
   const status=native(['status','--wait',remaining+'ms',m.lid],dmSettledBy);assert(status.trim(),'Missing public status');assert(!/\bqueued\b|local record/i.test(status),'Fixture delivery is still local or queued');
  }
+ if(!device){const settledDM=dm([],Date.now()+60000);assert.equal(historyPrefix(settledDM,'Long history ').length,200);assert(!settledDM.some(m=>m.queued),'DM fixture delivery is still queued');return {dm};}
  if(!meta.thread){const sent=native(['send','--wait','5s',to,'Device history 001']),id=/^([0-9a-f]{32}) [a-z_]+(?: [^\r\n]*)?\n?$/.exec(sent);assert(id,'Malformed public send ID');meta.thread=id[1];fs.writeFileSync(metaPath,JSON.stringify(meta),{mode:0o600});}
  const thread=(deadline)=>threadRecords(native(['conversation','--json','--limit','0',meta.thread],deadline),meta.thread,to,from);
  rows=historyPrefix(thread(),'Device history ');let last=rows.at(-1).id;

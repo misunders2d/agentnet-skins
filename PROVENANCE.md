@@ -1,5 +1,27 @@
 # Source provenance
 
+## v0.10.0 qualified candidate — October 30, 2026
+
+Candidate gallery v2026.10.30 pins application source
+`fbeab7c400b31412d79b7cfdd49c10c00b101294`, version v0.10.0 (MEL-713 step 1:
+device conversations take no new turn). Classic/Holonet/Pulp/Zoom are 1.10.0;
+Office is 1.8.0. The normal generator produces all five packages; the twenty
+previews are byte-unchanged. Classic, Holonet and Zoom keep device
+conversations readable and their received requests answerable, but their
+composer and new-conversation dialog refuse a new device message with a
+read-only note, keeping text and files. Office/Pulp inherit Comic's read-only
+device composer. Two repairs to the unreleased MEL-710 change: a dialog whose
+run is refused after a workspace change shows why and can be closed again
+(only a newer dialog silences it), and the historical-labels test loads the
+shared answer dialog it now opens.
+
+The complete exact-pin browser-enabled `npm test` passes: 324 Node/browser
+checks, zero failures or skips; all seven packages pass their applicable
+suites. The Zoom touch journey through device history is removed with the
+device composer. Node 26, Go 1.26.8 and the existing Chromium 155 are used.
+No physical-device, exhaustive control/platform/history, installed-client
+activation or public release is established by this gate.
+
 ## v0.9.9 published — October 29, 2026
 
 Gallery v2026.10.29.1 is public and Latest from immutable

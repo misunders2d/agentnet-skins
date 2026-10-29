@@ -62,7 +62,7 @@ async function backToChat(){const rungs=z().locator('.ladder .rung');await rungs
  /* Long histories for the Zoom check below: real messages in this disposable world, only in Anna's chats (no other journey reads them), topped up to 200 and never repeated; a device conversation is one reply chain. */
  const seed=JSON.parse(fs.readFileSync(path.join(world,'seed.json'))),runTag=Date.now().toString(36);
  const history=family!=='zoom'?null:seedPublicHistory({world,binary:process.env.AGENTNET_COMPANY_BINARY,conv:seed.dm_anna,to:urls.anna.address,from:urls.sergey.address});
- if(history)console.log('Zoom fixture: histories settled before browser launch (200+200)');
+ if(history)console.log('Zoom fixture: DM history settled before browser launch (200)');
  browser=await chromium.launch({headless:true,executablePath:process.env.AGENTNET_CHROMIUM||undefined});
  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
  page.on('request',r=>{if(!reloadTracking)return;const pathname=new URL(r.url()).pathname;if(!pathname.startsWith('/api/'))return;const row={path:pathname,method:r.method(),started:Date.now()};reloadRequests.push(row);pendingReload.set(r,row);});
@@ -104,7 +104,7 @@ async function backToChat(){const rungs=z().locator('.ladder .rung');await rungs
   await tap(z().locator('.zoom-message details.tech > summary'),'Details');
   const menu=z().locator('.zoom-message .msg-menu > summary');if(await menu.count()){await tap(menu,'Message actions');await z().getByRole('button',{name:'Edit',exact:true}).waitFor();await menu.tap();}
   const rungs=z().locator('.ladder .rung');await tap(rungs.nth((await rungs.count())-2),'Ladder: back to the chat');await z().locator('.mini-chat').waitFor();await settled();
-  /* Long history (v0.8.26 Android report): Write is in reach the moment a long chat opens and anywhere while its history scrolls, in a DM and in a device conversation, never scrolled to; tapped where it is, it writes to that chat (and a Reply still quotes its message). */
+  /* Long history (v0.8.26 Android report): Write is in reach the moment a long chat opens and anywhere while its history scrolls, in a DM, never scrolled to; tapped where it is, it writes to that chat (and a Reply still quotes its message). */
   const longChat=async(name,label)=>{const content=z().locator('.zoom-layer:last-child .zoom-content'),write=z().getByRole('button',{name,exact:true});
    const span=await content.evaluate(c=>({h:c.scrollHeight,v:c.clientHeight}));check(span.h>=10*span.v,label+' history is too short to prove reach: '+span.h+'px in a '+span.v+'px view');result.checks.push(label+': '+span.h+'px of history in a '+span.v+'px view');
    await inReach(write,label+': Write on arrival');
@@ -160,27 +160,7 @@ async function backToChat(){const rungs=z().locator('.ladder .rung');await rungs
   }
   check(quotesOriginal,'A Reply from a long DM quotes its message');
   await tap(z().locator('.ladder .rung').first(),'Ladder: Everyone');await z().locator('.person-card').first().waitFor();await settled();
-  const anna=()=>z().locator('.person-cluster').filter({hasText:'Anna'});
-  await tap(anna().locator('details.person-devices > summary'),'Anna\'s devices');await tap(anna().getByRole('button',{name:/device conversations?$/}),'Device conversations');
-  await tap(z().locator('.thread-row').filter({hasText:'Device history 001'}),'Long device conversation');await z().locator('.mini-chat').waitFor();await settled();
-  at=await longChat('Write in this conversation…','Long device conversation');await shot('long-device');
-  await page.touchscreen.tap(at.x,at.y);await page.locator('#write-body').waitFor();
-  check(await page.locator('#dialog-title').textContent()==='Write to '+urls.anna.address,'The device conversation\'s Write writes to its device');check(await page.locator('#write-kind').inputValue()==='message','It still sends as a message by default');
-  const devText='Device history write '+runTag;await page.locator('#write-body').fill(devText);await page.locator('#dialog-ok').tap();await z().locator('.mini-chat').getByText(devText,{exact:true}).waitFor();
-  await bubbleFor(devText).waitFor();const deviceNow=history.device(),storedDevice=deviceNow.filter(x=>x.body===devText);assert(storedDevice.length<=1,'Duplicate persisted device write');
-  check(storedDevice.length===1,'It joined that same device conversation');
-  if(storedDevice.length===1){
-   reloadTracking=true;
-   try{await page.reload();await page.locator(rootClass).waitFor();await z().locator('.mini-chat').waitFor();await settled();}
-   catch(e){result.reloadDiagnostic={requests:reloadRequests.map(r=>({path:r.path,method:r.method,status:r.status??null,durationMs:r.durationMs??Date.now()-r.started,pending:r.durationMs===undefined,failed:r.failed??false})),view:await z().evaluate(n=>({loading:n.textContent.includes('Loading this conversation'),layers:n.querySelectorAll('.zoom-layer').length,miniChats:n.querySelectorAll('.mini-chat').length,currentRungs:[...n.querySelectorAll('.rung')].map((r,i)=>r.getAttribute('aria-current')==='step'?i:null).filter(i=>i!==null),activeTag:n.getRootNode().activeElement?.tagName||null})).catch(()=>null)};console.error('Reload diagnostic:',JSON.stringify(result.reloadDiagnostic));throw e;}
-   finally{reloadTracking=false;}
-
-   await tap(z().locator('.ladder .rung').first(),'Reload: Everyone');await z().locator('.person-card').first().waitFor();await settled();
-   await tap(anna().locator('details.person-devices > summary'),'Reload: Anna devices');await tap(anna().getByRole('button',{name:/device conversations?$/}),'Reload: Device conversations');await tap(z().locator('.thread-row').filter({hasText:'Device history 001'}),'Reload: Long device conversation');await z().locator('.mini-chat').waitFor();await settled();
-   await bubbleFor('Device history 001').tap();await z().locator('.zoom-message').waitFor();await settled();check(renderedIDMatches(await messageID(),history.thread),'Reloaded device chat has the exact original root');await backToChat();
-   await bubbleFor(devText).tap();await z().locator('.zoom-message').waitFor();await settled();check(renderedIDMatches(await messageID(),storedDevice[0].id),'Reloaded device Write has its stored Message id');await backToChat();
-  }
-  await page.setViewportSize({width:1280,height:800});await page.waitForTimeout(300);await longChat('Write in this conversation…','Desktop long device conversation');await page.setViewportSize({width:390,height:844});
+  /* Old device conversations are read only since AgentNet v0.10.0 (MEL-713): nothing writes in one, so the long-history Write check is the DM's alone. */
  }else{
   await tap(page.locator('#conv-list button').filter({hasText:'Bohdan'}).first(),'Chat row');await page.locator('#composer').waitFor();await page.waitForTimeout(800); // the chat's own refresh redraws it once
   const theirs=page.locator('#timeline .msg.in').last();

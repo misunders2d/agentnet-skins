@@ -4082,7 +4082,7 @@ function continues(m, prev) {
     !(prev.actions && prev.actions.length) && !prev.summary && new Date(m.at) - new Date(prev.at) < 10 * 60e3;
 }
 
-const decisionActions = ["accept", "accept_always", "decline", "approve", "resolve", "reply", "do_it"];
+const decisionActions = ["continue", "accept", "accept_always", "decline", "approve", "resolve", "reply", "do_it"];
 
 // ---- message controls: reactions, edits, deletion (MEL-476, MEL-477, R08) ----
 //
@@ -4358,14 +4358,77 @@ function decisionButtons(it, x) {
   // A DM or group request (conv) is decided here, never answered by hand.
   const acts = (x.actions && x.actions.length ? x.actions : by[x.state] || []).filter((a) => !(x.conv && a === "reply"));
   if (!acts.length) return null;
-  return el("div", { class: "acts" }, acts.map((a, i) => el("button", { type: "button", class: "act" + (i === 0 ? " go" : ""), onclick: () => operatorDialog(it, x, a) }, a === "accept" && again ? "Run it again there…" : decisionWord[a] || a)));
+  return el("div", { class: "acts" }, acts.map((a, i) => {const button=el("button", { type: "button", class: "act" + (i === 0 ? " go" : ""), onclick: () => operatorDialog(it, x, a) }, a === "accept" && again ? "Run it again there…" : decisionWord[a] || a);return a==='reply'?answerSlot(['report-reply',it.report.host,x.id,x.key,x.attempt],button,x.result):button;}));
 }
 
 // operatorDialog sends one decision to the host, bound to the state and
 // attempt the operator saw; the host answers with the real resulting
 // state (or a refusal), shown on the item when it arrives.
+// Retain one exact submission across continuation/report surfaces and navigation.
+const answerIntents = new WeakMap(), answerDrafts = new Set(), answerSlots = new Set();
+function answerScope(identity) {
+  const ws=wsNow(),target=identity[1]||state.overview?.me?.address||'';
+  return {key:JSON.stringify([ws,target,...identity.slice(2,5)]),latest:'latest:'+JSON.stringify([ws,target,identity[2]])};
+}
+function answerIntent(identity,result) {
+  const rows=answerIntents.get(currentHost),intent=rows?.get(answerScope(identity).key);
+  const refusal=result?.refused&&JSON.stringify(result);
+  if(intent&&refusal&&refusal!==intent.refusal&&refusal!==intent.resultAtSend){
+    intent.refusal=refusal;intent.state='refused';intent.error=result.refused;intent.body=null;answerDrafts.add(intent);
+  }
+  return intent;
+}
+function paintAnswers(){for(const draw of answerSlots)if(!draw())answerSlots.delete(draw);}
+function answerSlot(identity,button,result) {
+  const host=currentHost,ws=wsNow(),label=button.textContent,card=el('div',{class:'hint'}),slot=el('div',{},button,card);
+  const draw=()=>{
+    if(!slot.isConnected)return false;
+    if(host!==currentHost||ws!==wsNow())return true;
+    const intent=answerIntent(identity,result),phase=intent?.state;
+    button.disabled=phase==='pending'||phase==='sent';
+    button.textContent=phase==='pending'?'Sending answer…':phase==='sent'?'Answer submitted':phase==='failed'||phase==='refused'?'Retry answer…':label;
+    card.replaceChildren();
+    if(intent&&phase!=='draft'){
+      card.append(el('p',{class:'quote'},intent.text),el('p',{role:phase==='failed'||phase==='refused'?'alert':'status'},
+        phase==='pending'?'Sending your answer… Not confirmed yet.':phase==='sent'?'Answer submitted. Waiting for the host’s current state.':phase==='refused'?'The host refused this answer: '+intent.error:'Submission was not confirmed. Your answer is kept; retry uses the same send ID. '+intent.error));
+    }
+    return true;
+  };
+  answerSlots.add(draw);queueMicrotask(()=>{if(slot.isConnected)draw()});return slot;
+}
+function answerDialog({identity, title, body, request, path, field, refresh, result}) {
+  const host=currentHost,ws=wsNow(),scope=answerScope(identity);
+  let rows=answerIntents.get(host);if(!rows){rows=new Map();answerIntents.set(host,rows);}
+  let intent=answerIntent(identity,result)||rows.get(scope.key);
+  if(!intent){intent={text:'',body:null,state:'draft',error:'',resultAtSend:JSON.stringify(result)};rows.set(scope.key,intent);}
+  rows.set(scope.latest,intent);
+  const current=()=>alive&&currentHost===host&&wsNow()===ws&&rows.get(scope.latest)===intent;
+  if(intent.state==='pending'||intent.state==='sent'){paintAnswers();announce(intent.state==='pending'?'Your answer is still sending.':'Answer already submitted. Waiting for the host’s current state.');return;}
+  const text=el('textarea',{id:'agent-answer',rows:'4',maxlength:'8000','aria-label':'Your answer'});text.value=intent.text;text.disabled=!!intent.body;
+  dialog({title,body:[...body,el('label',{for:'agent-answer',class:'field-label'},'Your answer'),text,
+    el('p',{class:'hint'},intent.state==='failed'?'Submission was not confirmed. Retry keeps the same answer and send ID. '+intent.error:intent.state==='refused'?'The host refused the previous answer: '+intent.error:'')],ok:intent.body?'Retry answer':'Send answer',focus:text,run:async()=>{
+    if(!current())throw Error('Workspace changed. Reopen the request.');
+    if(intent.state==='pending'||intent.state==='sent')return;
+    if(!text.value.trim())throw Error('Write your answer first.');
+    intent.text=text.value;
+    if(!intent.body){intent.body={...request,[field]:text.value.trim(),send_id:sendID()};intent.path=path;}
+    const refusal=intent.refusal;
+    intent.state='pending';intent.error='';answerDrafts.add(intent);
+    $('dialog').close();state.dialogBusy=false;paintAnswers();
+    try{
+      const response=await api(intent.path,intent.body,host);
+      if(intent.refusal!==refusal)return; // a newer signed refusal wins
+      intent.state='sent';answerDrafts.delete(intent);
+      if(current()){paintAnswers();announce(response.note||'Answer submitted.');void refresh().catch(e=>{if(current())announce('Answer submitted; current state could not be refreshed. '+e.message);});}
+    }catch(e){if(intent.refusal!==refusal)return;intent.state='failed';intent.error=e.message;if(current()){paintAnswers();announce('Answer submission was not confirmed. Reopen Reply to retry. '+e.message);}}
+  }});
+  $('dialog-ok').disabled=!text.value.trim();
+  text.addEventListener('input',()=>{intent.text=text.value;if(intent.text)answerDrafts.add(intent);else answerDrafts.delete(intent);$('dialog-ok').disabled=!text.value.trim();});
+}
+
 function operatorDialog(it, x, action) {
   const host = it.report.host;
+  if(action==='reply')return answerDialog({identity:['report-reply',host,x.id,x.key,x.attempt,x.state],title:'Answer it on '+host+'?',body:[el('p',{},'The '+(kindTag[x.kind]||x.kind||'request').toLowerCase()+' from '+(x.from||'?')+', as '+host+' reported it at '+when(it.report.at)+' ('+(execWord[x.state]||x.state)+').'),x.excerpt&&el('div',{class:'quote'},x.excerpt),el('p',{class:'hint'},'The host applies this only if the request is still in that state; you see the real outcome here. Nothing runs on this computer.')],path:'/api/operator/decide',field:'text',request:{host,id:x.id,key:x.key,action,expect:x.state,attempt:x.attempt,report:it.id},refresh:()=>loadOverview(),result:x.result});
   const needText = action === "reply" || action === "decline";
   const ta = needText ? el("textarea", { id: "decide-text", rows: "3", "aria-label": action === "reply" ? "Your answer" : "Why" }) : null;
   dialog({ title: (decisionWord[action] || action).replace(/…$/, "") + " on " + host + "?", ok: decisionWord[action] ? decisionWord[action].replace(/ there…$/, "") : action,
@@ -4524,7 +4587,7 @@ function details(m) {
 }
 
 const actionLabel = {
-  do_it: "Do it",
+  do_it: "Do it", continue: "Reply",
   accept: "Accept and run…", accept_always: "Always accept from this key…", decline: "Decline…",
   approve: "Answer their questions automatically…", resolve: "Close without replying…", reply: "Reply", cancel: "Stop…",
 };
@@ -4540,7 +4603,8 @@ function actionButton(a, m, t, primary) {
   if (a === "accept" && m.kind === "question") label = "Let your responder answer…";
   if (a === "accept" && ["needs_human", "interrupted", "failed", "cancelled"].includes(m.state)) label = "Run your responder again…";
   if (a === "accept" && (m.actions || []).includes("resolve")) label = "Ask again";
-  return el("button", { type: "button", class: "act" + (primary ? " go" : ""), onclick: () => decide(a, m, t) }, label);
+  const button=el("button", { type: "button", class: "act" + (primary ? " go" : ""), onclick: () => decide(a, m, t) }, label);
+  return a==='continue'&&m.continuation?answerSlot(['continue',m.continuation.host||'',m.continuation.id,m.continuation.key,m.continuation.attempt],button,m.continuation.handled):button;
 }
 
 // ---- decisions ---------------------------------------------------------------
@@ -4552,6 +4616,14 @@ async function act(body, host) {
 }
 
 function decide(a, m, t) {
+  if (a === "continue") {
+    if (!m.continuation) { announce("This request no longer waits for an answer. Refresh it and review its current state."); return; }
+    const c={...m.continuation};
+    return answerDialog({identity:['continue',c.host||'',c.id,c.key,c.attempt],title:'Answer '+historicalTargetLabel(m.target),
+      body:[el('p',{class:'agent-detail'},m.job_detail||m.detail||''),el('p',{class:'hint'},'Reply supplies missing information for this request. If the agent reports a permission or environment problem, resolve it in the native agent on its host computer first. Reply and retry keep the same permissions.')],
+      path:c.host?'/api/operator/decide':'/api/act',field:c.host?'text':'body',
+      request:c.host?{host:c.host,id:c.id,key:c.key,action:'continue',expect:'needs_human',attempt:c.attempt,report:''}:{do:'continue',id:c.id,key:c.key,attempt:c.attempt},refresh:()=>refetch(false),result:c.handled});
+  }
   if (a === "do_it") return act({ do: a, id: m.id }).then(() => refetch(false)).catch(e => announce(e.message));
   if (a === "reply") {
     setAnswering(m);
@@ -4651,6 +4723,8 @@ function dialog({ title, body, ok, run, gate, focus }) {
   okBtn.textContent = ok;
   okBtn.disabled = !!gate;
   if (gate) gate.addEventListener("change", () => { okBtn.disabled = !gate.checked; });
+  const dialogToken={},dialogHost=currentHost,dialogWorkspace=wsNow();state.dialogToken=dialogToken;state.dialogBusy=false;
+  const ownsDialog=()=>alive&&state.dialogToken===dialogToken&&currentHost===dialogHost&&wsNow()===dialogWorkspace;
   let busy = false; // a double click confirms once
   okBtn.onclick = async () => {
     if (busy) return;
@@ -4659,12 +4733,14 @@ function dialog({ title, body, ok, run, gate, focus }) {
     okBtn.disabled = true;
     try {
       await run();
-      d.close();
+      if(ownsDialog())d.close();
     } catch (e) {
+      if(!ownsDialog())return;
       $("dialog-error").textContent = e.message;
       okBtn.disabled = !!gate && !gate.checked;
     } finally {
       busy = false;
+      if(!ownsDialog())return;
       state.dialogBusy = false;
       if (state.newVersion) updated(state.newVersion);
     }
@@ -5490,6 +5566,7 @@ async function reconnect() {
 // Reload persistence keeps only part of a draft. Keep every unsent draft
 // in memory until the person sends or clears it, including other workspaces.
 function hasUnsentDrafts() {
+  if(answerDrafts.size)return true;
   if([...muteFlights().values()].some(f=>f.phase!=='failed'))return true;
   if ($("dialog").open && $("dialog-body").querySelector(".shared-resource-editor")) return true;
   const pending = (d) => d && (d.text || d.answering || d.reply || d.agent || d.agent_id || d.reply_receiver || d.reply_receiver_host || d.typedFor || (d.files && d.files.length));

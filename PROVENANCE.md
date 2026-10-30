@@ -1,8 +1,10 @@
 # Source provenance
 
-## v0.10.0 qualified candidate — October 30, 2026
+## v0.10.0 published — October 30, 2026
 
-Candidate gallery v2026.10.30 pins application source
+Gallery v2026.10.30 is public and Latest from immutable
+`3675a2e7e1d7bd037c7244a751bc8cd177172c47`, published at 08:08:16 UTC October 30.
+It pins application source
 `fbeab7c400b31412d79b7cfdd49c10c00b101294`, version v0.10.0 (MEL-713 step 1:
 device conversations take no new turn). Classic/Holonet/Pulp/Zoom are 1.10.0;
 Office is 1.8.0. The normal generator produces all five packages; the twenty
@@ -19,8 +21,14 @@ The complete exact-pin browser-enabled `npm test` passes: 324 Node/browser
 checks, zero failures or skips; all seven packages pass their applicable
 suites. The Zoom touch journey through device history is removed with the
 device composer. Node 26, Go 1.26.8 and the existing Chromium 155 are used.
-No physical-device, exhaustive control/platform/history, installed-client
-activation or public release is established by this gate.
+Physical-device, exhaustive control/platform/history and fleet-activation
+evidence remain outside this skin gate. Separate public verification uses the
+frozen application's actual gallery parser and prepare function over 151
+unauthenticated HTTPS requests: all five packages, 129 files and twenty preview
+digests match, and all 150 fetched raw files are byte-identical to `published/`.
+App v0.10.0 is public/Latest from the exact pin; its twelve payloads and
+checksum file match the qualified draft. Private logs, source extracts and QA
+screenshots remain outside the repository.
 
 ## v0.9.9 published — October 29, 2026
 

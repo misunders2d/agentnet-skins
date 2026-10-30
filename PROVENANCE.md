@@ -1,5 +1,26 @@
 # Source provenance
 
+## v0.10.1 qualified candidate — October 30, 2026
+
+Candidate gallery v2026.10.30.1 pins application source
+`6102c31465092edee8244f4d686b91a8bc628203`, version v0.10.1 (daemon CPU,
+own-device history and invitation delivery fixes; no web or skin contract
+change since v0.10.0). Classic/Holonet/Pulp/Zoom stay 1.10.0 and Office 1.8.0;
+only the `agentnet` field and generated manifests change, and the twenty
+previews are byte-unchanged.
+
+Exact-pin browser-enabled `npm test`, three local runs: all 324 Node/browser
+checks passed in each. Run 2 (network-isolated with `unshare -rn`) passed
+every suite of all five published packages and the native request suite;
+its only failure was the generated qa-orbit scaffold's browser-provider
+timeout. Run 1 failed only the native request suite: two `GET /` requests from
+a local Node process (`user-agent: node`, trace headers) reached its fixture
+server; isolated, it passed three times out of three. Run 3, overlapping local
+race tests at load 18, timed out Classic's browser and touch journeys. Every
+suite passed in at least one run. No physical-device, exhaustive
+control/platform/history, installed-client activation or public release is
+established by this gate.
+
 ## v0.10.0 published — October 30, 2026
 
 Gallery v2026.10.30 is public and Latest from immutable

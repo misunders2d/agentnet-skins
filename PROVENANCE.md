@@ -1,5 +1,30 @@
 # Source provenance
 
+## v0.10.2 qualified candidate — November 1, 2026
+
+Candidate gallery v2026.11.01 pins application source
+`40baa3f1c9a7da60eb8f0152ba125c5e24eb6eb6`, version v0.10.2 (relay checks
+asked once per action and together; an invited agent's device shown as
+offline or behind; quick retry of failed sends; automatic gallery updates).
+Contract text changed since v0.10.1: docs/UI_SKINS.md (trust carried to an
+automatic gallery update) and docs/HOST_API_ROUTES.md (optional
+`directory.members[]` `presence`/`suspended`). Classic/Holonet/Pulp/Zoom stay
+1.10.0 and Office 1.8.0; only the `agentnet` field, generated manifests and
+the Office/Pulp overlay builds (rebuilt on the pinned Comic kit) change, and
+the twenty previews are byte-unchanged.
+
+Exact-pin browser-enabled `npm test`, network-isolated with `unshare -rn`.
+Run 1: all 324 Node/browser checks passed, zero skipped; every suite of all
+five published packages and the native request suite passed; the only
+failure was the generated qa-orbit scaffold's motion check (its sweep
+animation had already ended when read). Run 2, at load 10 on 8 cores from
+unrelated local services, timed out 15 s waits in Classic's browser and
+touch journeys and in Holonet's and qa-orbit's touch journeys. A run on the
+earlier candidate `3b14cf7d` (test-only difference) failed only Zoom's touch
+journey under concurrent local race tests. No physical-device, exhaustive
+control/platform/history, installed-client activation or public release is
+claimed here.
+
 ## v0.10.1 published — October 30, 2026
 
 Gallery v2026.10.30.1 is public and Latest from immutable

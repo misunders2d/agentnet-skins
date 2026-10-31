@@ -2,7 +2,7 @@
 
 Portable interfaces for [AgentNet](https://github.com/misunders2d/agentnet). Build one, share its folder, install it on a computer or relay, import it into one browser, or pick it from AgentNet’s in-app **skin gallery**. Every skin uses AgentNet’s existing encrypted conversations, topics, people, agents and permissions through **Host API v1**.
 
-Gallery v2026.11.01 is the candidate for **AgentNet v0.10.2**, pinned to [`40baa3f1c9a7da60eb8f0152ba125c5e24eb6eb6`](https://github.com/misunders2d/agentnet/tree/40baa3f1c9a7da60eb8f0152ba125c5e24eb6eb6). Classic, Holonet, Pulp and Zoom are 1.10.0; Office is 1.8.0; packages and previews are unchanged apart from the AgentNet version they were checked against and the Office/Pulp builds of the pinned Comic kit. All 324 Node/browser checks pass; every suite of all five packages passed against the exact pin (see [PROVENANCE.md](PROVENANCE.md)). Exhaustive interaction and physical-device coverage remain incomplete.
+[Gallery v2026.11.01](https://github.com/misunders2d/agentnet-skins/releases/tag/v2026.11.01) is public for **AgentNet v0.10.2**, pinned to [`40baa3f1c9a7da60eb8f0152ba125c5e24eb6eb6`](https://github.com/misunders2d/agentnet/tree/40baa3f1c9a7da60eb8f0152ba125c5e24eb6eb6). Classic, Holonet, Pulp and Zoom are 1.10.0; Office is 1.8.0; packages and previews are unchanged apart from the AgentNet version they were checked against and the Office/Pulp builds of the pinned Comic kit. All 324 Node/browser checks pass; every suite of all five packages passed against the exact pin (see [PROVENANCE.md](PROVENANCE.md)). Exhaustive interaction and physical-device coverage remain incomplete.
 
 ## Gallery
 

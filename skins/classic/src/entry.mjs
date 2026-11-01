@@ -396,6 +396,48 @@ const when = (s) => {
   return d.toDateString() === new Date().toDateString() ? time(s)
     : d.toLocaleDateString([], { month: "short", day: "numeric" });
 };
+// A message's time keeps its day once the day line has scrolled away (owner,
+// November 1, 2026), as in Comic: the time today, then "Yesterday", the
+// weekday within a week, the date, and the year from another year. One "now"
+// and one formatter per form serve a whole synchronous render.
+const stampFormats = new Map();
+let renderNow = null;
+const stampFormat = (key, options) => {
+  let f = stampFormats.get(key);
+  if (!f) {
+    if (!stampFormats.size) queueMicrotask(() => stampFormats.clear());
+    stampFormats.set(key, f = new Intl.DateTimeFormat([], options));
+  }
+  return f;
+};
+const nowOfRender = () => renderNow || (queueMicrotask(() => { renderNow = null; }), renderNow = new Date());
+const dayStart = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+const msgStamp = (s, now = nowOfRender()) => {
+  const d = asDate(s), days = Math.round((dayStart(now) - dayStart(d)) / 864e5);
+  if (!Number.isFinite(d.getTime()) || days === 0) return time(s);
+  if (days === 1) return "Yesterday " + time(s);
+  if (days > 1 && days < 7) return stampFormat("week", { weekday: "short", hour: "numeric", minute: "2-digit" }).format(d);
+  return d.getFullYear() === now.getFullYear()
+    ? stampFormat("date", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(d)
+    : stampFormat("year", { year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(d);
+};
+const fullStamp = (s) => { const d = asDate(s); return Number.isFinite(d.getTime()) ? stampFormat("full", { dateStyle: "full", timeStyle: "short" }).format(d) : ""; };
+// The day line before each day's first message, by when it arrived, as
+// Comic's: "Today", "Yesterday" or "Thursday, Oct 29".
+const dayName = (d, now = nowOfRender()) => {
+  if (d.toDateString() === now.toDateString()) return "Today";
+  const y = new Date(now); y.setDate(now.getDate() - 1);
+  return d.toDateString() === y.toDateString() ? "Yesterday" : stampFormat("day", { weekday: "long", month: "short", day: "numeric" }).format(d);
+};
+// withDays draws rows with a day line before each day's first message; draw
+// gets the previous message only on the same day, so a group never runs on
+// across a day line.
+const withDays = (rows, draw, of = (r) => r) => rows.flatMap((r, i) => {
+  const m = of(r), before = i ? of(rows[i - 1]) : undefined, d = asDate(m.at);
+  if (!Number.isFinite(d.getTime()) || before && asDate(before.at).toDateString() === d.toDateString()) return [draw(r, before)];
+  const label = dayName(d);
+  return [el("li", { class: "day-line", role: "separator", "aria-label": label }, label), draw(r, undefined)];
+});
 const size = (n) => n < 1024 ? n + " B" : n < 1 << 20 ? (n / 1024).toFixed(1) + " KB" : (n / (1 << 20)).toFixed(1) + " MB";
 // A person mention in text: [@Name](agentnet:person/ID) or agentnet:guest/PID
 // (see mentionWho). mentionPlain reads each as @Name.
@@ -2800,7 +2842,7 @@ function renderDMBody(scrollToEnd) {
   if(topicSelections[t.id]&&!(t.topics||[]).some(x=>x.id===topicSelections[t.id])&&!sends.merge("dm:"+t.id,t.messages).some(m=>m._local&&m.topic===topicSelections[t.id]))topicSelections[t.id]="";
   topicUI.update({conv:t.id},t.topics,topicSelections[t.id],flatTopicScope(t),topicMetadata(t));
   prepareMediaRender(base,"dm");
-  fillTimeline(tl, "dm:"+t.id+":"+(topicSelections[t.id]||""), shown.length ? groupedSends(shown).map(({m, compact}, i, rows) => dmMsg(m, t, rows[i - 1]?.m, compact))
+  fillTimeline(tl, "dm:"+t.id+":"+(topicSelections[t.id]||""), shown.length ? withDays(groupedSends(shown), ({m, compact}, prev) => dmMsg(m, t, prev, compact), r => r.m)
     : el("li", { class: "hint empty-list" }, "No messages yet. What you write here goes to " + (humanGroup(t) ? "the current members of " + t.title : t.peer.label) + " only."));
   if (scrollToEnd || atEnd) tl.scrollTop = tl.scrollHeight;
   syncVisibleRead();
@@ -2827,9 +2869,7 @@ function dmReplyParent(m, t, ref = m.quote) {
 
 
 function sentWhen(m) {
-  const sent = m.sent_at || m.at, day = new Date(sent);
-  if (day.toDateString() === new Date(m.at).toDateString()) return when(sent);
-  return day.toLocaleDateString([], {month: "short", day: "numeric"}) + " · " + day.toLocaleTimeString([], {hour: "numeric", minute: "2-digit"});
+  return msgStamp(m.sent_at || m.at);
 }
 function messageReference(m,t) {
  const output=["answer","result"].includes(m.kind)||m.status==="progress"||m.verified_agent&&m.kind==="message",ref=m.quote||output&&m.reply_to;
@@ -2861,7 +2901,7 @@ async function askGuestUpdate(p) {
 function dmMsg(m, t, prev, compact = false) {
   if (m._local) return el("li", {id:"m-"+m.id,class:"msg out"}, el("div", {class:"col"}, el("div", {class:"bubble"}, m.pid && el("p", {"data-agent-recipient":"",title:m.pid}, "To @"+(agentOf(m.pid)?agentName(agentOf(m.pid)):"agent")), !compact && el("p", {class:"body"}, m.body), el("p",{class:"hint"},(m.attachments || m.files || []).map(f=>f.name).join(", "))), el("div", {class:"foot",role:"status"}, m.state_text, m._failed && el("button", {type:"button",class:"text-btn",onclick:m._retry}, "Retry"))));
   if (m.event) {
-    return el("li", { id: "m-" + m.id, class: "event-line" }, el("span", {}, m.event), el("time", { datetime: m.sent_at || m.at }, sentWhen(m)));
+    return el("li", { id: "m-" + m.id, class: "event-line" }, el("span", {}, m.event), el("time", { datetime: m.sent_at || m.at, title: fullStamp(m.sent_at || m.at) }, sentWhen(m)));
   }
   const mine = m.dir === "out";
   const agent = !!m.agent_id || (m.origin || "").startsWith("agent:");
@@ -2878,7 +2918,7 @@ function dmMsg(m, t, prev, compact = false) {
     to && el("span", { class: "tag", "data-agent-recipient":"", title:m.pid }, "To " + to.charAt(0).toLowerCase() + to.slice(1)),
     kindTag[m.kind] && el("span", { class: "tag" }, kindTag[m.kind]),
     m.unread && el("span", { class: "tag unread" }, "New"),
-    el("time", { datetime: m.sent_at || m.at }, sentWhen(m)));
+    el("time", { datetime: m.sent_at || m.at, title: fullStamp(m.sent_at || m.at) }, sentWhen(m)));
   const bubble = el("div", { class: "bubble", tabindex: "-1" });
   return el("li", { id: "m-" + m.id, class: "msg " + m.dir + (cont ? " cont" : "") + (held || acts.length ? " needs" : "") },
     !mine && (cont ? el("span", { class: "avatar sm", "aria-hidden": "true" }) : avatar(humanGroup(t) || (dmHumanGuest(t) && !m.excerpt_pid) || (t.guests || []).some(g => g.host.address === m.from) ? author : t.peer.label || m.from, "sm")),
@@ -4263,7 +4303,7 @@ function renderBody(scrollToEnd) {
   const tl = $("timeline");
   const atEnd = tl.scrollHeight - tl.scrollTop - tl.clientHeight < 60;
   prepareMediaRender(state.data,"thread");
-  fillTimeline(tl, "thread:"+state.thread, ...t.messages.map((m, i) => renderMsg(m, byId, t.messages[i - 1], t)));
+  fillTimeline(tl, "thread:"+state.thread, ...withDays(t.messages, (m, prev) => renderMsg(m, byId, prev, t)));
   if (scrollToEnd || atEnd) tl.scrollTop = tl.scrollHeight;
   syncVisibleRead();
 }
@@ -4787,7 +4827,7 @@ function renderMsg(m, byId, prev, t) {
     kindTag[m.kind] && el("span", { class: "tag" }, kindTag[m.kind]),
     m.status && m.status !== "done" && el("span", { class: "tag" }, statusWord[m.status] || m.status),
     m.unread && el("span", { class: "tag unread" }, "New"),
-    el("time", { datetime: m.sent_at || m.at }, sentWhen(m)));
+    el("time", { datetime: m.sent_at || m.at, title: fullStamp(m.sent_at || m.at) }, sentWhen(m)));
 
   let panel = null;
   if (report) {

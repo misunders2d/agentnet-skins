@@ -386,6 +386,48 @@ const when = (s) => {
   return d.toDateString() === new Date().toDateString() ? time(s)
     : d.toLocaleDateString([], { month: "short", day: "numeric" });
 };
+// A message's time keeps its day once the day line has scrolled away (owner,
+// November 1, 2026), as in Comic: the time today, then "Yesterday", the
+// weekday within a week, the date, and the year from another year. One "now"
+// and one formatter per form serve a whole synchronous render.
+const stampFormats = new Map();
+let renderNow = null;
+const stampFormat = (key, options) => {
+  let f = stampFormats.get(key);
+  if (!f) {
+    if (!stampFormats.size) queueMicrotask(() => stampFormats.clear());
+    stampFormats.set(key, f = new Intl.DateTimeFormat([], options));
+  }
+  return f;
+};
+const nowOfRender = () => renderNow || (queueMicrotask(() => { renderNow = null; }), renderNow = new Date());
+const dayStart = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+const msgStamp = (s, now = nowOfRender()) => {
+  const d = asDate(s), days = Math.round((dayStart(now) - dayStart(d)) / 864e5);
+  if (!Number.isFinite(d.getTime()) || days === 0) return time(s);
+  if (days === 1) return "Yesterday " + time(s);
+  if (days > 1 && days < 7) return stampFormat("week", { weekday: "short", hour: "numeric", minute: "2-digit" }).format(d);
+  return d.getFullYear() === now.getFullYear()
+    ? stampFormat("date", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(d)
+    : stampFormat("year", { year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(d);
+};
+const fullStamp = (s) => { const d = asDate(s); return Number.isFinite(d.getTime()) ? stampFormat("full", { dateStyle: "full", timeStyle: "short" }).format(d) : ""; };
+// The day line before each day's first message, by when it arrived, as
+// Comic's: "Today", "Yesterday" or "Thursday, Oct 29".
+const dayName = (d, now = nowOfRender()) => {
+  if (d.toDateString() === now.toDateString()) return "Today";
+  const y = new Date(now); y.setDate(now.getDate() - 1);
+  return d.toDateString() === y.toDateString() ? "Yesterday" : stampFormat("day", { weekday: "long", month: "short", day: "numeric" }).format(d);
+};
+// withDays draws rows with a day line before each day's first message; draw
+// gets the previous message only on the same day, so a group never runs on
+// across a day line.
+const withDays = (rows, draw, of = (r) => r) => rows.flatMap((r, i) => {
+  const m = of(r), before = i ? of(rows[i - 1]) : undefined, d = asDate(m.at);
+  if (!Number.isFinite(d.getTime()) || before && asDate(before.at).toDateString() === d.toDateString()) return [draw(r, before)];
+  const label = dayName(d);
+  return [el("li", { class: "day-line", role: "separator", "aria-label": label }, label), draw(r, undefined)];
+});
 const size = (n) => n < 1024 ? n + " B" : n < 1 << 20 ? (n / 1024).toFixed(1) + " KB" : (n / (1 << 20)).toFixed(1) + " MB";
 // A person mention in text: [@Name](agentnet:person/ID) or agentnet:guest/PID
 // (see mentionWho). mentionPlain reads each as @Name.
@@ -2760,9 +2802,7 @@ function dmReplyParent(m, t, ref = m.quote) {
 
 
 function sentWhen(m) {
-  const sent = m.sent_at || m.at, day = new Date(sent);
-  if (day.toDateString() === new Date(m.at).toDateString()) return when(sent);
-  return day.toLocaleDateString([], {month: "short", day: "numeric"}) + " · " + day.toLocaleTimeString([], {hour: "numeric", minute: "2-digit"});
+  return msgStamp(m.sent_at || m.at);
 }
 function messageReference(m,t) {
  const output=["answer","result"].includes(m.kind)||m.status==="progress"||m.verified_agent&&m.kind==="message",ref=m.quote||output&&m.reply_to;
@@ -6797,15 +6837,15 @@ const Zoom = {
         inviteRights(d).assistants && el("button",{type:"button",class:"text-btn",onclick:()=>inviteDialog(d)},"Add agent or share more…")),
       selectedModelReports(),
       $("compose-error").textContent && el("p",{class:"error",role:"alert"},$("compose-error").textContent),
-      el("ol", { class: "mini-chat" }, groupedSends(messages).map(({m, compact: groupPart}) => {
+      el("ol", { class: "mini-chat" }, withDays(groupedSends(messages), ({m, compact: groupPart}) => {
         if (m._local) return el("li", {class:"mc mine",id:"m-"+m.id}, el("div", {class:"mc-stack"}, el("div",{class:"mc-bubble"},m.pid && el("span",{class:"mc-who","data-agent-recipient":"",title:m.pid},"To @"+(agentOf(m.pid)?agentName(agentOf(m.pid)):"agent")),!groupPart && el("span",{class:"mc-text"},m.body), el("span",{class:"mc-files"},(m.attachments || m.files || []).map(f=>f.name).join(", "))),el("p",{class:"narr",role:"status"},m.state_text), m._failed && el("button",{type:"button",onclick:m._retry},"Retry")));
-        if (m.event) return el("li", { class: "event-line" }, el("span", {}, m.event), el("time", { datetime: m.sent_at || m.at }, sentWhen(m)));
+        if (m.event) return el("li", { class: "event-line" }, el("span", {}, m.event), el("time", { datetime: m.sent_at || m.at, title: fullStamp(m.sent_at || m.at) }, sentWhen(m)));
         const mine = m.dir === "out";
         const to = m.target && m.target.agent_id ? namedAgentLabel(m.target.agent_id, m.target.address, undefined, whoseAgent(m.pid && agentOf(m.pid))) : m.to && agentOf(m.pid) ? agentName(agentOf(m.pid)) : "";
         const execution = execLine(m, d);
         const compact = !m.deleted && confirmedTask(m);
         const bubble = el(compact ? "div" : "button", { ...(compact ? {} : {type:"button"}), class: compact ? "mc-bubble compact-approval-bubble" : "mc-bubble" },
-          el("span", { class: "mc-who" }, dmAuthor(m, d) + (kindTag[m.kind] ? " · " + kindTag[m.kind] : "") + (to ? " · to " + to : "") + " · " + sentWhen(m)),
+          el("span", { class: "mc-who", title: fullStamp(m.sent_at || m.at) }, dmAuthor(m, d) + (kindTag[m.kind] ? " · " + kindTag[m.kind] : "") + (to ? " · to " + to : "") + " · " + sentWhen(m)),
           !m.deleted && (m.kind === "question" || m.kind === "task") && m.pid && el("span", {class:"mc-who", "data-agent-recipient":"", title:m.pid}, "To @" + (agentOf(m.pid) ? agentName(agentOf(m.pid)) : "agent")),
           compact ? approvalBody(m) : !groupPart && el("span", { class: "mc-text" + (m.deleted ? " tombstone" : "") }, m.deleted ? "Message deleted" : formattedNodes(shownText(m),true), !m.deleted && m.edited ? " · edited" : ""),
           !m.deleted && (m.attachments || []).length > 0 && el("span", { class: "mc-files" }, "📎 " + m.attachments.map((f) => f.name).join(", ")),
@@ -6820,7 +6860,7 @@ const Zoom = {
           working(m) && nativeActivity(m.job_detail),
           m.exec?.state === "not_run" && m.job_detail && el("p", {class:"hint"}, m.job_detail),
           m.exec?.state !== "not_run" && (m.delivery || m.state_text) && el("p", { class: m.exec?.state ? "hint" : "narr" }, m.dir === "out" && m.delivery ? deliveryText(m) : m.state_text), storageSendActions(m, d.id));
-      })));
+      }, r => r.m)));
   },
 
   // Level 3 for a person: one DM message with everything known about it.
@@ -6832,7 +6872,7 @@ const Zoom = {
     const bubble = el("article", { class: "zoom-message", tabindex: "-1", "data-mid":m.id });
     return fill(bubble,
       el("div", { class: "meta" }, avatar(m.dir === "out" ? me : humanGroup(d) ? dmAuthor(m,d) : d.peer.label || m.from, "sm"), el("span", { class: "who" }, dmAuthor(m, d)),
-        kindTag[m.kind] && el("span", { class: "tag" }, kindTag[m.kind]), el("time", { datetime: m.sent_at || m.at }, sentWhen(m))),
+        kindTag[m.kind] && el("span", { class: "tag" }, kindTag[m.kind]), el("time", { datetime: m.sent_at || m.at, title: fullStamp(m.sent_at || m.at) }, sentWhen(m))),
       messageReference(m,state.dmData?.messages.includes(m)?state.dmData:state.data),
       agentDetailFor(m, d) && ((m.actions || []).includes("resolve") || m.exec?.state === "needs_human") && agentNeedsYouTurn(m, d),
       bodyOf(m),
@@ -6874,12 +6914,12 @@ const Zoom = {
           onclick: () => writeDialog(t, null) }, t.key.pending ? "Sending is blocked until you trust the new key" : "Write in this conversation…"))),
       ownModelReport(t.peer,state.deviceAgentID||""),
       $("compose-error").textContent && el("p",{class:"error",role:"alert"},$("compose-error").textContent),
-      el("ol", { class: "mini-chat" }, t.messages.map((m) => {
+      el("ol", { class: "mini-chat" }, withDays(t.messages, (m) => {
         if (m._local) return el("li", {class:"mc mine",id:"m-"+m.id}, el("div", {class:"mc-stack"}, el("div",{class:"mc-bubble"},el("span",{class:"mc-text"},[m.body,...(m.attachments || m.files || []).map(f=>f.name)].filter(Boolean).join("\n"))),el("p",{class:"narr",role:"status"},m.state_text), m._failed && el("button",{type:"button",onclick:m._retry},"Retry")));
         const mine = m.dir === "out";
         const compact = !m.deleted && confirmedTask(m);
         const bubble = el(compact ? "div" : "button", { ...(compact ? {} : {type:"button"}), class: compact ? "mc-bubble compact-approval-bubble" : "mc-bubble" },
-          el("span", { class: "mc-who" }, authorName(m) + (kindTag[m.kind] ? " · " + kindTag[m.kind] : "") + " · " + sentWhen(m)),
+          el("span", { class: "mc-who", title: fullStamp(m.sent_at || m.at) }, authorName(m) + (kindTag[m.kind] ? " · " + kindTag[m.kind] : "") + " · " + sentWhen(m)),
           compact ? approvalBody(m) : el("span", { class: "mc-text" + (m.deleted ? " tombstone" : "") }, m.deleted ? "Message deleted" : formattedNodes(shownText(m),true), !m.deleted && m.edited ? " · edited" : ""),
           (m.reactions || []).length > 0 && el("span", { class: "mc-files" }, m.reactions.map((r) => r.emoji + " " + (r.by || []).length).join("  ")));
         if (compact) bubble.append(el("button", {type:"button",class:"text-btn",onclick:()=>this.go(3,{msg:m.id},bubble)}, "Message details"));
@@ -6907,7 +6947,7 @@ const Zoom = {
     const bubble = el("article", { class: "zoom-message", tabindex: "-1", "data-mid":m.id });
     return fill(bubble,
       el("div", { class: "meta" }, avatar(m.dir === "out" ? state.overview.me.address : m.from, "sm"), el("span", { class: "who" }, authorName(m)),
-        kindTag[m.kind] && el("span", { class: "tag" }, kindTag[m.kind]), el("time", { datetime: m.sent_at || m.at }, sentWhen(m))),
+        kindTag[m.kind] && el("span", { class: "tag" }, kindTag[m.kind]), el("time", { datetime: m.sent_at || m.at, title: fullStamp(m.sent_at || m.at) }, sentWhen(m))),
       messageReference(m,state.dmData?.messages.includes(m)?state.dmData:state.data),
       bodyOf(m),
       !m.deleted && reminderLine(m),

@@ -501,7 +501,7 @@ dialog .check input { margin-top: 4px; width: 16px; height: 16px; accent-color: 
 .agent-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .agents-past summary { cursor: pointer; font-size: 13px; color: var(--muted); }
 .agents-past .agent-card { margin-top: 6px; opacity: .8; }
-.event-line { align-self: center; display: flex; gap: 8px; align-items: baseline; margin: 12px 0 2px; padding: 4px 12px; border-radius: 999px;
+.event-line, .day-line { align-self: center; display: flex; gap: 8px; align-items: baseline; margin: 12px 0 2px; padding: 4px 12px; border-radius: 999px;
   background: var(--sunken); color: var(--muted); font-size: 13px; max-width: 90%; text-align: center; }
 .event-line time { font-size: 12px; }
 .shared-note { margin: 2px 0 0; font-size: 12px; color: var(--accent-text); }
@@ -524,7 +524,9 @@ dialog .check input { margin-top: 4px; width: 16px; height: 16px; accent-color: 
 .agent-node::before { content: ""; position: absolute; top: -15px; left: 50%; width: 2px; height: 14px; background: var(--accent); }
 .agent-node-head { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
 .agent-node-dms { display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: center; }
-.mini-chat .event-line { list-style: none; }
+.mini-chat .event-line, .mini-chat .day-line { list-style: none; }
+.day-line { font-size: 12px; font-weight: 600; }
+.mini-chat .day-line { justify-self: center; }
 .notify-line .text-btn { font-size: inherit; }
 /* Reminders: personal, attention only. */
 .reminder { font-size: 12.5px; color: var(--muted); }
@@ -964,6 +966,8 @@ button.reaction { cursor: pointer; }
 .an-hit { min-height: 44px; min-width: 44px; }
 .an-row-button { width: 100%; text-align: left; display: flex; flex-direction: column; overflow-wrap: anywhere; }
 .an-video-file { max-width: 480px; min-width: 0; overflow-wrap: anywhere; }
+.an-file-fetch { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; font-size: 12px; overflow-wrap: anywhere; }
+.an-file-fetch progress { width: 160px; max-width: 100%; }
 .an-video-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .an-video-file .an-hit { padding: 8px 12px; font: inherit; color: inherit; cursor: pointer; }
 .an-video-player { display: block; width: 100%; max-height: 60vh; object-fit: contain; background: #000; border-radius: 8px; }

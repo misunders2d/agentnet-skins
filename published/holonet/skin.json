@@ -2,7 +2,7 @@
   "api": 1,
   "id": "holonet",
   "name": "Holonet",
-  "agentnet": "v0.10.2",
+  "agentnet": "v0.10.3",
   "entry": "entry.mjs",
   "style": "style.css",
   "files": [
@@ -30,6 +30,7 @@
     "unread-review.mjs",
     "choices.mjs",
     "video-file.mjs",
+    "file-fetch.mjs",
     "schedule.mjs",
     "schedule-model.mjs",
     "schedule-saves.mjs",

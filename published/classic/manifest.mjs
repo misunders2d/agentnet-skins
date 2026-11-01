@@ -2,7 +2,7 @@ export default {
   "api": 1,
   "id": "classic",
   "name": "Classic",
-  "agentnet": "v0.10.2",
+  "agentnet": "v0.10.3",
   "entry": "entry.mjs",
   "style": "style.css",
   "files": [
@@ -30,6 +30,7 @@ export default {
     "visible-rows.mjs",
     "native-activity.mjs",
     "video-file.mjs",
+    "file-fetch.mjs",
     "choices.mjs",
     "unread-review.mjs",
     "schedule.mjs",

@@ -1,5 +1,32 @@
 # Source provenance
 
+## v0.10.3 qualified candidate — November 1, 2026
+
+Candidate gallery v2026.11.01.1 pins application source
+`ddf830d4365a7355d0e29916b3da0c49a3ca9991`, version v0.10.3 (faster chat open
+and chat list on a busy device; big received files wait for a tap with
+download progress; message times show their day). Contract text changed
+since v0.10.2: docs/UI_SKINS.md (`host.file`: a received file with
+`fetch: "wait"` or `"fetching"`) and docs/HOST_API_ROUTES.md (POST
+`/api/files/{id}/{i}/fetch`, GET `/api/files/{id}/{i}/progress`).
+Classic, Holonet and Zoom go to 1.11.0 (0ee0f5e: Download · size with
+progress, Retry and gone states; 621a603: day lines and dated message
+times); Office 1.8.0 and Pulp 1.10.0 change only the `agentnet` field and
+their overlay builds on the pinned Comic kit. Previews are unchanged.
+
+Exact-pin browser-enabled `npm test`, network-isolated with
+`unshare -rn sh -c 'ip link set lo up && exec npm test'`. Run 4 (load 6.5–7.9
+on 8 cores): all 326 Node/browser checks passed, zero skipped; every suite of
+all five published packages, qa-orbit, qa-overlay and the native request
+suite passed. Earlier runs on the same pin failed only waits under load (a
+first attempt with loopback down is not counted): run 1 (load 9–13) and
+run 2 (load 18) timed out 15–20 s waits in Classic, Holonet and Zoom
+browser/touch journeys and qa-orbit; run 3 (load 4–8) failed only Zoom's
+"390 keyboard: frame must leave visible messages at keyboard height", which
+reads the frame height right after Cancel and passed in runs 1, 2 and 4.
+Mixed-version gate `TestMixedVersion` (v0.10.2 devices against this source)
+passed in 210 s.
+
 ## v0.10.2 published — November 1, 2026
 
 Gallery v2026.11.01 is public and Latest from immutable

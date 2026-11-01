@@ -30,6 +30,7 @@
     "unread-review.mjs",
     "choices.mjs",
     "video-file.mjs",
+    "file-fetch.mjs",
     "schedule.mjs",
     "schedule-model.mjs",
     "schedule-saves.mjs",

@@ -1,6 +1,7 @@
 import {watchVisibleRows} from './visible-rows.mjs';
 import {nativeActivityDetail} from './native-activity.mjs';
 import {mountVideoFile,videoFileName} from './video-file.mjs';
+import {mountFileFetch,waitsForTap} from './file-fetch.mjs';
 import {sniffVideo} from './pictures.mjs';
 import {unreadReview} from './unread-review.mjs';
 import {mountSchedule} from './schedule.mjs';
@@ -727,12 +728,17 @@ function discardStaged(files) {
 // came to this device (received, from another device of yours, or as
 // history once it is here). A history file not here yet is asked for from
 // the device it came from.
+// fileFetchSlot is a big received file's Download control (file-fetch.mjs),
+// bound to the host and message it was drawn for.
+function fileFetchSlot(m,f,idx){const host=currentHost,node=el('span',{class:'file-fetch'});mountFileFetch({root:node,file:f,ref:{id:m.id,index:idx,dir:m.dir},host,api:(path,body)=>api(path,body,host),size});return node;}
+
 function fileChips(m, files) {
   if (!files || !files.length) return null;
   const sentHere = m.dir === "out" && !m.via && !m.synced_from;
   const from = m.synced_from ? m.synced_from.split("/")[1] : "";
   return el("div", { class: "files" }, files.map((f, i) => {
     const idx = f.index === undefined ? i : f.index;
+    if(waitsForTap(f))return el("span",{class:"file"},el("span",{class:"file-icon","aria-hidden":"true"},fileExt(f.name)),el("span",{class:"file-text"},el("span",{class:"file-name"},f.name),el("span",{class:"file-size"},size(f.size))),fileFetchSlot(m,f,idx));
     if(videoFileName(f.name)&&(!sentHere||f.openable===true)&&f.openable!==false&&!['requestable','requested','unavailable'].includes(f.availability))return videoFileSlot(m,f,idx,true);
     // An opened file keeps its Download link when the view is drawn again.
     const savedDownload = state.downloads[m.dir + ":" + m.id + ":" + idx];

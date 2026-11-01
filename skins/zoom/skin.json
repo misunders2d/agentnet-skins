@@ -30,6 +30,7 @@
     "visible-rows.mjs",
     "native-activity.mjs",
     "video-file.mjs",
+    "file-fetch.mjs",
     "choices.mjs",
     "unread-review.mjs",
     "schedule.mjs",

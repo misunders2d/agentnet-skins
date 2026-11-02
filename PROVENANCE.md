@@ -1,5 +1,15 @@
 # Source provenance
 
+## v0.10.4 published — November 2, 2026
+
+Gallery v2026.11.02 is public and Latest from immutable `0d7df3e`
+(published 01:51:48 UTC), pinning application source
+`392f6f6a8d17dc1891373842e71f2f28e6cafce5`, version v0.10.4. All 153 raw
+files under `published/` at the tag, fetched unauthenticated over HTTPS, are
+byte-identical to the committed `published/`. App v0.10.4 is public and
+Latest (01:51:23 UTC) from the exact pin; its twelve payloads and checksum
+file match the verified draft.
+
 ## v0.10.4 qualified candidate — November 2, 2026
 
 Candidate gallery v2026.11.02 pins application source

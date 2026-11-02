@@ -1,5 +1,21 @@
 # Source provenance
 
+## v0.10.4 qualified candidate — November 2, 2026
+
+Candidate gallery v2026.11.02 pins application source
+`392f6f6a8d17dc1891373842e71f2f28e6cafce5`, version v0.10.4 (a busy device's
+daemon no longer rebuilds its views on every native tool call, and the
+desktop badge shares the page's chat-list build; MEL-731). No contract text,
+web source or Comic kit changed since v0.10.3. Classic, Holonet and Zoom stay
+1.11.0, Pulp 1.10.0 and Office 1.8.0; only the `agentnet` field and the
+generated manifests and catalog change. Entries and previews are
+byte-unchanged.
+
+Exact-pin browser-enabled `npm test`, network-isolated with
+`unshare -rn sh -c 'ip link set lo up && exec npm test'` (load 4.4–6.3 on 8
+cores). Run 1: all 326 Node/browser checks passed, zero skipped; every suite
+of all five published packages, qa-orbit and qa-overlay passed.
+
 ## v0.10.3 published — November 1, 2026
 
 Gallery v2026.11.01.1 is public and Latest from immutable `dc7993b`

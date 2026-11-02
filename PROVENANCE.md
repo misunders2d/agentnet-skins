@@ -1,5 +1,25 @@
 # Source provenance
 
+## v0.10.5 qualified candidate — November 2, 2026
+
+Candidate gallery v2026.11.02.1 pins application source
+`0b7a758504cb1b02cb70d0d90fc7cd234839455a`, version v0.10.5 (Linux app video
+plays past 2 s and Expand replaces WebKit fullscreen, MEL-734; Smaller video
+reuses its prepared file; agent dismissals run side by side; the app badge gets
+a pushed unread total, MEL-731; Windows app updates check both programs were
+written, MEL-735). No contract text changed. The Comic kit's video player
+changed, so Office and Pulp `entry.mjs` and their chunks are regenerated
+(`Composer.video-AAKLROU5.mjs`, `chunk-QSFGMLXL.mjs` replace
+`Composer.video-GZXOOFDA.mjs`, `chunk-QQWQR7LL.mjs`); versions stay
+(Classic, Holonet and Zoom 1.11.0, Pulp 1.10.0, Office 1.8.0), as in v0.10.3.
+`tests/contract.cjs`: the Classic send journey now reports the composer
+error, draft, disabled state and timeline tail when its message does not
+appear (it failed twice on f2baf644 with a bare timeout, cause unknown).
+
+Exact-pin browser-enabled `npm test` with network (not isolated; load about
+3 on 8 cores): all 326 Node/browser checks passed, zero skipped; every suite
+of all five published packages, qa-orbit and qa-overlay passed.
+
 ## v0.10.4 published — November 2, 2026
 
 Gallery v2026.11.02 is public and Latest from immutable `0d7df3e`

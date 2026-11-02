@@ -313,7 +313,21 @@ const journeys = {
     await messageShot(page,'classic');
     const text='Classic contract send '+runTag+' '+(++sent);
     await page.locator('#body').fill(text);await page.locator('#composer').evaluate(form=>form.requestSubmit());
-    await page.locator('#timeline').getByText(text,{exact:true}).waitFor();
+    try { await page.locator('#timeline').getByText(text,{exact:true}).waitFor(); }
+    catch (e) {
+      // Which conversation was open and what the composer said decide
+      // whether the skin refused the send or the host never answered.
+      const seen = async (sel, f) => page.locator(sel).first().evaluate(f).catch(err => 'unreadable: ' + err.message.split('\n')[0]);
+      e.message += '\nclassic send diagnostics: ' + JSON.stringify({
+        composeError: await seen('#compose-error', n => n.textContent),
+        draft: await seen('#body', n => n.value),
+        sendDisabled: await seen('#send', n => n.disabled),
+        bodyDisabled: await seen('#body', n => n.disabled),
+        placeholder: await seen('#body', n => n.placeholder),
+        timelineTail: await seen('#timeline', n => n.textContent.slice(-400)),
+      });
+      throw e;
+    }
   },
   zoom: async (page) => {
     await page.locator('#zoom .thread-row').first().waitFor();

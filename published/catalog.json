@@ -7,12 +7,12 @@
       "description": "AgentNet's original interface: your chats in a list on the left and the open conversation on the right, with topics, people, agents, activity and every setting one click away. Plain, familiar and quick on a desktop or a phone, in light and dark.",
       "version": "1.11.0",
       "api": 1,
-      "agentnet": "v0.10.4",
-      "digest": "4902ce64eee1e7d4dd323e29ce51ba884ca826c471c84afe668e6f705aab5f88",
+      "agentnet": "v0.10.5",
+      "digest": "2fa8aabd00f31589c2f653b99b342bd018d9a0147de4a37c0f89d422ee771360",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "57899b46cb1cd91a16665d4c9a2855a523fea84f1daf7efc7c71cea5c93bc80d",
+          "sha256": "e97d33f4627ed9f630422065221ba19fc78c6e508d64b9bb075b856b805c9b10",
           "size": 828
         },
         {
@@ -27,7 +27,7 @@
         },
         {
           "path": "manifest.mjs",
-          "sha256": "dd791c4cd8394e2fe587379c6c8437a01d07b0d27e28ee9f75d4c23868e7b77f",
+          "sha256": "67fb55282525402209d478ce496f72a03f8b1ca253a4107438e041ac99035470",
           "size": 844
         },
         {
@@ -199,12 +199,12 @@
       "description": "A starship comms console for AgentNet: command navigation across the top, a framed transmission display, a crew panel and a command dock for writing. A brief scanner sweep and split shutters mark what you open, and both stay still when your device asks for less motion. Every chat, topic, agent and setting is still there.",
       "version": "1.11.0",
       "api": 1,
-      "agentnet": "v0.10.4",
-      "digest": "2d753aa79245149f0f0ef0547c14839c7876381e5e6e8af2ba0936d66db40be8",
+      "agentnet": "v0.10.5",
+      "digest": "8b84199538cc0067eac7e1907b0a30bc4d6a49092b39ece2284969eff49e6007",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "f1fe6df0f7b69081df4f468936b35c09ba498da369c6df9bad1c6330166c7280",
+          "sha256": "573f262ce8cc25d10283bead4c89e86bc24107a9badfc2d82ffd613755c3fc37",
           "size": 790
         },
         {
@@ -219,7 +219,7 @@
         },
         {
           "path": "manifest.mjs",
-          "sha256": "409c1df3a99651be6a7bf22e3b058ef1ff698140c626aabf3e95de053c2c4c0e",
+          "sha256": "681199bf76dfb314fb2b86ba20ccfc864a74ed1cb51857666dcfd63e821d6ca7",
           "size": 806
         },
         {
@@ -386,18 +386,18 @@
       "description": "A plain workplace messenger: white pages, thin hairlines, a dark neutral rail, the device's own font. Green for what you can do, blue for agents. Flat messages, a bordered composer, hairline request cards with a coloured edge. Everything Comic does, without the stickers.",
       "version": "1.8.0",
       "api": 1,
-      "agentnet": "v0.10.4",
-      "digest": "78fab3a78282127c6905a08192987d43f64fd4049c457e3581cf7539ad4961ad",
+      "agentnet": "v0.10.5",
+      "digest": "ddd0fddf9255833f07d4d3f957c4a79332c46aeada1a5c7fd3e64f2ba92d54de",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "fe45e401a1298004d0f2f54b11eb8ca01ce22735e33c2cb187015b52d62ad1cc",
+          "sha256": "e15b191f6beb882afc326e93f86fa9177f24b82c23a1ece8a3193c7d28af627c",
           "size": 754
         },
         {
           "path": "entry.mjs",
-          "sha256": "4d26031576d6e6b6f94ea5d5404fddd856c5878b5fe2e1dfe54998c4a55e9a86",
-          "size": 1445796
+          "sha256": "c45c91ee2510ef4a69899ec9bc5f8b59bcff5287319336cf7e0da14c9d8d460a",
+          "size": 1449674
         },
         {
           "path": "style.css",
@@ -410,14 +410,14 @@
           "size": 3254
         },
         {
-          "path": "m/chunks/Composer.video-GZXOOFDA.mjs",
-          "sha256": "eb9d4dc75eacfefc9d17a49facd2889bd1ab48e2d826346575424b259d02954c",
-          "size": 472975
+          "path": "m/chunks/Composer.video-AAKLROU5.mjs",
+          "sha256": "95c4206340dfaf363d677e46cdc985c7444cf45033656442a6b2011df31a0736",
+          "size": 473119
         },
         {
-          "path": "m/chunks/chunk-QQWQR7LL.mjs",
-          "sha256": "9dbaaa1b267ebd74b96fc498735a78d76804f1e96e532871291c937cf83694e7",
-          "size": 638
+          "path": "m/chunks/chunk-QSFGMLXL.mjs",
+          "sha256": "af09ca070e75e1165a4e5f899944be6cd72faa37b87d5d7259622e6c8971aaae",
+          "size": 4089
         },
         {
           "path": "m/emoji/en/data.json",
@@ -503,18 +503,18 @@
       "description": "A 1970s paperback by day and a roadside diner by night. Chats read like a table of contents, every topic opens with a chapter card, requests for your OK arrive as a glowing case, and your agents wear costumes. Everything Comic does, in a new look.",
       "version": "1.10.0",
       "api": 1,
-      "agentnet": "v0.10.4",
-      "digest": "0bf4c76457f034bb737e249c548aad8d37ce8931bc136d009128adb32ef7ee40",
+      "agentnet": "v0.10.5",
+      "digest": "45d0d9714fbefbf58ce6dc6a0d5282b47dbf876385ba8a89212d7f0bcfd86075",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "00aac1bd7ff07c6d5a0e428c0380eb800f82ebee42125b2af6bff5fd98c5710b",
+          "sha256": "619da4c996724416c24e6b9231d3573f2f027dc117224d64bfcec875217dd929",
           "size": 1210
         },
         {
           "path": "entry.mjs",
-          "sha256": "bf8c477225e66dd0ec525c6da6a46a7459ba6bd06fe79db786f4bce78b34c753",
-          "size": 1449110
+          "sha256": "8130adf33f0e11e8d96e23783a1c7106227d9796e91cb96db0a1d8e2adf24ca8",
+          "size": 1452988
         },
         {
           "path": "style.css",
@@ -527,14 +527,14 @@
           "size": 8581
         },
         {
-          "path": "m/chunks/Composer.video-GZXOOFDA.mjs",
-          "sha256": "eb9d4dc75eacfefc9d17a49facd2889bd1ab48e2d826346575424b259d02954c",
-          "size": 472975
+          "path": "m/chunks/Composer.video-AAKLROU5.mjs",
+          "sha256": "95c4206340dfaf363d677e46cdc985c7444cf45033656442a6b2011df31a0736",
+          "size": 473119
         },
         {
-          "path": "m/chunks/chunk-QQWQR7LL.mjs",
-          "sha256": "9dbaaa1b267ebd74b96fc498735a78d76804f1e96e532871291c937cf83694e7",
-          "size": 638
+          "path": "m/chunks/chunk-QSFGMLXL.mjs",
+          "sha256": "af09ca070e75e1165a4e5f899944be6cd72faa37b87d5d7259622e6c8971aaae",
+          "size": 4089
         },
         {
           "path": "m/emoji/en/data.json",
@@ -660,12 +660,12 @@
       "description": "Move through your workspace by zooming in: everyone, then one person, then a conversation, then a single message with everything known about it. Esc steps back out. You write in a focused dialog, and every chat, topic, agent and setting is still there.",
       "version": "1.11.0",
       "api": 1,
-      "agentnet": "v0.10.4",
-      "digest": "bc9fc21740cc399a5557efc86061d795e474a31477f0a6015384bed46f66a018",
+      "agentnet": "v0.10.5",
+      "digest": "26a83681f3a5ded43c817e90b47012d763458bd82e7963735224275f19ddd248",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "ecef37554b605dad75a379c46f1830e08209c2e592c95a49ce040e0f7963fecb",
+          "sha256": "6214bba65127b6660aeb539d532e6db2c6f09d8c6e776f75d0b8098883c38c3f",
           "size": 822
         },
         {
@@ -680,7 +680,7 @@
         },
         {
           "path": "manifest.mjs",
-          "sha256": "7fc21b92ba669a170bba36bcd07697caa7a917304821ae5bbadf7668af631dad",
+          "sha256": "c251da21eef75cb0c4835371f1ac34e35bb08a22a81370acdbcd8151f867a1fe",
           "size": 838
         },
         {

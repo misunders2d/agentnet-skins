@@ -145,7 +145,7 @@ function attentionRows(t,kind,rows=t?.messages||[]){
  const topic=topicFresh[t.id]?'':topicSelections[t.id]||'';
  return rows.filter(m=>!m._local&&!m.hidden&&!m.deleted&&!m.sub&&!m.event&&!m.topic_event&&['message','question','task','answer','result'].includes(m.kind)&&!(m.kind==='message'&&m.status==='review_notice'&&!m.reply_to&&!(m.attachments||[]).length)&&(kind!=='dm'||(m.topic||'')===topic));
 }
-function leaveReadVisit(){state.readVisit?.watcher?.destroy();state.readVisit=null;state.messageOpening=null;releaseVideos();}
+function leaveReadVisit(){state.readVisit?.entryCleanup?.();state.readVisit?.watcher?.destroy();state.readVisit=null;state.messageOpening=null;releaseVideos();}
 function enterReadVisit(kind,id,explicit=true){
  if(!id){leaveReadVisit();return null;}
  if(kind==='thread'&&state.data?.messages?.some(m=>m.id===id))id=state.data.id||id;
@@ -155,9 +155,9 @@ function enterReadVisit(kind,id,explicit=true){
  const same=old?.host===currentHost&&old.kind===kind&&old.id===id;
  const pending=same&&(old.entering||old.loading>0);
  const view=same&&kind==='dm'&&old.fresh===state.dmData?state.dmData:null;
- old?.watcher?.destroy();releaseVideos();
+ old?.entryCleanup?.();old?.watcher?.destroy();releaseVideos();
  const read=pending?old:{kind,id,host:currentHost,loading:0};
- Object.assign(read,{scope,topic,initialized:false,firstUnread:'',visibleIDs:new Set(),entry:new Map(),pending:new Set(),done:new Set(),entering:explicit,fresh:view});
+ Object.assign(read,{scope,topic,entryPinned:false,entryResize:null,entryCleanup:null,initialized:false,firstUnread:'',visibleIDs:new Set(),entry:new Map(),pending:new Set(),done:new Set(),entering:explicit,fresh:view});
  state.readVisit=read;
  // A local topic transition can reuse the already committed full fresh view.
  // While its first GET is pending, keep that entry object for the same GET.
@@ -200,13 +200,28 @@ function updateVisible(t,kind){
  const canonical=new Set(attentionRows(t,kind).map(m=>m.id));
  for(const row of $('timeline').children){const id=row.id?.startsWith('m-')?row.id.slice(2):'';if(canonical.has(id))row.dataset.mid=id;else delete row.dataset.mid;row.classList.toggle('first-unread',!!read.firstUnread&&id===read.firstUnread);}
  const first=read.firstUnread&&root.querySelector('#'+CSS.escape('m-'+read.firstUnread));if(first&&!$('timeline').querySelector('.unread-divider'))first.before(el('li',{class:'unread-divider',role:'separator'},'Unread messages'));
+ if(read.entryPinned)placePinnedReadEntry(read);
+ if(read.entryResize){read.entryResize.disconnect();read.entryResize.observe($('timeline'));for(const row of $('timeline').children)read.entryResize.observe(row);}
  read.watcher.update($('timeline').children,canonical);
 }
+function placePinnedReadEntry(read){
+ if(state.readVisit!==read||state.messageOpening){read.entryPinned=false;return;}
+ const tl=$('timeline'),marker=tl.querySelector('.unread-divider');
+ if(read.firstUnread&&marker)tl.scrollTop+=marker.getBoundingClientRect().top-tl.getBoundingClientRect().top-tl.clientTop;
+ else if(!read.firstUnread)tl.scrollTop=tl.scrollHeight;
+ read.entryScroll=tl.scrollTop;
+}
 function positionReadEntry(){
- const read=state.readVisit,first=read?.firstUnread&&!state.messageOpening&&root.querySelector('#'+CSS.escape('m-'+read.firstUnread));
- const marker=first?.previousElementSibling?.classList.contains('unread-divider')?first.previousElementSibling:first;
- if(marker)marker.scrollIntoView({block:'start'});else $('timeline').scrollTop=$('timeline').scrollHeight;
- read?.watcher?.evaluate();
+ const read=state.readVisit;if(!read||state.messageOpening)return;
+ read.entryPinned=true;placePinnedReadEntry(read);
+ if(!read.entryResize){
+  const tl=$('timeline'),release=()=>{read.entryPinned=false;};
+  read.entryResize=new root.ownerDocument.defaultView.ResizeObserver(()=>{if(read.entryPinned)placePinnedReadEntry(read);});
+  read.entryResize.observe(tl);for(const row of tl.children)read.entryResize.observe(row);
+  for(const type of ['wheel','touchmove','pointerdown','keydown'])tl.addEventListener(type,release,{passive:true});
+  read.entryCleanup=()=>{read.entryResize.disconnect();for(const type of ['wheel','touchmove','pointerdown','keydown'])tl.removeEventListener(type,release);};
+ }
+ read.watcher?.evaluate();
 }
 function visibleAnchor(tl){const ids=state.readVisit?.visibleIDs;const row=ids&&[...tl.children].find(n=>ids.has(n.dataset.mid));return row?{id:row.id,top:row.getBoundingClientRect().top}:null;}
 function restoreAnchor(tl,anchor){const row=anchor&&root.querySelector('#'+CSS.escape(anchor.id));if(row)tl.scrollTop+=row.getBoundingClientRect().top-anchor.top;}
@@ -2640,6 +2655,10 @@ function saveToDrive(m, idx, name) {
 async function openDM(id, localView, readEntry = true, freshEntryView = false) {
   rememberEntry();
   const changed = beginDM(id,readEntry), gen = state.gen;
+  if(changed&&!localView){
+    fill($("timeline"),el("li",{class:"hint",role:"status","data-entry-opening":""},"Opening conversation…"));
+    showPane("conv");commitConversation();
+  }
   await loadDM(true,localView,freshEntryView);
   if (gen !== state.gen) return;
   if(!localView)await loadOverview();
@@ -2673,7 +2692,7 @@ async function loadDM(scrollToEnd, localView, freshEntryView = false) {
   try {
     if(!t)t = await api("/api/dm?id=" + encodeURIComponent(id),undefined,host);
   } catch (e) {
-    if (!current()) {if(visit)visit.loading--;return;}
+  if (!current()) {if(visit)visit.loading--;return;}
     if (e?.code !== "group_context_pending") {if(visit)visit.loading--;announce(e.message);return;}
     state.dmPending={id,host};
     if(visit)visit.fresh=null; // A verification wait never grants another read entry.
@@ -2686,6 +2705,8 @@ async function loadDM(scrollToEnd, localView, freshEntryView = false) {
     t={...saved,frozen:saved.frozen||groupContextWait};
     dmLoadViews.set(t,{host,pending:true});
   }
+  // Fetch starts on input; paint the selected pending pane before a long render.
+  if(scrollToEnd&&!localView)await new Promise(resolve=>root.ownerDocument.defaultView.requestAnimationFrame(()=>setTimeout(resolve,0)));
   if (!current()) {if(visit)visit.loading--;return;} // another request, read visit, conversation or workspace won
   const pending=!!dmLoadViews.get(t)?.pending;
   if(pending&&dmLoadViews.get(t).host!==host){if(visit)visit.loading--;return;}
@@ -4012,6 +4033,7 @@ async function openThread(id, focusId, localView, readEntry = true, freshEntryVi
 }
 
 function flash(id) {
+  if(state.readVisit)state.readVisit.entryPinned=false;
   const m = root.querySelector("#" + CSS.escape("m-" + id));
   if (!m) return;
   const target = m.querySelector(".agent-turn") || m;

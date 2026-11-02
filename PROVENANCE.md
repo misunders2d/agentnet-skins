@@ -1,5 +1,23 @@
 # Source provenance
 
+## v0.10.6 qualified candidate — November 2, 2026
+
+Candidate gallery for app v0.10.6 pins application source
+`cfa66090aa2bf81fb47810808cb7439e78142db8`, version v0.10.6 (a person who
+rejoins with Google after losing every device is pinned as a new person
+instead of frozen by peers as an email conflict, once the Hub reports the old
+person's devices revoked; held messages are released for retry, MEL-736).
+No contract text changed and no skin source changed: published/ differs from
+v0.10.5 only in the `agentnet` version fields and their derived hashes;
+versions stay (Classic, Holonet and Zoom 1.11.0, Pulp 1.10.0, Office 1.8.0).
+
+Exact-pin browser-enabled `npm test` with network (not isolated): all 326
+Node/browser checks passed, zero skipped; every suite of all five published
+packages, qa-orbit and qa-overlay passed. Classic and Zoom motion remain the
+explicit inapplicable groups (no action-linked motion; not counted as passes).
+After `npm run publish`, `npm run check` on the release tree: 326 passed,
+0 failed, 0 skipped.
+
 ## v0.10.5 qualified candidate — November 2, 2026
 
 Candidate gallery v2026.11.02.1 pins application source

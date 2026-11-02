@@ -2,7 +2,7 @@ export default {
   "api": 1,
   "id": "holonet",
   "name": "Holonet",
-  "agentnet": "v0.10.5",
+  "agentnet": "v0.10.6",
   "entry": "entry.mjs",
   "style": "style.css",
   "files": [

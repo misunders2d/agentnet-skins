@@ -165,7 +165,7 @@ function enterReadVisit(kind,id,explicit=true){
  const pending=same&&(old.entering||old.loading>0);
  const view=same&&kind==='dm'&&old.fresh===state.dmData?state.dmData:null;
  const read=pending?old:{kind,id,host:currentHost,loading:0};
- Object.assign(read,{scope,topic,visible:new Set(),firstUnread:undefined,landed:false,target:null,entry:new Map(),pending:new Set(),done:new Set(),entering:explicit,fresh:view});
+ Object.assign(read,{scope,topic,entryPinned:false,visible:new Set(),firstUnread:undefined,landed:false,target:null,entry:new Map(),pending:new Set(),done:new Set(),entering:explicit,fresh:view});
  state.readVisit=read;
  // A local topic transition can reuse the already committed full fresh view.
  // While its first GET is pending, keep that entry object for the same GET.
@@ -286,7 +286,7 @@ let mediaEpoch = 0, unreadRequest = 0, scheduleUI = null, scheduleContainer = nu
 function retireVisibleRead() {
  cancelHeaderSync();
  const previous=visibleRead;visibleRead=null;
- if(previous){previous.read.visible=new Set();previous.watcher.destroy();previous.resize.disconnect();previous.scroller.removeEventListener('scroll',previous.scroll);}
+ if(previous){previous.read.visible=new Set();previous.watcher.destroy();previous.resize.disconnect();previous.scroller.removeEventListener('scroll',previous.scroll);for(const type of ['wheel','touchmove','pointerdown','keydown'])previous.scroller.removeEventListener(type,previous.release);}
 }
 function retireViewMedia() {
  ++mediaEpoch;
@@ -309,6 +309,15 @@ function placeUnreadDivider(scroller,read,t,kind) {
  previous?.remove();
  if(first){const divider=el(['UL','OL'].includes(first.parentElement.tagName)?'li':'div',{role:'separator','aria-label':'Unread messages','data-unread-divider':'',class:'unread-divider'},'Unread messages');first.before(divider);}
 }
+// Ordinary entry follows Telegram's separate unread-bar/end placement.
+// Exact navigation still owns its target. Native read state never chooses scroll.
+function placeReadEntry(read,scroller){
+ if(state.readVisit!==read||state.messageOpening)return;
+ const divider=scroller.querySelector('[data-unread-divider]');
+ if(read.firstUnread&&divider)scroller.scrollTop+=divider.getBoundingClientRect().top-scroller.getBoundingClientRect().top-scroller.clientTop-messageTopReserve();
+ else if(!read.firstUnread)scroller.scrollTop=scroller.scrollHeight;
+ read.entryScroll=scroller.scrollTop;
+}
 function syncVisibleRead() {
  const read=state.readVisit,t=state.dm?state.dmData:state.data,kind=state.dm?'dm':'thread',scroller=messageScrollRoot();
  if(!read||!t||!scroller||!viewReadyForRead()){retireVisibleRead();return;}
@@ -316,13 +325,15 @@ function syncVisibleRead() {
  for(const n of nodes)n.dataset.mid=n.dataset.mid||n.id.slice(2);
  placeUnreadDivider(scroller,read,t,kind);
  if(state.messageOpening)read.landed=true;
- if(!read.landed){const target=nodes.find(n=>n.dataset.mid===(read.target||read.firstUnread));if(target){target.scrollIntoView({block:'center'});target.classList.add('flash');}read.landed=true;}
+ if(!read.landed){const target=nodes.find(n=>n.dataset.mid===(read.target||read.firstUnread));if(read.target&&target){target.scrollIntoView({block:'center'});target.classList.add('flash');}else{read.entryPinned=true;placeReadEntry(read,scroller);}read.landed=true;}
+ if(read.entryPinned)placeReadEntry(read,scroller);
  if(visibleRead&&(visibleRead.read!==read||visibleRead.scroller!==scroller))retireVisibleRead();
  if(!visibleRead){
   const host=currentHost,watcher=watchVisibleRows(scroller,{reserveTop:messageTopReserve,reserve:()=>0,allowed:()=>host===currentHost&&state.readVisit===read&&readAllowed(read,state.dm?state.dmData:state.data,kind)&&viewReadyForRead(),onChange:ids=>{if(state.readVisit!==read||host!==currentHost)return;read.visible=ids;void markPersonalRead(state.dm?state.dmData:state.data,kind);reportSeen();}});
-  const scroll=()=>watcher.evaluate(),resize=new root.ownerDocument.defaultView.ResizeObserver(scroll);
-  resize.observe(scroller);scroller.addEventListener('scroll',scroll,{passive:true});visibleRead={read,scroller,watcher,resize,scroll};
+  const release=()=>{read.entryPinned=false;},scroll=()=>watcher.evaluate(),resize=new root.ownerDocument.defaultView.ResizeObserver(()=>{if(read.entryPinned)placeReadEntry(read,scroller);scroll();});
+  scroller.addEventListener('scroll',scroll,{passive:true});for(const type of ['wheel','touchmove','pointerdown','keydown'])scroller.addEventListener(type,release,{passive:true});visibleRead={read,scroller,watcher,resize,scroll,release};
  }
+ visibleRead.resize.disconnect();visibleRead.resize.observe(scroller);for(const node of nodes)visibleRead.resize.observe(node);
  visibleRead.watcher.update(nodes,ids);
  for(const [key,item] of videoFiles)if(!root.contains(item.node)){item.player.destroy();videoFiles.delete(key);}
 }
@@ -2712,7 +2723,7 @@ async function loadDM(scrollToEnd, localView, freshEntryView = false) {
   try {
     if(!t)t = await api("/api/dm?id=" + encodeURIComponent(id),undefined,host);
   } catch (e) {
-    if (!current()) {if(visit)visit.loading--;return;}
+  if (!current()) {if(visit)visit.loading--;return;}
     if (e?.code !== "group_context_pending") {if(visit)visit.loading--;announce(e.message);return;}
     state.dmPending={id,host};
     if(visit)visit.fresh=null; // A verification wait never grants another read entry.
@@ -2725,6 +2736,8 @@ async function loadDM(scrollToEnd, localView, freshEntryView = false) {
     t={...saved,frozen:saved.frozen||groupContextWait};
     dmLoadViews.set(t,{host,pending:true});
   }
+  // Fetch starts on input; paint the selected pending pane before a long render.
+  if(scrollToEnd&&!localView)await new Promise(resolve=>root.ownerDocument.defaultView.requestAnimationFrame(()=>setTimeout(resolve,0)));
   if (!current()) {if(visit)visit.loading--;return;} // another request, read visit, conversation or workspace won
   const pending=!!dmLoadViews.get(t)?.pending;
   if(pending&&dmLoadViews.get(t).host!==host){if(visit)visit.loading--;return;}
@@ -6634,6 +6647,7 @@ const Zoom = {
   },
 
   async go(level, patch, from, localView, readEntry = true, freshEntryView = false) {
+    if(state.readVisit)state.readVisit.entryPinned=false;
     if (level < 2) state.messageOpening = null;
     if(level===1&&!patch.dm&&!patch.thread&&!patch.peer&&(patch.person||this.person)&&!(humanGroup()&&!patch.person)) {
      const key=patch.person||this.person,p=(state.overview?.people||[]).find(p=>personKey(p)===key);

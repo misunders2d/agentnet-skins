@@ -2657,7 +2657,7 @@ async function openDM(id, localView, readEntry = true, freshEntryView = false) {
   const changed = beginDM(id,readEntry), gen = state.gen;
   if(changed&&!localView){
     fill($("timeline"),el("li",{class:"hint",role:"status","data-entry-opening":""},"Opening conversation…"));
-    showPane("conv");commitConversation();
+    showPane("conv");commitConversation();$("composer").hidden=true;
   }
   await loadDM(true,localView,freshEntryView);
   if (gen !== state.gen) return;

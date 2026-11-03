@@ -331,7 +331,7 @@ function syncVisibleRead() {
  if(!visibleRead){
   const host=currentHost,watcher=watchVisibleRows(scroller,{reserveTop:messageTopReserve,reserve:()=>0,allowed:()=>host===currentHost&&state.readVisit===read&&readAllowed(read,state.dm?state.dmData:state.data,kind)&&viewReadyForRead(),onChange:ids=>{if(state.readVisit!==read||host!==currentHost)return;read.visible=ids;void markPersonalRead(state.dm?state.dmData:state.data,kind);reportSeen();}});
   const release=()=>{read.entryPinned=false;},scroll=()=>watcher.evaluate(),resize=new root.ownerDocument.defaultView.ResizeObserver(()=>{if(read.entryPinned)placeReadEntry(read,scroller);scroll();});
-  resize.observe(scroller);scroller.addEventListener('scroll',scroll,{passive:true});for(const type of ['wheel','touchmove','pointerdown','keydown'])scroller.addEventListener(type,release,{passive:true});visibleRead={read,scroller,watcher,resize,scroll,release};
+  scroller.addEventListener('scroll',scroll,{passive:true});for(const type of ['wheel','touchmove','pointerdown','keydown'])scroller.addEventListener(type,release,{passive:true});visibleRead={read,scroller,watcher,resize,scroll,release};
  }
  visibleRead.resize.disconnect();visibleRead.resize.observe(scroller);for(const node of nodes)visibleRead.resize.observe(node);
  visibleRead.watcher.update(nodes,ids);

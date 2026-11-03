@@ -882,3 +882,6 @@ button.reaction { cursor: pointer; }
 .an-outbox-due { display: inline-block; min-width: 1.5em; padding: 2px 5px; border: 1px solid currentColor; border-radius: 999px; font-size: 12px; font-weight: 700; line-height: 1.2; }
 .an-outbox-due[hidden] { display: none; }
 /* agentnet-shared-v33 end */
+
+/* Pending entry keeps Activity reachable while the selected pane loads. */
+@media (max-width: 760px) { .classic-root.show-conv:has([data-entry-opening]) .nav-rail { display: flex; } }

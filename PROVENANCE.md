@@ -1,5 +1,72 @@
 # Source provenance
 
+## v0.10.7 qualified candidate — November 3, 2026
+
+Local candidate only; no push, tag or GitHub release. Pins AgentNet
+`21938aa732d2177e865788087ffafebabc0087e7` (MEL-741 optimistic read badge,
+MEL-742 entry at last unread). Fast-forwarded origin/mel741-742-read-scroll
+`fba3747` onto origin/main `9b771cb` in /tmp/agr/skins-v0107.
+Classic, Holonet and Zoom become 1.11.1; Office 1.8.1; Pulp 1.10.1.
+All five manifests require v0.10.7. Office/Pulp regenerated from candidate Comic.
+Existing gallery previews retained: publication generation requires no new
+previews; these changes affect entry positioning/read state, not gallery styling.
+
+Commands (release worktree; logs retained privately under /tmp/agr):
+
+```sh
+AGENTNET_SOURCE=/media/misunderstood/DATA/projects/agentnet npm run build
+AGENTNET_SOURCE=/media/misunderstood/DATA/projects/agentnet npm run publish
+AGENTNET_SOURCE=/media/misunderstood/DATA/projects/agentnet AGENTNET_CHROMIUM=/usr/bin/chromium TMPDIR=/tmp/agr npm test
+AGENTNET_CHROMIUM=/usr/bin/chromium TMPDIR=/tmp/agr npm run check
+```
+
+Build and publish passed for every package. Initial npm test: 328 passed,
+3 failed, 0 skipped (331 including nested tests). Focused rerun reproduced
+Classic phone ACK expectation and Zoom redundant first resize observation.
+Removed duplicate Zoom observe; retained its existing deferred-observation
+regression. Classic expectation now compares exact ACKs with still-armed visible
+rows: preserved entry anchoring exposes already-read rows without duplicate ACKs.
+An attempted wait for duplicate ACK correctly timed out and was removed.
+Zoom phone's initial ACK timeout reproduced on rerun: screenshot/geometry showed
+the synthetic 380px pane left the first unread below the visibility threshold.
+The fixture now gives the conversation 480px and signals wheel intent before its
+programmatic scroll, releasing the entry anchor as real user input does.
+No visibility thresholds or exact ACK/refetch/unseen-tail assertions removed.
+Corrected focused command:
+`AGENTNET_CHROMIUM=/usr/bin/chromium TMPDIR=/tmp/agr node --test --test-concurrency=1 tests/classic-zoom-v33.test.mjs`
+passed 31/31, 0 failed/skipped. An intervening integrated run was explicitly
+terminated when superseded by the corrected tree; it is not passing evidence.
+
+Subsequent full Node/browser checks passed 333/333 with zero skips. First
+world run recorded 33 passed groups, 4 failed, 5 inapplicable: a Classic send
+visibility timeout (its exact rebuilt-byte rerun passed both viewports) and
+pending-entry browser failures for Classic/Holonet/qa-orbit. Pending entry now
+hides the previous composer until the fresh conversation commits. Its mobile
+navigation rail remains available while the pending marker exists, preserving
+Activity cancellation during the held GET. Existing production browser assertions
+exercise both requirements; no assertions removed. A run with the composer fix
+alone exposed hidden Activity before this CSS correction. Its earlier-loaded
+Classic snapshot still failed, while corrected Holonet/qa-orbit each passed all
+10 production browser journeys, provider and touch suites. These mixed-state
+runs are diagnostic evidence, not final qualification.
+
+Final exact-pin `npm test` passed: 333 Node/browser checks, 0 failed,
+0 skipped; 37 runtime groups passed, 0 failed. Five runtime entries are
+explicitly inapplicable: Classic and Zoom motion (no action-linked motion),
+and Office/Pulp/qa-overlay world journeys (covered by Comic journeys).
+All five published skins plus qa-orbit and qa-overlay passed their applicable
+contract, lifecycle, production loader/provider, touch and motion suites.
+Final logs: /tmp/agr/v0107-final-test.log; private runtime summary:
+/tmp/agr/agentnet-skins-90XKaC/summary.json. Disposable company removed by runner.
+
+Final separate exact `AGENTNET_CHROMIUM=/usr/bin/chromium TMPDIR=/tmp/agr npm run check`
+passed 333 checks, 0 failed, 0 skipped (log /tmp/agr/v0107-final-check.log).
+No helper worktrees created beyond the retained release worktree. Removed its
+node_modules symlink before committing; the original main checkout stays clean.
+
+Physical devices, live providers, remote deployment and publication unverified;
+no AgentNet source, relay, owner apps or daemons changed.
+
 ## v0.10.6 qualified candidate — November 2, 2026
 
 Candidate gallery for app v0.10.6 pins application source

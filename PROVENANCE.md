@@ -1,5 +1,61 @@
 # Source provenance
 
+## v0.10.8 qualified candidate — November 3, 2026
+
+Qualified by the third full run below (12:02–12:28 UTC): `npm test` exit 0, 333
+Node/browser checks passed, 0 failed, 0 skipped, and every skin package PASSED
+(classic, holonet, office, pulp, zoom, qa-orbit, qa-overlay), including the
+contract, lifecycle, browser, browser-provider, touch and motion runtime suites.
+Log /tmp/agr/v0108-test3.log; evidence /tmp/agr/agentnet-skins-a0nSb1. The two
+earlier runs failed different touch checks each time (1, then 4) on the same
+unchanged bytes, while the laptop's load average was 7–12 (memento ~2 cores, owner
+daemon, local CI work). That is the timing-under-load class recorded for
+v0.10.1/v0.10.2. No test was weakened and no timeout raised. The earlier attempt
+is kept below as it was written.
+
+### Earlier attempt (blocked, superseded by the qualified run above)
+
+Pin: `78aac66d67e13077c425d7bea2c97b9141c02520`, version/candidate v0.10.8.
+Contract and Comic source diff against `1a543d36` is empty. Build and publish
+passed. Every published package byte equals v0.10.7 after normalizing the
+agentnet version field; only those fields and derived hashes changed. Skin
+versions retained: Classic/Holonet/Zoom 1.11.1, Office 1.8.1, Pulp 1.10.1.
+Existing previews retained; publish required no regeneration.
+
+Commands from /tmp/agr/skins-v0108:
+
+```sh
+AGENTNET_SOURCE=/media/misunderstood/DATA/projects/agentnet npm run build
+AGENTNET_SOURCE=/media/misunderstood/DATA/projects/agentnet npm run publish
+AGENTNET_SOURCE=/media/misunderstood/DATA/projects/agentnet AGENTNET_CHROMIUM=/usr/bin/chromium TMPDIR=/tmp/agr npm test
+AGENTNET_SOURCE=/media/misunderstood/DATA/projects/agentnet AGENTNET_CHROMIUM=/usr/bin/chromium TMPDIR=/tmp/agr node scripts/test.mjs
+AGENTNET_CHROMIUM=/usr/bin/chromium TMPDIR=/tmp/agr npm run check
+```
+
+First full test: 333 Node/browser checks passed, 0 failed/skipped. Runtime:
+36 passed, 1 failed, 5 inapplicable. qa-orbit touch timed out waiting for
+its root to become visible before any tap. Log: /tmp/agr/v0108-test.log;
+summary: /tmp/agr/agentnet-skins-MzrhTP/summary.json.
+Runtime suite rerun once without changes: 33 passed, 4 failed,
+5 inapplicable. Classic/Holonet touch root visibility timed out; Zoom touch
+stored-send projection timed out; qa-orbit inverse mute remained disabled.
+Log: /tmp/agr/v0108-runtime-rerun.log; summary:
+/tmp/agr/agentnet-skins-dTDbJE/summary.json. Timing-flake hypothesis remains
+unproven; no tests weakened and no timeout increased. Disposable worlds
+removed by runner. Both runs passed all package contracts, gallery acceptance,
+Comic overlay journeys, and applicable production browser/provider journeys.
+Five inapplicable entries: Classic/Zoom motion and Office/Pulp/qa-overlay
+world journeys (covered by Comic); never counted as passes.
+
+Separate check started, then intentionally terminated after repeated runtime
+failures blocked qualification; it is incomplete, not passing evidence.
+Log: /tmp/agr/v0108-check.log. No safe skins-only repair established for the
+real-provider failures; AgentNet host/native investigation is outside this task.
+No AgentNet source, owner apps, relay or daemons changed. Physical devices,
+live providers and release/publication remain unverified. node_modules symlink
+removed. Main skins checkout remains clean. Release worktree retained dirty
+for owner review; no commit claims qualification while gate fails.
+
 ## v0.10.7 qualified candidate — November 3, 2026
 
 Local candidate only; no push, tag or GitHub release. Pins AgentNet

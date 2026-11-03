@@ -1,5 +1,19 @@
 # Source provenance
 
+## v0.10.9 qualified candidate — November 3, 2026
+
+Pin: `cabe5c3c81893a85f9e236c29b1cde37b3440035`, version/candidate v0.10.9 (the
+MEL-747 hotfix on top of v0.10.8). Contract, host routes and `internal/ui` have
+no diff against `78aac66d` (v0.10.8). Build and publish passed; only the
+agentnet requirement fields and derived hashes changed. Skin versions retained:
+Classic/Holonet/Zoom 1.11.1, Office 1.8.1, Pulp 1.10.1. Existing previews kept.
+
+One full run from /tmp/agr/skins-v0109 (build, publish, `npm test`, finished
+20:50 local): exit 0, 333 Node/browser checks passed, 0 failed, 0 skipped, and
+every skin package PASSED (classic, holonet, office, pulp, zoom, qa-orbit,
+qa-overlay). Log /tmp/agr/v0109-skins.log; evidence
+/tmp/agr/agentnet-skins-nla2u5.
+
 ## v0.10.8 qualified candidate — November 3, 2026
 
 Qualified by the third full run below (12:02–12:28 UTC): `npm test` exit 0, 333

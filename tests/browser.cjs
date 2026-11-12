@@ -162,6 +162,8 @@ const ui=family==='zoom'?zoom:classic;
   });for(const[k,v]of Object.entries(contrast))check(v>=(k==='focus'?3:4.5),tag+' '+k+' contrast '+v.toFixed(2));
   for(const section of ['profile','notifications','device','storage']){await page.locator('#settings-tab-'+section).click();await page.locator('#settings-'+section).waitFor();await shot(tag+'-settings-'+section);}
   // Browser-native dialog stays within the owned shadow root and keeps focus.
+  /* Storage fills in after it opens: Tab before that runs past the dialog's end. */
+  if(await page.locator('#settings-storage #storage').count()){await page.locator('#settings-storage #storage > *').first().waitFor();await page.locator('#settings-storage #file-storage > *').first().waitFor();}
   for(const key of ['Tab','Tab','Shift+Tab','Shift+Tab']){await page.keyboard.press(key);assert(await page.locator('#settings').evaluate(d=>d.contains(d.getRootNode().activeElement)),'Settings focus escaped');}
   await page.locator('#settings-close').click();await ui.list();await shot(tag+'-chats');
   for(const name of ['Vitalii','Anna','Bohdan'])assert(await ui.name(name).evaluate(n=>n.scrollWidth<=n.clientWidth+1),name+' truncated');

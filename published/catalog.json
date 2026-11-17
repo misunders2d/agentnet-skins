@@ -7,12 +7,12 @@
       "description": "AgentNet's original interface: your chats in a list on the left and the open conversation on the right, with topics, people, agents, activity and every setting one click away. Plain, familiar and quick on a desktop or a phone, in light and dark.",
       "version": "1.11.1",
       "api": 1,
-      "agentnet": "v0.11.4",
-      "digest": "e0cf8821a28a9d2e89821fd12382bb6f45c897de7d6595f61a425894066bb167",
+      "agentnet": "v0.11.5",
+      "digest": "dd9904e081f03fa119f3d95c757888ce66a9f47146cb037298eb0a0b86b5cf23",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "d883fe97e466780b8734c2f28cf64d433ce79e98cd41e59d88de24d6d005742e",
+          "sha256": "d25b1152d2c5ded3627f38f686f7e0aecc4c9d779192a4bc96a9901bb0b8540e",
           "size": 828
         },
         {
@@ -27,7 +27,7 @@
         },
         {
           "path": "manifest.mjs",
-          "sha256": "d8edfc1bfa014a39341980df1964f87c522be3577d7d37e096497c53b57c5212",
+          "sha256": "56304c96cfb3ab50a30acba0932476cd3bcbaa5762645461772cbfd6af47e876",
           "size": 844
         },
         {
@@ -199,12 +199,12 @@
       "description": "A starship comms console for AgentNet: command navigation across the top, a framed transmission display, a crew panel and a command dock for writing. A brief scanner sweep and split shutters mark what you open, and both stay still when your device asks for less motion. Every chat, topic, agent and setting is still there.",
       "version": "1.11.1",
       "api": 1,
-      "agentnet": "v0.11.4",
-      "digest": "ff4ff3fd50cd862ad151457d7792f7fcc06604f0cdac53cb5cc4ab26cd350547",
+      "agentnet": "v0.11.5",
+      "digest": "7720ce4780652f678398550a7d8af75c3a59db7876b5ceb933db5845ad7a31ee",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "e08041a0b9aad37b63f24912c412d81f5c72bcf2706da1e8c022d6fad4a8651e",
+          "sha256": "f803f5a0d3ada2cbdbd78368369e7e6eea66dc539995d52878dd40494bbc5508",
           "size": 790
         },
         {
@@ -219,7 +219,7 @@
         },
         {
           "path": "manifest.mjs",
-          "sha256": "622a689a5bab2ae77b3496c70a535d201b21694b495707399d45940155a48921",
+          "sha256": "b42ff1ab63d50d778e0ad83aecad2196bd7f3db47e66d0793247fa0270c620da",
           "size": 806
         },
         {
@@ -386,12 +386,12 @@
       "description": "A plain workplace messenger: white pages, thin hairlines, a dark neutral rail, the device's own font. Green for what you can do, blue for agents. Flat messages, a bordered composer, hairline request cards with a coloured edge. Everything Comic does, without the stickers.",
       "version": "1.8.1",
       "api": 1,
-      "agentnet": "v0.11.4",
-      "digest": "fcbd25a447eb14ccd56eaef5b66e66b2f1c7c5056940e248e77640127da202dc",
+      "agentnet": "v0.11.5",
+      "digest": "ca08e1f166b7eaa930d45686dc70cde50d157b68a86db9bbee01e965653b7fd6",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "77d07ae27972858aa5b7fe4f588022ee21c24dc72f700d5403317333075b4598",
+          "sha256": "a3b6334e5c50cbe554423b98514dc8d6ab8e72f05c1e371c8590a6556442420c",
           "size": 754
         },
         {
@@ -503,12 +503,12 @@
       "description": "A 1970s paperback by day and a roadside diner by night. Chats read like a table of contents, every topic opens with a chapter card, requests for your OK arrive as a glowing case, and your agents wear costumes. Everything Comic does, in a new look.",
       "version": "1.10.1",
       "api": 1,
-      "agentnet": "v0.11.4",
-      "digest": "0e0b04c3dc12d6c35b7ebfcd52392d1b5a590cebbf46529dc3016167a98a8eb8",
+      "agentnet": "v0.11.5",
+      "digest": "db34bf816c56a6df49b4c34f3badb0db9e5a9c4aa4574faf215c75357e35ac74",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "9ddb8f3b10d0f6c60b3cb184eb1418282cdbc3e16827f3284ba67dbab7794492",
+          "sha256": "442a9954023e19e951f691c94d4d45f49b5943c2fabc78d587993b5dc8af1a00",
           "size": 1210
         },
         {
@@ -660,12 +660,12 @@
       "description": "Move through your workspace by zooming in: everyone, then one person, then a conversation, then a single message with everything known about it. Esc steps back out. You write in a focused dialog, and every chat, topic, agent and setting is still there.",
       "version": "1.11.1",
       "api": 1,
-      "agentnet": "v0.11.4",
-      "digest": "2d8c4fb88363050e52374739cb9d08f06d98714d7d71c79057c77f1da658f579",
+      "agentnet": "v0.11.5",
+      "digest": "7e4f750ec1e28493a034fe40ea1ddd0402504358a80f3b80e10f3ed2636a3f65",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "11d2415dffddff266d3528dfb98f51988263a84a5d66d73b5407077fb13ede1d",
+          "sha256": "27bd3f327728fa84a8cf7974131f7ad772fcbce419dd8a8317de1ba6700718a7",
           "size": 822
         },
         {
@@ -680,7 +680,7 @@
         },
         {
           "path": "manifest.mjs",
-          "sha256": "d74699d1431ed20b63bcb65a83731f366ce90b09b8d0497ba06964d4b3db4fd8",
+          "sha256": "7e73bca264fabf43a4ddfe7be91759ae2bc395ccefc028cd645384e0460ffe46",
           "size": 838
         },
         {

@@ -387,7 +387,7 @@
       "version": "1.8.2",
       "api": 1,
       "agentnet": "v0.11.6",
-      "digest": "a7594b1081fc0d8546cb3a9b2e457d547e55755faa0e87c2996b62b19e8a0784",
+      "digest": "39d7891ebe164530cfe6f6a49634ea8af487c15eb6e8a7fefb166b030671b7de",
       "files": [
         {
           "path": "skin.json",
@@ -396,13 +396,13 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "6a857b04c9e5b41e0959599866bf5ef27e367d179fdf20ecfd6005f209f6bf68",
-          "size": 1488055
+          "sha256": "e0c379a8b21e2907febb6543b45fbbf7db94f36ff64c99714630c7d9de904e31",
+          "size": 1488613
         },
         {
           "path": "style.css",
-          "sha256": "f06f907fde60214ee3fc800fc7e248b109f5e63e1630f5bf7f04037d77c937f9",
-          "size": 87161
+          "sha256": "250290a8ad6a9d80542c9b298de293589b1baa0db3e4dea95c1898e77ba05304",
+          "size": 87272
         },
         {
           "path": "document.css",
@@ -509,7 +509,7 @@
       "version": "1.10.2",
       "api": 1,
       "agentnet": "v0.11.6",
-      "digest": "cadce1d6aa39f3b56bb63fe6f3a60dd26838e12ca0f0e44c8738008e5127360b",
+      "digest": "ed53b60087ad5998cddeb12af92ada5cd5bf1b2d53c930a584ed45f9a4601743",
       "files": [
         {
           "path": "skin.json",
@@ -518,13 +518,13 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "c816ddca79ad0e73b7a91444594fdf4ccbec4ffc1e82fca33c7922f4e0fc906a",
-          "size": 1491354
+          "sha256": "7532befc6d4a0392702bd3998919b530164e56b90327d47a08af8fe922cf1291",
+          "size": 1491912
         },
         {
           "path": "style.css",
-          "sha256": "f86fc9393a8b46d88bbf82ff07d4fabea9a4ee8322c1941afdfa3dd95256b565",
-          "size": 90072
+          "sha256": "9a5530dc8c5f72cd0ae0e534928501f290b9327cfea138a1727e5f6d7b533dda",
+          "size": 90183
         },
         {
           "path": "document.css",

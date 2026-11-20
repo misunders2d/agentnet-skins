@@ -384,30 +384,30 @@
       "id": "office",
       "name": "Office",
       "description": "A plain workplace messenger: white pages, thin hairlines, a dark neutral rail, the device's own font. Green for what you can do, blue for agents. Flat messages, a bordered composer, hairline request cards with a coloured edge. Everything Comic does, without the stickers.",
-      "version": "1.8.1",
+      "version": "1.8.2",
       "api": 1,
       "agentnet": "v0.11.6",
-      "digest": "ac72a3c105e11fc2716ac88b47b4dff4d73ffcc2b293bd3c9209a18c1b8d8025",
+      "digest": "a7594b1081fc0d8546cb3a9b2e457d547e55755faa0e87c2996b62b19e8a0784",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "7a3302e99dbf7cc99a7ef41163b5f003a18b1c75b8fb096b23a2b05e4a938e75",
-          "size": 754
+          "sha256": "dadeae6d5944cee2034df03ac31da32c48cfef09b260360e745781dccbc71d31",
+          "size": 783
         },
         {
           "path": "entry.mjs",
-          "sha256": "3e54c55c7a6065c08527ba71f4cd298d5ae271a46d09c3362478c5369a63d1ec",
-          "size": 1487128
+          "sha256": "6a857b04c9e5b41e0959599866bf5ef27e367d179fdf20ecfd6005f209f6bf68",
+          "size": 1488055
         },
         {
           "path": "style.css",
-          "sha256": "bd89ee325e567af657a7bed8241b8c054f204d6c8d6e26dd282a6e68c016f8ba",
-          "size": 86830
+          "sha256": "f06f907fde60214ee3fc800fc7e248b109f5e63e1630f5bf7f04037d77c937f9",
+          "size": 87161
         },
         {
           "path": "document.css",
-          "sha256": "dc75ce6da855d448c6518042eaeeefbbe587c7e7f77e240acd409fedd1db1f21",
-          "size": 3254
+          "sha256": "992f1097d465671d2698924d4c847ad2936fb0d723fdf72b0c6a85a67d050dd7",
+          "size": 3860
         },
         {
           "path": "m/chunks/Composer.video-AAKLROU5.mjs",
@@ -468,6 +468,11 @@
           "path": "m/fonts/rubik-latin-wght-normal.woff2",
           "sha256": "691cd1d9b4c0cdf31a1dcf04259c86f92c85e69f6622abab7964d81e36890691",
           "size": 35348
+        },
+        {
+          "path": "m/fonts/twemoji.woff2",
+          "sha256": "5d141786e7df2be7a886855c79d081f11ae469f2776a85b755488e82142a1773",
+          "size": 479168
         }
       ],
       "previews": [
@@ -501,30 +506,30 @@
       "id": "pulp",
       "name": "Pulp",
       "description": "A 1970s paperback by day and a roadside diner by night. Chats read like a table of contents, every topic opens with a chapter card, requests for your OK arrive as a glowing case, and your agents wear costumes. Everything Comic does, in a new look.",
-      "version": "1.10.1",
+      "version": "1.10.2",
       "api": 1,
       "agentnet": "v0.11.6",
-      "digest": "6a25b533c9422b7b3a714b0dc360020d1a1140cc47c882521a195c5b3c62a755",
+      "digest": "cadce1d6aa39f3b56bb63fe6f3a60dd26838e12ca0f0e44c8738008e5127360b",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "ae288daf56706bb1a5a7601b515f0a4400a175d330e51488d5187d2e8c69acbe",
-          "size": 1210
+          "sha256": "40ee89fdc5a6f74da448f8e8247512c29c36a8fa5e8ef7cac25276eca913a4b6",
+          "size": 1239
         },
         {
           "path": "entry.mjs",
-          "sha256": "9c2977e685f7c117d46b8e3ebf7986e3d319ddde15a72f2f31b13de46159ca0a",
-          "size": 1490442
+          "sha256": "c816ddca79ad0e73b7a91444594fdf4ccbec4ffc1e82fca33c7922f4e0fc906a",
+          "size": 1491354
         },
         {
           "path": "style.css",
-          "sha256": "c32e3b7596c24a30f4c9093508ceb8f8fde1ae0de5e46688ebf4142d01583c2b",
-          "size": 89571
+          "sha256": "f86fc9393a8b46d88bbf82ff07d4fabea9a4ee8322c1941afdfa3dd95256b565",
+          "size": 90072
         },
         {
           "path": "document.css",
-          "sha256": "e07ec8b17a3539c0574f1a3cf37e06e85ea9b46b8489cb1b3626cf44e63a040c",
-          "size": 8581
+          "sha256": "bc605920cf0181de9091e2a2ffece6273e495df0adcab5940b75cb633790bc54",
+          "size": 9136
         },
         {
           "path": "m/chunks/Composer.video-AAKLROU5.mjs",
@@ -625,6 +630,11 @@
           "path": "m/fonts/pt-sans-narrow-latin-ext-700-normal.woff2",
           "sha256": "95a6a85e22dd80ba187d6b0d853dd922ca51074915c6e811d20c2a06be730e5e",
           "size": 30964
+        },
+        {
+          "path": "m/fonts/twemoji.woff2",
+          "sha256": "5d141786e7df2be7a886855c79d081f11ae469f2776a85b755488e82142a1773",
+          "size": 479168
         }
       ],
       "previews": [

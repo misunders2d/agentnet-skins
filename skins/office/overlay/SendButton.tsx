@@ -13,7 +13,7 @@ export function SendButton({ ready, busy, label }: { ready: boolean; busy: boole
   const dots = <span aria-hidden="true" className="flex gap-0.5 text-lg leading-none"><span className="working-dot">•</span><span className="working-dot">•</span><span className="working-dot">•</span></span>;
   return (
     <button type="submit" data-part="send" onMouseDown={keep} aria-disabled={!ready || busy} aria-label={label} title={label}
-      className={"office-send grid size-11 shrink-0 place-items-center self-end transition-colors duration-150 " + look}>
+      className={"office-send grid size-[46px] shrink-0 place-items-center self-end transition-colors duration-150 lg:size-12 " + look}>
       {busy ? dots : <IconSend size={20} stroke={2} aria-hidden="true" />}
     </button>
   );

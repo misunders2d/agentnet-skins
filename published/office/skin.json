@@ -2,7 +2,7 @@
   "api": 1,
   "id": "office",
   "name": "Office",
-  "agentnet": "v0.11.6",
+  "agentnet": "v0.11.7",
   "entry": "entry.mjs",
   "style": "style.css",
   "document": "document.css",
@@ -21,6 +21,7 @@
     "m/fonts/rubik-cyrillic-ext-wght-normal.woff2",
     "m/fonts/rubik-cyrillic-wght-normal.woff2",
     "m/fonts/rubik-latin-ext-wght-normal.woff2",
-    "m/fonts/rubik-latin-wght-normal.woff2"
+    "m/fonts/rubik-latin-wght-normal.woff2",
+    "m/fonts/twemoji.woff2"
   ]
 }

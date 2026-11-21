@@ -125,7 +125,7 @@ export function validateOverlay(id,project=root){
  if(fs.existsSync(doc)){
   const s=fs.readFileSync(doc,'utf8').replace(/\/\*[\s\S]*?\*\//g,'');
   if(s.replace(/@font-face\s*\{[^{}]*\}/g,'').trim())throw Error(id+': overlay/document.css holds only @font-face rules');
-  for(const match of s.matchAll(/url\(\s*(["']?)([^"')]+)\1\s*\)/g)){const target=match[2].trim();if(!/^m\/fonts\/[^/]+\.woff2$/.test(target)||(fs.existsSync(path.join(dir,'fonts'))&&!fs.existsSync(path.join(dir,'fonts',target.slice('m/fonts/'.length)))))throw Error(id+': document.css fonts come from overlay/fonts as m/fonts/<file>.woff2: '+target);}
+  for(const match of s.matchAll(/url\(\s*(["']?)([^"')]+)\1\s*\)/g)){const target=match[2].trim();if(!/^m\/fonts\/[^/]+\.woff2$/.test(target)||(target!=='m/fonts/twemoji.woff2'&&fs.existsSync(path.join(dir,'fonts'))&&!fs.existsSync(path.join(dir,'fonts',target.slice('m/fonts/'.length)))))throw Error(id+': document.css fonts come from overlay/fonts as m/fonts/<file>.woff2: '+target);}
  }
  return m;
 }

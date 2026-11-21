@@ -43,7 +43,7 @@ const nativeAPI=(route,body)=>owner.evaluate(async ({route,body})=>{
  // The browser checks this exact fixture certificate through Chromium SPKI pin;
  // computer-only certificate field is omitted from the test browser invitation.
  const origin=new URL(invite.hub).origin;assert.equal(new URL(origin).hostname,'127.0.0.1');delete invite.cert;offer.invite='agentnet-invite-v1:'+Buffer.from(JSON.stringify(invite)).toString('base64url');
- const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,userAgent:'Mozilla/5.0 (Linux; Android 14; Test Phone) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36'});page=await context.newPage();page.setDefaultTimeout(20000);page.on('pageerror',e=>errors.push(e.message));
+ const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,userAgent:'Mozilla/5.0 (Linux; Android 14; Test Phone) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36'});page=await context.newPage();page.setDefaultTimeout(20000);page.on('pageerror',e=>errors.push(e.stack || e.message));
  await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
  await page.goto(origin+'/?skin='+m.id+'#agentnet-link-v2:'+Buffer.from(JSON.stringify(offer)).toString('base64url'));
  await page.locator('.join-go').click();

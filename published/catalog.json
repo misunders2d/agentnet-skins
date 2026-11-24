@@ -8,7 +8,7 @@
       "version": "1.11.1",
       "api": 1,
       "agentnet": "v0.11.7",
-      "digest": "81e4940fccd6a55ee894ca2f8531966f817727be0cea1f36929372d0527883c2",
+      "digest": "abeb5a8f9d586246890f7081837d1c66fff821f28157aa760e21f9b96209bda6",
       "files": [
         {
           "path": "skin.json",
@@ -17,8 +17,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "3d68217981e33d2c87af15d515bad154bf4c8dfa4bc252462b295f67b87826c1",
-          "size": 470148
+          "sha256": "d59ffd29a7dbc3f93a654eb9d63a38d50aaa00f6b80d7da7b05c3a67784005bc",
+          "size": 470119
         },
         {
           "path": "composer-followup.mjs",
@@ -210,7 +210,7 @@
       "version": "1.11.1",
       "api": 1,
       "agentnet": "v0.11.7",
-      "digest": "b777e7a8cdce923477bc15c04d000221d355e16e6398b4163970634f72f113ab",
+      "digest": "62602925720af8423ce9a08effb62815f0564bedfcdb94269084d6dcc11bca6b",
       "files": [
         {
           "path": "skin.json",
@@ -219,8 +219,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "6c2347ce652e0a95da084042b85d2aa0bbdbb2723fd531a38310cd2c339dca2e",
-          "size": 444646
+          "sha256": "b01c5d89238cd74ce8bbdb11b92dee307f7723e8e1e862dddb60b72bf610a189",
+          "size": 444617
         },
         {
           "path": "composer-followup.mjs",
@@ -691,7 +691,7 @@
       "version": "1.11.1",
       "api": 1,
       "agentnet": "v0.11.7",
-      "digest": "63402e8b5843d7f8aac0ad646efebea4eb43f815ed28df80c135f454490410c1",
+      "digest": "99554a214f24742f9e23a5fb939f51afbef5378b8c476fc9596d8d3010d9bc65",
       "files": [
         {
           "path": "skin.json",
@@ -700,8 +700,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "5fb9da479cb5efa81d91499aa81772831baeb89f613864a65f9309458dfe93f4",
-          "size": 501287
+          "sha256": "57092d25fcbbd26cce7ba868ac7275b420234c840864c96d37a7988a5013067f",
+          "size": 501258
         },
         {
           "path": "composer-followup.mjs",

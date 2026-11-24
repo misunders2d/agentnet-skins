@@ -11,7 +11,7 @@ test('standalone topic search crosses statuses in its existing scope',{skip:!pro
  const server=http.createServer((req,res)=>{
   const u=new URL(req.url,'http://fixture');
   if(u.pathname==='/'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><title>Topic search fixture</title><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><style>body{margin:0}#skin{height:100vh}</style><div id="skin"></div>');return;}
-  const match=/^\/(classic|holonet|zoom)\/(topics\.mjs|person-topics\.mjs|choices\.mjs|style\.css)$/.exec(u.pathname);
+  const match=/^\/(classic|holonet|zoom)\/(topics\.mjs|person-topics\.mjs|link-text\.mjs|choices\.mjs|style\.css)$/.exec(u.pathname);
   if(!match){res.writeHead(404).end();return;}
   res.setHeader('Content-Type',match[2].endsWith('.css')?'text/css':'text/javascript');res.end(fs.readFileSync(path.join(collection,'skins',match[1],'src',match[2])));
  });

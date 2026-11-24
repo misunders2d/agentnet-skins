@@ -943,7 +943,7 @@ function reminderLine(m) {
 function remindAct(path,id,due,message) {
  const flights=reminderFlights(),existing=flights.get(id);if(existing)return existing.promise;
  const base=canonicalReminder(id),host=currentHost,gen=state.gen;
- const flight={path,id,due,base,host,gen,conv:base?.conv||state.dm||undefined,title:base?.title ? collapsedText(base.title) : firstLine(message?.body||'',90),phase:'pending',committed:false};
+ const flight={path,id,due,base,host,gen,conv:base?.conv||state.dm||undefined,title:base?.title||firstLine(message?.body||'',90),phase:'pending',committed:false};
  flights.set(id,flight);paintReminderChanges();
  flight.promise=runReminder(flight,flights);return flight.promise;
 }

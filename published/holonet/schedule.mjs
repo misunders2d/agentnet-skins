@@ -250,7 +250,7 @@ export function mountSchedule({root,host,owner,context,capture,getDraft,setDraft
   function compactRow(row){
     const article=node('article','',{className:'an-outbox-row'}),open=button('',()=>{selected=row;editing=false;notice='';paint();},busy);
     open.className+=' an-outbox-summary';open.setAttribute('aria-label','View scheduled message: '+chatText(row.conv));open.setAttribute('data-schedule-id',row.id);
-    open.append(node('time',new Date(row.due).toLocaleString([], {dateStyle:'medium',timeStyle:'short'}),{className:'an-schedule-when',dateTime:row.due}),node('strong',chatText(row.conv),{className:'an-outbox-chat'}),node('span',row.body?.slice(0,140)||'Attachment message',{className:'an-outbox-preview'}),node('span',states[row.state]||'Unavailable',{className:'hint an-outbox-status'}));article.append(open);
+    open.append(node('time',new Date(row.due).toLocaleString([], {dateStyle:'medium',timeStyle:'short'}),{className:'an-schedule-when',dateTime:row.due}),node('strong',chatText(row.conv),{className:'an-outbox-chat'}),node('span',maskSpoilers(row.body||'').slice(0,140)||'Attachment message',{className:'an-outbox-preview'}),node('span',states[row.state]||'Unavailable',{className:'hint an-outbox-status'}));article.append(open);
     if(selected?.id===row.id){
       const original=selected,detail=node('section','',{className:'an-schedule-detail'});detail.setAttribute('aria-label','Scheduled message details');
       detail.append(para(maskSpoilers(original.body||'')||'Attachment message'),para(original.topic?topicText(original.topic,original.conv):'Main flow'),para(audienceText(original.audience||{},original.conv)));

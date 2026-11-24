@@ -92,6 +92,11 @@ test('standalone global Outbox keeps compact schedules, exact drafts and persona
    const original=await page.evaluate(()=>({title:fixture.state.overview.dms[0].title,kind:fixture.state.overview.dms[0].kind,peer:fixture.state.overview.dms[0].peer.label,body:f.records[0].body,state:f.records[0].state}));
    assert.equal(await dialog.locator('[data-schedule-id] .an-outbox-chat').first().textContent(),original.peer,'person DM rows name the recipient, not the opening-line subject');
    assert.equal(await dialog.locator('[data-schedule-id]').first().getAttribute('aria-label'),'View scheduled message: '+original.peer,'accessible row name identifies the same recipient');
+   const scheduledSpoiler = 'Scheduled note ||private scheduled text ' + 'x'.repeat(150) + '||';
+   await page.evaluate(body=>{f.records[0].body=body;fixture.push();},scheduledSpoiler);
+   const preview = dialog.locator('[data-schedule-id] .an-outbox-preview').first();
+   await preview.getByText(/^Scheduled note/, {exact:false}).waitFor();
+   assert.equal(await preview.textContent(),'Scheduled note [Hidden text]','mask the scheduled spoiler before truncating the compact preview');
    const labels=['Heads up: expedited freight for Savannah','配送確認東京倉庫🚚'.repeat(8),'Subject: delivery window / invoice review / destination confirmation'];
    for(const [index,label]of labels.entries()){
     const body='Exact scheduled original '+index+': '+('Full message details remain available. '.repeat(8));

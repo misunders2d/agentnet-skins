@@ -7,12 +7,12 @@
       "description": "AgentNet's original interface: your chats in a list on the left and the open conversation on the right, with topics, people, agents, activity and every setting one click away. Plain, familiar and quick on a desktop or a phone, in light and dark.",
       "version": "1.11.1",
       "api": 1,
-      "agentnet": "v0.11.7",
-      "digest": "c51079ca80c97ff5b3c3ed104ce82dfb4931eaa26bb3f96f502d7f120e654609",
+      "agentnet": "v0.11.8",
+      "digest": "16e3a57ab373f4dc5f4e9f828f461f11845d6f22ce23fa77aa6f22b45ded2ae1",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "a4aa7d8b2a17816e63b152d6ef8e314287369d69926e5d66bac5253f47096b07",
+          "sha256": "3fd481f0b08c72fcc9452e1b243dd4d44c21c93f7436c4c56c47d1adf77d8bd1",
           "size": 883
         },
         {
@@ -27,7 +27,7 @@
         },
         {
           "path": "manifest.mjs",
-          "sha256": "625e3f718b3e2ff485f79b49c516cc92736bb3660ec8445c08cc174efdaadd71",
+          "sha256": "b18b6f83ba51ab6c8e737f6d27be175f6afc416b8428193ad8fc7083932a3174",
           "size": 899
         },
         {
@@ -162,8 +162,8 @@
         },
         {
           "path": "schedule.mjs",
-          "sha256": "7d51a25529db9b150f6c97b79e0e3bc9d6e9f3a8abe17a16255fc04b0beba8a0",
-          "size": 28698
+          "sha256": "ac33b4f3512a6aa543e0a1f9bf685d85bb88a89fe7b01ffe7c4befa177414b7b",
+          "size": 28715
         },
         {
           "path": "schedule-model.mjs",
@@ -209,12 +209,12 @@
       "description": "A starship comms console for AgentNet: command navigation across the top, a framed transmission display, a crew panel and a command dock for writing. A brief scanner sweep and split shutters mark what you open, and both stay still when your device asks for less motion. Every chat, topic, agent and setting is still there.",
       "version": "1.11.1",
       "api": 1,
-      "agentnet": "v0.11.7",
-      "digest": "f5fef2ab2a7a66dae76facd9b4d832eb300c16bd95329ca20eecc33d3492832a",
+      "agentnet": "v0.11.8",
+      "digest": "cf1589f665a4fe0f13a85f891a679f05d4e8354f77a11579a1fdee10cea52467",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "dfc655443fe5e3b348c7b99354426f9ddad102bd16cffe0bebe7af91d19336fc",
+          "sha256": "5d363a882c39d7a4216279456724d823bf0ba36e7790518236f1f6fc3607b289",
           "size": 845
         },
         {
@@ -229,7 +229,7 @@
         },
         {
           "path": "manifest.mjs",
-          "sha256": "96359857aaa8becd255fb96c9535570c4cdd5526cb5912a376ff6ae6c79e1a90",
+          "sha256": "151ab8071918cb513222d86d71e9d12b28afa5b9faf953baa96c6c3433e27c31",
           "size": 861
         },
         {
@@ -354,8 +354,8 @@
         },
         {
           "path": "schedule.mjs",
-          "sha256": "7d51a25529db9b150f6c97b79e0e3bc9d6e9f3a8abe17a16255fc04b0beba8a0",
-          "size": 28698
+          "sha256": "ac33b4f3512a6aa543e0a1f9bf685d85bb88a89fe7b01ffe7c4befa177414b7b",
+          "size": 28715
         },
         {
           "path": "schedule-model.mjs",
@@ -406,12 +406,12 @@
       "description": "A plain workplace messenger: white pages, thin hairlines, a dark neutral rail, the device's own font. Green for what you can do, blue for agents. Flat messages, a bordered composer, hairline request cards with a coloured edge. Everything Comic does, without the stickers.",
       "version": "1.8.2",
       "api": 1,
-      "agentnet": "v0.11.7",
-      "digest": "955da2e2a119c02a9504ca240c647f13184b2a7d7e0215f6ccf24c2c86889cef",
+      "agentnet": "v0.11.8",
+      "digest": "09fdb6db2d7464b0783d4f7ff01c6767ee10cfc0260bad8a2aad9d1bbfe4c43e",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "af27c4646737e4ff6e1093b23bc0610fc9c37dd7bb37163481e36741acc9fc5a",
+          "sha256": "2d0bf7ce1a34c7dc3aa3d82cef9a754130ea4e5c15d73a4f6dc6ff120f842094",
           "size": 783
         },
         {
@@ -528,12 +528,12 @@
       "description": "A 1970s paperback by day and a roadside diner by night. Chats read like a table of contents, every topic opens with a chapter card, requests for your OK arrive as a glowing case, and your agents wear costumes. Everything Comic does, in a new look.",
       "version": "1.10.2",
       "api": 1,
-      "agentnet": "v0.11.7",
-      "digest": "f8e38c7a1564afc0ad1250d2d9067ab94e4644675b0bd67890fa14f5611a1c24",
+      "agentnet": "v0.11.8",
+      "digest": "79d44bdd7938522ceb2495df96ac3f80ecaa6f86ce9304fa3d57d30f36bcb501",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "3565214731d131f20c79c75123ffd7ebe7dcb1fca372dbdf5ceb5e61253497b8",
+          "sha256": "731c8350f799a0810743286ea099bf587b992c0a06cae523c3c1af74bbcf69b1",
           "size": 1239
         },
         {
@@ -690,12 +690,12 @@
       "description": "Move through your workspace by zooming in: everyone, then one person, then a conversation, then a single message with everything known about it. Esc steps back out. You write in a focused dialog, and every chat, topic, agent and setting is still there.",
       "version": "1.11.1",
       "api": 1,
-      "agentnet": "v0.11.7",
-      "digest": "5731f09b1bfc8cd114071966825422a7f6b06e70ab3aec62d03d604301ef629b",
+      "agentnet": "v0.11.8",
+      "digest": "efe316082a873a03ec9e0b8e9ee4a8d09efcd5ec1e18724a309f22a1d8ddacaa",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "2185bad85a9bb388dfa13b9c6f827e5cf12410258fde8e57531fb24d36a3935a",
+          "sha256": "ca72539d457ad1fdeec9932fc49256970936ec5750e5bf3bcf170e80cf35a505",
           "size": 877
         },
         {
@@ -710,7 +710,7 @@
         },
         {
           "path": "manifest.mjs",
-          "sha256": "7800757cfc0711dd0e0d8933a848d775e5fa7102193912b62b8b3679542e81e7",
+          "sha256": "aa41b517ac5f594bfac57c45445d0e2e10485beadad3429550da6e14c5124e23",
           "size": 893
         },
         {
@@ -845,8 +845,8 @@
         },
         {
           "path": "schedule.mjs",
-          "sha256": "7d51a25529db9b150f6c97b79e0e3bc9d6e9f3a8abe17a16255fc04b0beba8a0",
-          "size": 28698
+          "sha256": "ac33b4f3512a6aa543e0a1f9bf685d85bb88a89fe7b01ffe7c4befa177414b7b",
+          "size": 28715
         },
         {
           "path": "schedule-model.mjs",

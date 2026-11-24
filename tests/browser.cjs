@@ -74,6 +74,17 @@ const ui=family==='zoom'?zoom:classic;
 (async()=>{
  browser=await chromium.launch({headless:true,executablePath:process.env.AGENTNET_CHROMIUM||undefined});
  const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
+ if(family!=='zoom')await page.addInitScript(()=>{
+  const NativeEventSource = window.EventSource;
+  let changeStream;
+  window.fixtureChangeStreamOpen = () => changeStream?.readyState===NativeEventSource.OPEN;
+  window.EventSource = class extends NativeEventSource {
+   constructor(url,options){
+    super(url,options);
+    if(new URL(url,location.href).pathname.endsWith('/events'))changeStream=this;
+   }
+  };
+ });
  const shot=async(name)=>{const f=path.join(evidence,'screenshots',m.id+'-'+name+'.png');await page.screenshot({path:f});result.screenshots.push(f);};
  const mounted=()=>page.locator(rootClass).waitFor();
  // The ordinary-opening control has no push; later cases restore the real stream.
@@ -99,24 +110,39 @@ const ui=family==='zoom'?zoom:classic;
    releaseEntry();await bounded(entryFinished,'ordinary opening response');await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
    assert.equal(await page.locator(rootClass).evaluate(root=>root.classList.contains('show-conv')),false,'Winning ordinary opening cannot replace chosen Activity');assert.equal(await page.locator('#review').isVisible(),true,'Activity survives the ordinary opening response');
   }finally{releaseEntry();releaseEntryEvents();await page.unrouteAll({behavior:'wait'});}
-  // The no-push proof above is complete; reset the fixture for real push cases.
-  await page.reload();await mounted();await ui.list();
   for(const destination of ['conversation','chats','activity']){
-   await ui.list();let firstStart,secondStart,firstDone,secondDone,releaseFirst,releaseSecond,count=0;
+   // Each case starts a cold visit with a connected push stream.
+   await page.reload();await mounted();await ui.list();
+   await page.waitForFunction(()=>window.fixtureChangeStreamOpen());
+   const sentBody = 'Current visit push '+destination+' '+runID;
+   let firstStart,secondStart,firstDone,secondDone,releaseFirst,releaseSecond,opening=false,winning=false;
    const first=new Promise(r=>firstStart=r),second=new Promise(r=>secondStart=r),done1=new Promise(r=>firstDone=r),done2=new Promise(r=>secondDone=r),hold1=new Promise(r=>releaseFirst=r),hold2=new Promise(r=>releaseSecond=r);
-   const hold=async route=>{if(new URL(route.request().url()).searchParams.get('id')!==seed.dm_vitalii)return route.continue();const n=++count,response=await route.fetch();if(n===1){firstStart();await hold1;}else if(n===2){secondStart();await hold2;}await route.fulfill({response});if(n===1)firstDone();if(n===2)secondDone();};
+   const hold=async route=>{
+    if(new URL(route.request().url()).searchParams.get('id')!==seed.dm_vitalii)return route.continue();
+    const opens = !opening;
+    opening = true;
+    const response = await route.fetch();
+    // Allow incidental refreshes through. The winning response must contain this push's message.
+    const hasPush = !opens && !winning && response.ok() && (await response.json()).messages?.some(message=>message.body===sentBody);
+    const wins = hasPush && !winning;
+    if(opens){firstStart();await hold1;}
+    else if(wins){winning=true;secondStart();await hold2;}
+    await route.fulfill({response});
+    if(opens)firstDone();
+    if(wins)secondDone();
+   };
    await page.route('**/api/dm?*',hold);
    try{
-    await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().click();await bounded(first,'opening GET');
+    await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().click();await bounded(first,'opening GET ('+destination+')');
     const pushAt = performance.now();
-    await page.evaluate(([conv,body])=>window.agentnet.api('/api/dm/send',{conv,body}),[seed.dm_vitalii,'Current visit push '+destination+' '+runID]);
-    await bounded(second,'pushed winning GET');
+    await page.evaluate(([conv,body])=>window.agentnet.api('/api/dm/send',{conv,body}),[seed.dm_vitalii,sentBody]);
+    await bounded(second,'pushed winning GET ('+destination+')');
     result.pushedGetMs.push(Math.round(performance.now() - pushAt));
     if(destination!=='conversation')await page.locator(destination==='chats'?'#nav-chats':'#review-btn').click();
     releaseSecond();await bounded(done2,'winning response');releaseFirst();await bounded(done1,'older response');
     if(destination==='conversation'){
      await page.locator('#conv-name').filter({hasText:'Vitalii'}).waitFor();await page.locator('#composer').waitFor();
-     await page.locator('#timeline').getByText('Current visit push '+destination+' '+runID,{exact:true}).waitFor();
+     await page.locator('#timeline').getByText(sentBody,{exact:true}).waitFor();
     }else{
      await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
      assert.equal(await page.locator(rootClass).evaluate(root=>root.classList.contains('show-conv')),false,'late DM response cannot replace chosen '+destination);

@@ -145,12 +145,30 @@ async function edit(message, touch = false) {
   const actions = message.getByLabel('Message actions', { exact: true }).first();
   await activate(actions);
   if (zoom && touch) {
-    await actions.focus();
-    const menu = await message.locator('.msg-menu').elementHandle();
-    await page.evaluate(conv => window.agentnet.api('/api/dm/send', {conv, body: 'Update while message actions are open'}), conv);
-    await page.waitForFunction(oldMenu => !oldMenu.isConnected, menu);
-    assert(await actions.evaluate(n => n.parentElement.open), 'message actions remain open after a background refresh');
-    assert(await actions.evaluate(n => n.getRootNode().activeElement === n), 'message action focus survives the refresh');
+    const selector = '.zoom-layer:last-child .zoom-message > .msg-menu > summary';
+    const menu = await page.evaluateHandle(async ({ selector, conv, body }) => {
+      const root = document.querySelector('#skin').shadowRoot;
+      const summary = root.querySelector(selector);
+      if (!summary) throw Error('Expected the current message action trigger');
+      const menu = summary.parentElement;
+      summary.focus({ preventScroll: true });
+      if (!menu.open || root.activeElement !== summary) {
+        throw Error('Expected the open message action menu to have focus before the push');
+      }
+      await window.agentnet.api('/api/dm/send', { conv, body });
+      return menu;
+    }, { selector, conv, body: 'Update while message actions are open ' + tag });
+    try {
+      await page.waitForFunction(oldMenu => !oldMenu.isConnected, menu);
+      // Look up the current control and read its focus in one browser task.
+      const state = await page.evaluate(selector => {
+        const root = document.querySelector('#skin').shadowRoot;
+        const summary = root.querySelector(selector);
+        return { open: summary?.parentElement.open, focused: root.activeElement === summary };
+      }, selector);
+      assert(state.open, 'message actions remain open after a background refresh');
+      assert(state.focused, 'message action focus survives the refresh');
+    } finally { await menu.dispose(); }
   }
   await activate(message.getByRole('button', { name: 'Edit', exact: true }));
   return message.getByRole('textbox', { name: 'New text' });
@@ -338,8 +356,14 @@ async function touch() {
     await message.getByRole('button', { name: 'Cancel', exact: true }).tap();
     await assertMask(message, revised);
     const spoiler = message.getByRole('button', { name: hidden, exact: true });
-    const target = await spoiler.boundingBox();
-    assert(target.width >= 44 && target.height >= 44, 'Touch spoiler has a 44px target');
+    const target = await page.evaluate(({ zoom, messageID }) => {
+      const root = document.querySelector('#skin').shadowRoot;
+      const message = zoom ? root.querySelector('.zoom-layer:last-child .zoom-message') : root.getElementById(messageID);
+      const node = message?.querySelector('.message-spoiler[aria-pressed="false"]');
+      const box = node?.getBoundingClientRect();
+      return box && { width: box.width, height: box.height };
+    }, { zoom, messageID });
+    assert(target && target.width >= 44 && target.height >= 44, 'Touch spoiler has a 44px target');
     await timed('touch reveal', () => spoiler.tap(), () => message.getByRole('button', { name: revised, exact: true }).waitFor());
   } finally { await context.close(); }
 }

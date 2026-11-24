@@ -691,7 +691,7 @@
       "version": "1.11.1",
       "api": 1,
       "agentnet": "v0.11.8",
-      "digest": "efe316082a873a03ec9e0b8e9ee4a8d09efcd5ec1e18724a309f22a1d8ddacaa",
+      "digest": "6e316f75ee4a0a07aa9650e98f495bc0e49044f75ba9162640e693fe8011048a",
       "files": [
         {
           "path": "skin.json",
@@ -700,8 +700,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "73b9002aa7d7d5e2706375391dbcf5e8a09774bbab4a12482f7e4d2c47c1810a",
-          "size": 501461
+          "sha256": "d274d74b0b83071388ba12360b9200e73783f5d35578ed4c160e4576ceea70f9",
+          "size": 501760
         },
         {
           "path": "composer-followup.mjs",

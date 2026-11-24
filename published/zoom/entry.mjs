@@ -4298,7 +4298,7 @@ function messageMenu(m, conv, bubble) {
   if (canDo(m, "delete")) items.push(el("button", { type: "button", onclick: (e) => { e.currentTarget.closest("details").open = false; deleteDialog(m, conv); } }, "Delete…"));
   if(conv&&!m.topic&&!m.topic_event&&state.dmData&&!state.dmData.frozen&&!dmVisitor(state.dmData)&&!m.excerpt_pid)items.push(el("button",{type:"button",onclick:async()=>{try{await api("/api/topic/create",{conv,peer:"",id:m.lid||m.id});topicSelections[conv]=m.lid||m.id;await loadDM(false);await Zoom.go(2,{});}catch(e){announce(e.message);}}},"Make a topic"));
   if (!items.length) return null;
-  return el("details", { class: "msg-menu" }, el("summary", { "aria-label": "Message actions", title: "Message actions" }, "⋯"), el("div", { class: "menu-items" }, items));
+  return el("details", { class: "msg-menu", "data-keep": "message-actions:" + (conv || state.thread) + ":" + m.id }, el("summary", { "aria-label": "Message actions", title: "Message actions" }, "⋯"), el("div", { class: "menu-items" }, items));
 }
 
 // editInPlace replaces the bubble's text with a box: Save sends a revision,
@@ -6587,6 +6587,7 @@ const Zoom = {
     const atEnd = oldContent && oldContent.scrollHeight - scroll - oldContent.clientHeight < 60;
     const expanded = [...surface.querySelectorAll(".zoom-layer:last-child details[open]")].map(d => d.dataset.person || d.dataset.keep).filter(Boolean);
     const focusText = ownedFocus && focused.tagName === "BUTTON" ? focused.textContent : null;
+    const focusMenu = ownedFocus && focused.matches(".msg-menu > summary") ? focused.parentElement.dataset.keep : null;
     const typing = focused?.classList.contains("zoom-search");
     const selection = typing ? [focused.selectionStart, focused.selectionEnd] : null;
     retireVisibleRead();
@@ -6604,7 +6605,8 @@ const Zoom = {
       search.focus({preventScroll: true});
       search.setSelectionRange(...selection);
     } else if (ownedFocus && !editFocused) {
-      const match = focusText && [...surface.querySelectorAll("button")].find(b => !b.disabled && b.textContent === focusText);
+      const match = focusMenu ? surface.querySelector('details[data-keep="' + CSS.escape(focusMenu) + '"] > summary')
+        : focusText && [...surface.querySelectorAll("button")].find(b => !b.disabled && b.textContent === focusText);
       if (match) match.focus({preventScroll: true}); else focusZoomLayer(surface);
     }
   },

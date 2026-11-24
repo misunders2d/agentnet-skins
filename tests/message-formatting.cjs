@@ -140,9 +140,19 @@ async function openMessage() {
   return page.locator('.zoom-message');
 }
 
-async function edit(message) {
-  await message.getByLabel('Message actions', { exact: true }).first().click();
-  await message.getByRole('button', { name: 'Edit', exact: true }).click();
+async function edit(message, touch = false) {
+  const activate = button => touch ? button.tap() : button.click();
+  const actions = message.getByLabel('Message actions', { exact: true }).first();
+  await activate(actions);
+  if (zoom && touch) {
+    await actions.focus();
+    const menu = await message.locator('.msg-menu').elementHandle();
+    await page.evaluate(conv => window.agentnet.api('/api/dm/send', {conv, body: 'Update while message actions are open'}), conv);
+    await page.waitForFunction(oldMenu => !oldMenu.isConnected, menu);
+    assert(await actions.evaluate(n => n.parentElement.open), 'message actions remain open after a background refresh');
+    assert(await actions.evaluate(n => n.getRootNode().activeElement === n), 'message action focus survives the refresh');
+  }
+  await activate(message.getByRole('button', { name: 'Edit', exact: true }));
   return message.getByRole('textbox', { name: 'New text' });
 }
 
@@ -312,7 +322,7 @@ async function touch() {
     if (zoom) await page.locator('#dialog-cancel').tap();
     await preview().waitFor();
     const message = await openMessage();
-    const editor = await edit(message);
+    const editor = await edit(message, true);
     assert(!(await message.locator('.edit-box').textContent()).includes('false'));
     await select(editor, revised);
     const editTrigger = editor.locator('..').getByRole('button', { name: 'Formatting', exact: true });

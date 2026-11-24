@@ -3,7 +3,9 @@ import { nativeRequestItem } from "./native-request.mjs";
 // Modified for AgentNet Skins Holonet from AgentNet v0.8.1 Classic.
 // Visual identity and Host API v1 compatibility fixes; see PROVENANCE.md.
 function niceGoogleDevice(address) { const name = String(address || "").split("/").pop() || "device"; return name.charAt(0).toUpperCase() + name.slice(1); }
-import { rawLinkParts, previewText, portableLink } from "./link-text.mjs";
+import { maskSpoilers, previewText, portableLink } from "./link-text.mjs";
+import { formattingField, restoreMessageEdits } from "./text-formatting.mjs";
+import { messageMarkdown } from "./message-markdown.mjs";
 import { avatarPicture, openPictureEditor, pastePictures, sniffVideo } from "./pictures.mjs";
 import { topicControls } from './topics.mjs';
 import { watchVisibleRows } from './visible-rows.mjs';
@@ -288,6 +290,7 @@ function fill(parent, ...kids) {
 function fillTimeline(timeline, key, ...kids) {
   const host=currentHost,previous=timeline.pickerScope,opened=new Map();
   const active=timeline.getRootNode().activeElement;
+  const edits=previous?.host===host&&previous.key===key ? [...timeline.querySelectorAll(".edit-box")] : [];
   if(previous?.host===host&&previous.key===key){
     for(const picker of timeline.querySelectorAll('.react-pick[open]')){
       const message=picker.closest('.msg[id]');if(!message)continue;
@@ -295,6 +298,7 @@ function fillTimeline(timeline, key, ...kids) {
     }
   }
   fill(timeline,...kids);timeline.pickerScope={host,key};
+  restoreMessageEdits(edits, timeline, active);
   for(const picker of timeline.querySelectorAll('.react-pick')){
     const id=picker.closest('.msg[id]')?.id;if(!opened.has(id))continue;
     picker.open=true;
@@ -407,8 +411,9 @@ const size = (n) => n < 1024 ? n + " B" : n < 1 << 20 ? (n / 1024).toFixed(1) + 
 const mentionRef = /\[@([^\[\]\r\n]{1,80})\]\(agentnet:(person|guest)\/([A-Za-z0-9_-]{1,64})\)/g;
 const mentionName = (s) => String(s || "").replace(/[\[\]\r\n]/g, "").trim().slice(0, 80);
 const mentionPlain = (s) => typeof s === "string" ? s.replace(mentionRef, (_, name) => "@" + name) : s;
+const collapsedText = s => mentionPlain(maskSpoilers(s || ""));
 const firstLine = (s, n) => {
-  const l = previewText(mentionPlain(s || "")).split("\n")[0]; // a person mention reads as @Name
+  const l = previewText(collapsedText(s)).split("\n")[0]; // a person mention reads as @Name
   return l.length > n ? l.slice(0, n - 1).trimEnd() + "…" : l;
 };
 const announce = (t) => { if (alive) $("live").textContent = t; };
@@ -450,7 +455,7 @@ async function loadOverview() {
   $("me").textContent = o.person ? o.person.label : "This device";
   $("me").title = "Key " + o.me.fingerprint;
   const m = machineLines(o);
-  $("machine").textContent = m.summary;
+  $("machine").textContent = collapsedText(m.summary);
   fill($("machine-detail"), ...m.details.filter(Boolean).map((t) => el("p", {}, t)));
   $("new-btn").hidden = !!(o.link && o.link.state === "pending"); // a device waiting for approval sends nothing
   renderOffline(o);
@@ -900,7 +905,7 @@ function reminderLine(m) {
 function remindAct(path,id,due,message) {
  const flights=reminderFlights(),existing=flights.get(id);if(existing)return existing.promise;
  const base=canonicalReminder(id),host=currentHost,gen=state.gen;
- const flight={path,id,due,base,host,gen,conv:base?.conv||state.dm||undefined,title:base?.title||firstLine(message?.body||'',90),phase:'pending',committed:false};
+ const flight={path,id,due,base,host,gen,conv:base?.conv||state.dm||undefined,title:base?.title ? collapsedText(base.title) : firstLine(message?.body||'',90),phase:'pending',committed:false};
  flights.set(id,flight);paintReminderChanges();
  flight.promise=runReminder(flight,flights);return flight.promise;
 }
@@ -997,7 +1002,7 @@ async function resumeOutboxDraft(key,draft) {
  restoreDraft(key,view);state.draftKey=key;syncComposer();$('body').focus();
 }
 function outboxReminders() {
- return [...(canRemind()?projectedReminders():[])].sort((a,b)=>(Number(b.overdue)-Number(a.overdue))||a.due.localeCompare(b.due)).map(r=>({id:r.message,title:r.title||'A message',chat:r.conv?outboxChatText(r.conv):whoText(r.from),when:dueText(r.due),detail:'From '+whoText(r.from),overdue:r.overdue,open:()=>openReminder(r),change:()=>remindDialog({id:r.message,body:r.title||''},r),done:()=>remindAct('/api/remind/done',r.message),cancel:()=>remindAct('/api/remind/cancel',r.message)}));
+ return [...(canRemind()?projectedReminders():[])].sort((a,b)=>(Number(b.overdue)-Number(a.overdue))||a.due.localeCompare(b.due)).map(r=>({id:r.message,title:collapsedText(r.title)||'A message',chat:r.conv?outboxChatText(r.conv):whoText(r.from),when:dueText(r.due),detail:'From '+whoText(r.from),overdue:r.overdue,open:()=>openReminder(r),change:()=>remindDialog({id:r.message,body:r.title||''},r),done:()=>remindAct('/api/remind/done',r.message),cancel:()=>remindAct('/api/remind/cancel',r.message)}));
 }
 function outboxChanged(open) {
  const nav=$('nav-outbox');if(nav){nav.classList.toggle('selected',open);nav.setAttribute('aria-current',open?'page':'false');}
@@ -1413,7 +1418,7 @@ function contactsOf(threads) {
   for (const c of list) {
     c.conversations.sort(newest); c.singles.sort(newest); c.reports.sort(newest);
     const latest = [...c.conversations, ...c.singles].sort(newest)[0];
-    c.last = latest ? latest.last : "";
+    c.last = latest ? collapsedText(latest.last) : "";
   }
   return list.sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt));
 }
@@ -1428,13 +1433,13 @@ function searchKnown(q, threads, dir) {
   // the person's name. Nothing matched is merged or guessed.
   const has = (s) => (s || "").toLowerCase().includes(q);
   const people = (o.people || []).filter((p) => has(p.label) || has(p.address) || devicesOf(p).some((d) => has(d.address) || has(d.name) || has(deviceWords(d.address))));
-  const dms = (o.dms || []).filter((d) => has(d.title) || has(d.last) || has(d.peer.label));
+  const dms = (o.dms || []).filter((d) => has(d.kind === "group" || d.renamed ? d.title : collapsedText(d.title)) || has(collapsedText(d.last)) || has(d.peer.label));
   const agents = contactsOf(threads).filter((c) => whoMatches(o, c.peer, q));
   const known = new Set(threads.map((t) => t.peer));
   // Agents the server lists that there is no conversation with yet.
   const listed = ((dir && dir.members) || []).filter((m) => !known.has(m.address) && whoMatches(o, m.address, q));
   const conversations = threads.filter((t) => !t.notice_only &&
-    (t.title.toLowerCase().includes(q) || t.last.toLowerCase().includes(q)))
+    (has(t.renamed ? t.title : collapsedText(t.title)) || has(collapsedText(t.last))))
     .sort((a, b) => new Date(b.last_at) - new Date(a.last_at));
   return { people, dms, agents, conversations, listed };
 }
@@ -1579,7 +1584,7 @@ function reportLine(c) {
   // Every report from this sender: open ones (also any that got a reply and
   // so sit in a conversation) and dismissed ones, newest first.
   const open = ((state.overview && state.overview.review) || []).filter((it) => it.notice && it.peer === c.peer)
-    .map((it) => ({ id: it.id, at: it.at, text: it.excerpt, open: true }));
+    .map((it) => ({ id: it.id, at: it.at, text: collapsedText(it.excerpt), open: true }));
   const seen = new Set(open.map((r) => r.id));
   const all = [...open, ...c.reports.filter((t) => !seen.has(t.id)).map((t) => ({ id: t.id, at: t.last_at, text: t.title, open: false }))]
     .sort((a, b) => new Date(b.at) - new Date(a.at));
@@ -2076,7 +2081,7 @@ function personRow(p, dms) {
       p.email && el("span", { class: "person-email" }, p.email),
       el("span", { class: "person-tags" }, el("span", { class: "kind-tag" }, "Person"), p.person && el("span", { class: "kind-tag", title: "Person ID: " + p.person }, "@" + p.person.slice(0, 8))),
       el("span", { class: "conv-bottom" },
-        el("span", { class: "conv-last" }, last ? last.last || "No messages yet" : "No DM yet"),
+        el("span", { class: "conv-last" }, last ? collapsedText(last.last) || "No messages yet" : "No DM yet"),
         p.state === "conflict" && el("span", { class: "conv-flag danger" }, "Frozen"),
         held > 0 && el("span", { class: "conv-flag calm" }, held + " held"),
         unread > 0 && el("span", { class: "conv-flag unread" }, unread + " new")),
@@ -2833,7 +2838,7 @@ async function askGuestUpdate(p) {
 // dmMsg is one DM message. Who wrote it is what the sending AgentNet says,
 // shown as that: a person's name is their claim, an agent is marked.
 function dmMsg(m, t, prev) {
-  if (m._local) return el("li", {id:"m-"+m.id,class:"msg out"}, el("div", {class:"col"}, el("div", {class:"bubble"}, m.pid && el("p", {"data-agent-recipient":"",title:m.pid}, "To @"+(agentOf(m.pid)?agentName(agentOf(m.pid)):"agent")), el("p", {class:"body"}, [m.body,...(m.attachments || m.files || []).map(f=>f.name)].filter(Boolean).join("\n"))), el("div", {class:"foot",role:"status"}, m.state_text, m._failed && el("button", {type:"button",class:"text-btn",onclick:m._retry}, "Retry"))));
+  if (m._local) return el("li", {id:"m-"+m.id,class:"msg out"}, el("div", {class:"col"}, el("div", {class:"bubble"}, m.pid && el("p", {"data-agent-recipient":"",title:m.pid}, "To @"+(agentOf(m.pid)?agentName(agentOf(m.pid)):"agent")), el("p", {class:"body"}, [collapsedText(m.body),...(m.attachments || m.files || []).map(f=>f.name)].filter(Boolean).join("\n"))), el("div", {class:"foot",role:"status"}, m.state_text, m._failed && el("button", {type:"button",class:"text-btn",onclick:m._retry}, "Retry"))));
   if (m.event) {
     return el("li", { id: "m-" + m.id, class: "event-line" }, el("span", {}, m.event), el("time", { datetime: m.sent_at || m.at, title: fullStamp(m.sent_at || m.at) }, sentWhen(m)));
   }
@@ -3752,7 +3757,7 @@ function guestInvitationRow(c) {
   const chat = (state.overview.dms || []).find(d => d.id === c.conv);
   return el("li", {"data-guest-invitation":c.pid},
     el("strong", {}, "Guest invitation"),
-    el("p", {class:"review-why"}, c.excerpt || chat?.title || "You are invited to a conversation."),
+    el("p", {class:"review-why"}, collapsedText(c.excerpt) || chat?.title || "You are invited to a conversation."),
     c.decide_on ? el("p", {class:"hint"}, "Decide on " + deviceWords(c.decide_on)) : el("div", {class:"agent-actions"}, join, decline));
 }
 
@@ -3794,7 +3799,7 @@ function renderReview(items) {
     el("button", { type: "button", onclick: () => { openThread(it.id, it.id); } },
       el("span", {}, who(it.peer), " · ", kindTag[it.kind] || it.kind),
       el("span", { class: "review-why" }, it.why),
-      el("span", { class: "review-text" }, it.excerpt)))) : conversations.length || invitations.length ? [] : [el("li", { class: "hint" }, "Nothing here waits for your decision.")]));
+      el("span", { class: "review-text" }, collapsedText(it.excerpt))))) : conversations.length || invitations.length ? [] : [el("li", { class: "hint" }, "Nothing here waits for your decision.")]));
   fill($("activity-extra"), ...working.map(it => el("li", {}, el("button", {type:"button", onclick:()=>{toggleReview(false);openThread(it.id,it.id);}}, el("strong", {}, "Working · ", who(it.peer)), nativeActivity(it.why) || el("span", {class:"review-why"},it.why), el("span", {class:"review-text"},it.excerpt)))), ...security.map(it => el("li", {}, el("p", {}, it.why), el("time", {datetime:it.at}, when(it.at)), el("button", {type:"button", onclick:async()=>{ await api("/api/act",{do:"resolve",id:it.id}); await loadOverview(); }}, "Hide notice"))), ...linkNotices().map((n) => el("li", {}, n)));
   const senders = [...new Set(reports.map((it) => it.peer))];
   const contacts = contactsOf(state.overview.threads);
@@ -3924,7 +3929,7 @@ function searchItems(q, threads, open) {
     dms.length > 0 && el("li", { class: "result-head" }, dms.some(humanGroup) ? plural(dms.length, "conversation", "conversations") : plural(dms.length, "DM", "DMs")),
     ...dms.map((d) => el("li", {}, el("button", { type: "button", class: "result", onclick: () => open.dm(d) },
       el("span", { class: "result-kind" }, humanGroup(d) ? "Group" : "DM"),
-      el("span", { class: "result-main" }, el("span", { class: "result-title" }, d.title || "No messages yet"),
+      el("span", { class: "result-main" }, el("span", { class: "result-title" }, (d.kind === "group" || d.renamed ? d.title : collapsedText(d.title)) || "No messages yet"),
         el("span", { class: "hint" }, "with " + d.peer.label + " · " + when(d.last_at))), dmFlags(d)))),
     agents.length + listed.length > 0 && el("li", { class: "result-head" }, plural(agents.length + listed.length, "device", "devices")),
     ...agents.map((c) => el("li", {}, el("button", { type: "button", class: "result", onclick: () => open.contact(c) },
@@ -3934,7 +3939,7 @@ function searchItems(q, threads, open) {
     conversations.length > 0 && el("li", { class: "result-head" }, plural(conversations.length, "conversation or message", "conversations or messages")),
     ...shown.map((t) => el("li", {}, el("button", { type: "button", class: "result", onclick: () => open.conversation(t) },
       el("span", { class: "result-kind" }, kind(t)),
-      el("span", { class: "result-main" }, el("span", { class: "result-title" }, t.title),
+      el("span", { class: "result-main" }, el("span", { class: "result-title" }, t.renamed ? t.title : collapsedText(t.title)),
         el("span", { class: "hint" }, "with ", t.peer, " · ", when(t.last_at))), threadFlag(t)))),
     conversations.length > shown.length && el("li", { class: "hint result-more" }, (conversations.length - shown.length) + " more: type more to narrow the search.")];
 }
@@ -4262,6 +4267,8 @@ function editInPlace(m, conv, bubble) {
   const p = bubble.querySelector(".body");
   if (!p || bubble.querySelector(".edit-box")) return;
   const box = el("div", { class: "edit-box" });
+  box.originalBody = p;
+  box.messageSelector = bubble.matches("[data-mid]") ? '[data-mid="' + CSS.escape(m.id) + '"]' : "#m-" + CSS.escape(m.id);
   const ta = el("textarea", { rows: "3", "aria-label": "New text" });
   const decoded = decodeMentions(shownText(m)); // edited as @Name; each untouched mention keeps its exact reference
   let spans = decoded.spans, edited = decoded.text;
@@ -4272,14 +4279,25 @@ function editInPlace(m, conv, bubble) {
     spans = r.kept; edited = ta.value;
     if (r.dropped.length) err.textContent = r.dropped.map(s => "@" + s.name).join(", ") + " is no longer an exact mention; the text stays.";
   });
-  const cancel = () => { box.replaceWith(p); };
-  box.append(ta,
+  const cancel = () => { box.replaceWith(box.originalBody); };
+  const field = formattingField(ta, { el, browser: currentHost.platform === "browser",
+    refs: () => spans, write: (value, refs) => { spans = refs; edited = value; } });
+  box.append(field,
     (m.kind === "question" || m.kind === "task") && el("p", { class: "hint" }, "Editing changes the text shown here and on their devices. What their agent already received stays as sent; nothing runs again."),
     el("div", { class: "edit-actions" },
-      el("button", { type: "button", class: "btn primary", onclick: () => {
+      el("button", { type: "button", class: "btn primary", onclick: event => {
         if (!ta.value.trim()) { err.textContent = "Write the new text first."; return; }
         const text = encodeMentions(ta.value, spans).trim();
-        control("edit", { ...controlRef(m, conv), text }, (e) => { if (e) err.textContent = e.message; });
+        const save = event.currentTarget;
+        if (save.disabled) return;
+        save.disabled = true;
+        err.textContent = "";
+        announce("Saving edit…");
+        void control("edit", { ...controlRef(m, conv), text }, error => {
+          save.disabled = false;
+          if (error) { err.textContent = error.message; return; }
+          if (box.isConnected) cancel();
+        });
       } }, "Save"),
       el("button", { type: "button", class: "btn", onclick: cancel }, "Cancel")), err);
   p.replaceWith(box);
@@ -4288,7 +4306,7 @@ function editInPlace(m, conv, bubble) {
 
 function deleteDialog(m, conv) {
   dialog({ title: "Delete this message?", ok: "Delete",
-    body: [el("div", { class: "quote" }, mentionPlain(shownText(m)) || "(files only)"),
+    body: [el("div", { class: "quote" }, collapsedText(shownText(m)) || "(files only)"),
       el("p", {}, "It is removed here and on devices that can read deletions. Anyone who already read it, saved its files or gave it to an agent keeps what they have; nothing that is running is stopped."),
       (m.kind === "question" || m.kind === "task") && el("p", { class: "hint" }, "What was sent to their agent stays on record under Details.")],
     run: async () => { await control("delete", controlRef(m, conv)); } });
@@ -4302,29 +4320,37 @@ function reportText(m) {
     const v = JSON.parse(m.body);
     if (v && v.v === 2 && Array.isArray(v.items)) return plural(v.items.length || v.count || 0, "request", "requests") + " waiting on " + (v.host || m.from) + " at " + when(v.at) + ". See Activity for what they are" + (v.items.some((x) => x.actionable) ? " and to decide them from here." : ".");
   } catch (e) { /* the older count text */ }
-  return mentionPlain(shownText(m));
+  return collapsedText(shownText(m));
 }
 // lineOf is a message's first line as the page names it: a report by what it says.
 const lineOf = (m, n) => firstLine(isReport(m) ? reportText(m) : m.body || "(files)", n);
 
 function bodyOf(m) {
+  const body = messageBody(m);
+  if (canDo(m, "edit")) body.editSource = { dir: m.dir, revision: m.revision, text: shownText(m) };
+  return body;
+}
+
+function messageBody(m) {
   if (m.deleted) return el("p", { class: "body tombstone" }, "Message deleted");
   if (isReport(m)) return el("p", { class: "body report-body" }, reportText(m)); // a report from another machine: what it says, never its raw record
-  return el("p", { class: "body" }, messageNodes(shownText(m)), m.edited && el("span", { class: "edited", title: "Revision " + (m.revision || "") }, " · edited"));
+  return el("div", { class: "body body-markdown" }, formattedNodes(shownText(m)), m.edited && el("span", { class: "edited", title: "Revision " + (m.revision || "") }, " · edited"));
 }
 // messageNodes: a message's text with its links clickable and its exact
 // mentions as chips (Classic's link-text module).
-function messageNodes(text) {
-  return rawLinkParts(text).flatMap(part => typeof part === "string" ? mentionNodes(part, state.dm ? state.dmData : null) : [el("a", {href:part.href, target:"_blank", rel:"noopener noreferrer", title:part.href, "aria-label":part.href}, part.label)]);
+function formattedNodes(text, compact = false) {
+  return messageMarkdown(text, { el, compact,
+    mention: raw => compact ? [mentionPlain(raw)] : mentionNodes(raw, state.dm ? state.dmData : null) });
 }
+
 
 // controlDetails are the rows Details adds: the original text of an edited
 // message, and what was sent of a deleted question or task (on record;
 // never shown in the tombstone).
 function controlDetails(m) {
   const rows = [];
-  if (m.edited && !m.deleted) rows.push(el("dt", {}, "Original text"), el("dd", {}, mentionPlain(m.body)));
-  if (m.deleted && (m.kind === "question" || m.kind === "task")) rows.push(el("dt", {}, "What was sent to their agent"), el("dd", {}, mentionPlain(m.body)));
+  if (m.edited && !m.deleted) rows.push(el("dt", {}, "Original text"), el("dd", {}, collapsedText(m.body)));
+  if (m.deleted && (m.kind === "question" || m.kind === "task")) rows.push(el("dt", {}, "What was sent to their agent"), el("dd", {}, collapsedText(m.body)));
   if (m.revision) rows.push(el("dt", {}, "Revision"), el("dd", { class: "mono" }, String(m.revision)));
   return rows;
 }
@@ -4406,7 +4432,7 @@ function reportItems(it) {
     return el("li", { class: "report-request" + (x.actionable ? " actionable" : "") },
       el("div", { class: "report-head" }, el("strong", {}, kindTag[x.kind] || x.kind || "request"), " from ", who(x.from || "?"), " · ", (execWord[x.state] || x.state || "state unknown"),
         x.blocker && el("span", { class: "hint" }, " · " + (blockerWord[x.blocker] || x.blocker)), x.since && el("span", { class: "hint" }, " · since " + when(x.since))),
-      x.excerpt ? (x.state === "needs_human" ? el("details", {}, el("summary", {}, "Read all available detail"), el("p", {class:"agent-detail"}, x.excerpt)) : el("p", { class: "report-excerpt" }, x.excerpt)) : el("p", { class: "hint" }, "Its text is not shared with this device."),
+      x.excerpt ? (x.state === "needs_human" ? el("details", {}, el("summary", {}, "Read all available detail"), el("p", {class:"agent-detail"}, collapsedText(x.excerpt))) : el("p", { class: "report-excerpt" }, collapsedText(x.excerpt))) : el("p", { class: "hint" }, "Its text is not shared with this device."),
       proposalCard(x.proposal),
       el("p", { class: "hint mono" }, "Request " + x.id.slice(0, 8) + "… on " + r.host),
       res, acts);
@@ -4496,12 +4522,12 @@ function answerDialog({identity, title, body, request, path, field, refresh, res
 
 function operatorDialog(it, x, action) {
   const host = it.report.host;
-  if(action==='reply')return answerDialog({identity:['report-reply',host,x.id,x.key,x.attempt,x.state],title:'Answer it on '+host+'?',body:[el('p',{},'The '+(kindTag[x.kind]||x.kind||'request').toLowerCase()+' from '+(x.from||'?')+', as '+host+' reported it at '+when(it.report.at)+' ('+(execWord[x.state]||x.state)+').'),x.excerpt&&el('div',{class:'quote'},x.excerpt),el('p',{class:'hint'},'The host applies this only if the request is still in that state; you see the real outcome here. Nothing runs on this computer.')],path:'/api/operator/decide',field:'text',request:{host,id:x.id,key:x.key,action,expect:x.state,attempt:x.attempt,report:it.id},refresh:()=>loadOverview(),result:x.result});
+  if(action==='reply')return answerDialog({identity:['report-reply',host,x.id,x.key,x.attempt,x.state],title:'Answer it on '+host+'?',body:[el('p',{},'The '+(kindTag[x.kind]||x.kind||'request').toLowerCase()+' from '+(x.from||'?')+', as '+host+' reported it at '+when(it.report.at)+' ('+(execWord[x.state]||x.state)+').'),x.excerpt&&el('div',{class:'quote'},collapsedText(x.excerpt)),el('p',{class:'hint'},'The host applies this only if the request is still in that state; you see the real outcome here. Nothing runs on this computer.')],path:'/api/operator/decide',field:'text',request:{host,id:x.id,key:x.key,action,expect:x.state,attempt:x.attempt,report:it.id},refresh:()=>loadOverview(),result:x.result});
   const needText = action === "reply" || action === "decline";
   const ta = needText ? el("textarea", { id: "decide-text", rows: "3", "aria-label": action === "reply" ? "Your answer" : "Why" }) : null;
   dialog({ title: (decisionWord[action] || action).replace(/…$/, "") + " on " + host + "?", ok: decisionWord[action] ? decisionWord[action].replace(/ there…$/, "") : action,
     body: [el("p", {}, "The " + (kindTag[x.kind] || x.kind || "request").toLowerCase() + " from " + (x.from || "?") + ", as " + host + " reported it at " + when(it.report.at) + " (" + (execWord[x.state] || x.state) + ")."),
-      x.excerpt && el("div", { class: "quote" }, x.excerpt),
+      x.excerpt && el("div", { class: "quote" }, collapsedText(x.excerpt)),
       ta, el("p", { class: "hint" }, "The host applies this only if the request is still in that state; you see the real outcome here. Nothing runs on this computer.")],
     run: async () => {
       const body = { host, id: x.id, key: x.key, action, expect: x.state, attempt: x.attempt, text: ta ? ta.value.trim() : "", report: it.id };
@@ -4585,7 +4611,7 @@ async function openMessage(ref) {
 }
 
 function renderMsg(m, byId, prev, t) {
-  if (m._local) return el("li", {id:"m-"+m.id,class:"msg out"}, el("div", {class:"col"}, el("div", {class:"bubble"}, m.pid && el("p", {"data-agent-recipient":"",title:m.pid}, "To @"+(agentOf(m.pid)?agentName(agentOf(m.pid)):"agent")), el("p", {class:"body"}, [m.body,...(m.attachments || m.files || []).map(f=>f.name)].filter(Boolean).join("\n"))), el("div", {class:"foot",role:"status"}, m.state_text, m._failed && el("button", {type:"button",class:"text-btn",onclick:m._retry}, "Retry"))));
+  if (m._local) return el("li", {id:"m-"+m.id,class:"msg out"}, el("div", {class:"col"}, el("div", {class:"bubble"}, m.pid && el("p", {"data-agent-recipient":"",title:m.pid}, "To @"+(agentOf(m.pid)?agentName(agentOf(m.pid)):"agent")), el("p", {class:"body"}, [collapsedText(m.body),...(m.attachments || m.files || []).map(f=>f.name)].filter(Boolean).join("\n"))), el("div", {class:"foot",role:"status"}, m.state_text, m._failed && el("button", {type:"button",class:"text-btn",onclick:m._retry}, "Retry"))));
   const cont = continues(m, prev);
   const parent = m.reply_to && byId[m.reply_to];
   const actions = m.actions || [];
@@ -4628,7 +4654,7 @@ function renderMsg(m, byId, prev, t) {
     .filter(Boolean).flatMap((p, i) => i ? [el("span", { class: "sep", "aria-hidden": "true" }, "·"), p] : [p]);
 
   const col = el("div", { class: "col" }, meta, bubble,
-    m.summary && el("div", { class: "note" }, el("p", { class: "note-label" }, "Summary written on this computer by your responder"), el("p", { class: "body" }, m.summary)),
+    m.summary && el("div", { class: "note" }, el("p", { class: "note-label" }, "Summary written on this computer by your responder"), el("p", { class: "body" }, collapsedText(m.summary))),
     panel, el("div", { class: "foot" }, reactionsRow(m, ""), parts, messageMenu(m, "", bubble)));
   return el("li", { id: "m-" + m.id, class: "msg " + m.dir + (cont ? " cont" : "") + (needs ? " needs" : "") },
     m.dir === "in" && (cont ? el("span", { class: "avatar sm", "aria-hidden": "true" }) : avatar(m.from, "sm")),
@@ -4698,7 +4724,7 @@ function decide(a, m, t) {
     $("body").focus();
     return;
   }
-  const quote = el("div", { class: "quote" }, mentionPlain(m.body));
+  const quote = el("div", { class: "quote" }, collapsedText(m.body));
   const from = el("dl", {}, el("dt", {}, "From"), el("dd", {}, m.from));
   const runs = m.target && m.target.agent_id
     ? namedAgentOn(m.target.agent_id, m.target.address) + ", using its local configuration on that computer."
@@ -4840,7 +4866,7 @@ function newConversationDialog(prefill) {
   const body=el('textarea',{id:'new-body',rows:'4',placeholder:'What do you want to say?'});
   dialog({title:'New conversation',body:[el('label',{for:'new-to',class:'field-label'},'To'),to,el('label',{for:'new-kind',class:'field-label'},'Send as'),kind,
    el('label',{for:'new-agent',class:'field-label'},'Configured agent'),agent,el('button',{type:'button',class:'text-btn',onclick:()=>void load()},'Refresh agents'),note,
-   el('label',{for:'new-body',class:'field-label'},'Message'),body],ok:'Send',focus:to.value?body:to,run:async()=>{
+   el('label',{for:'new-body',class:'field-label'},'Message'),formattingField(body,{el,browser:host.platform==='browser'})],ok:'Send',focus:to.value?body:to,run:async()=>{
     throw Error(deviceReadOnly);
     if(!current())throw Error('Workspace changed. Reopen this conversation.');
     const address=to.value.trim(),selected=records.find(a=>a.id===agent.value),draft={to:address,kind:kind.value,body:body.value};
@@ -5264,7 +5290,7 @@ function setDMReply(m, plain = false) {
   if (m && (dmVisitor() || m.excerpt_pid)) return;
   if (state.dmReplyAgent && state.dmAgent === state.dmReplyAgent && m?.id !== state.dmReply?.id) { state.dmAgent = null; if (humanGroup()) refreshTyping(); } // it came only from the earlier Reply
   state.dmReplyAgent = null;
-  state.dmReply = m ? { id: m.id, body: m.body } : null;
+  state.dmReply = m ? { id: m.id, body: shownText(m) } : null;
   state.dmPlainReply = !!m && plain;
   if (m && state.dmAgent && !composerReplyFollowup(state.dmData,state.dmAgent,topicSelections[state.dm]||"",state.overview?.me,m.id)) setDMAgent(null);
   // A Reply on an agent's answer or clarification continues that exact
@@ -5279,7 +5305,7 @@ function setDMReply(m, plain = false) {
   $("replying").hidden = !m;
   if (m) {
     $("replying-label").textContent = "Replying to";
-    $("replying-text").textContent = firstLine(m.body, 70);
+    $("replying-text").textContent = firstLine(shownText(m), 70);
   }
   renderTarget();
 }
@@ -5288,7 +5314,7 @@ function setAnswering(m) {
   state.answering = m;
   $("replying").hidden = !m;
   $("replying-label").textContent = "Answering";
-  if (m) $("replying-text").textContent = (kindTag[m.kind] || "message").toLowerCase() + ": " + firstLine(m.body, 70);
+  if (m) $("replying-text").textContent = (kindTag[m.kind] || "message").toLowerCase() + ": " + firstLine(shownText(m), 70);
   syncComposer();
   kindHint();
 }
@@ -6185,6 +6211,14 @@ function start() {
   let theme = "system";
   try { theme = localStorage.getItem("agentnet-theme") || theme; } catch (e) { /* default */ }
   setTheme(theme);
+  const field = $("body"), parent = field.parentNode, next = field.nextSibling;
+  parent.insertBefore(formattingField(field, { el, floating: true, browser: currentHost.platform === "browser", refs: () => state.mentions || [],
+    scope: () => JSON.stringify([state.gen, state.draftKey, topicSelections[state.dm], topicFresh[state.dm]]),
+    write(value, refs) {
+      state.mentions = refs; state.mentionText = value;
+      grow(); noteTyping(); closeMentions(); keepDraft();
+    },
+  }), next);
   $("composer").addEventListener("submit", send);
   $("body").addEventListener("input", grow);
   $("body").addEventListener("input", noteTyping);

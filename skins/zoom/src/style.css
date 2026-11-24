@@ -1005,3 +1005,52 @@ button.reaction { cursor: pointer; }
 .an-outbox-due { display: inline-block; min-width: 1.5em; padding: 2px 5px; border: 1px solid currentColor; border-radius: 999px; font-size: 12px; font-weight: 700; line-height: 1.2; }
 .an-outbox-due[hidden] { display: none; }
 /* agentnet-shared-v33 end */
+
+/* Native textarea selection and a package-local formatting menu. */
+.format-field { position: relative; min-width: 0; }
+.format-trigger { display: none; }
+@media (pointer: coarse) {
+  .format-trigger { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; }
+  .format-floating .format-trigger { position: absolute; z-index: 3; inset: auto 0 100% auto; margin: 0 0 4px; }
+}
+.format-menu {
+  position: fixed; inset: auto; bottom: 12px; left: 50%; translate: -50% 0;
+  margin: 0; padding: 4px; min-width: min(224px, 100vw - 24px);
+  max-height: min(410px, 50dvh); overflow: auto;
+  background: var(--surface); color: var(--text); border: 1px solid var(--line);
+  border-radius: 12px; box-shadow: var(--shadow);
+}
+@supports (position-anchor: --format-field) {
+  .format-field:has(> .format-menu:popover-open) { anchor-name: --format-field; }
+  .format-menu {
+    position-anchor: --format-field; inset: auto; translate: none;
+    position-area: top span-right; position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+    margin: 4px; justify-self: start;
+  }
+}
+.format-menu button {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 34px;
+  padding: 5px 10px; background: transparent; color: inherit; border: 0; border-radius: 8px;
+  font: inherit; text-align: left; cursor: pointer;
+}
+.format-menu small { color: var(--muted); white-space: nowrap; }
+.format-menu button:is(:hover, :focus-visible) { background: var(--hover); }
+@media (pointer: coarse) {
+  .format-menu button { min-height: 44px; }
+  .format-menu small { display: none; }
+}
+.format-link { width: min(380px, 100% - 24px); }
+.format-link .edit-actions { justify-content: end; margin-top: 10px; }
+.format-link :is(input, button) { min-height: 44px; }
+.message-spoiler {
+  border-radius: 4px; padding: 0 3px; background: color-mix(in srgb, currentColor 16%, transparent);
+  cursor: pointer; box-decoration-break: clone;
+}
+.message-spoiler[aria-pressed="false"] { user-select: none; font-weight: 600; }
+.message-spoiler:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+@media (pointer: coarse) {
+  .message-spoiler {
+    display: inline-block; box-sizing: border-box; vertical-align: middle;
+    min-width: 44px; min-height: 44px; max-width: 100%; align-content: center;
+  }
+}

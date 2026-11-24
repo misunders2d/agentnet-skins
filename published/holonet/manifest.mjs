@@ -19,6 +19,8 @@ export default {
     "assistant-setup.css",
     "qr.mjs",
     "link-text.mjs",
+    "text-formatting.mjs",
+    "message-markdown.mjs",
     "topics.mjs",
     "optimistic.mjs",
     "pictures.mjs",

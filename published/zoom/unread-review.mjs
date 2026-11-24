@@ -1,3 +1,4 @@
+import { maskSpoilers } from './link-text.mjs';
 import {holdChoices,pagedChoices,placeChoices,LIST_CHANGED} from './choices.mjs';
 
 // One root/host's unread projection only. Exact navigation stays with the entry.
@@ -38,8 +39,8 @@ export function unreadReview(root,{api,onChoose}) {
         button.onclick=()=>{if(!dead&&visible&&cards.get(card.row.key)===card&&card.present){const chosen=card.row;stable.release();void onChoose(chosen);}};
       }
       card.row=r;card.present=present;card.where.textContent=label(r);card.author.textContent=r.dir==='out'?'You':r.label||r.author;
-      card.preview.textContent=present?r.preview||'Attachment':'No longer unread';card.time.textContent=r.at;card.time.dateTime=r.at;
-      card.button.setAttribute('aria-disabled',String(!present));card.button.setAttribute('aria-label',label(r)+', '+(r.label||r.author)+', '+(r.preview||'Attachment')+(present?'. Open message.':'. No longer unread.'));
+      const preview=maskSpoilers(r.preview||'')||'Attachment';card.preview.textContent=present?preview:'No longer unread';card.time.textContent=r.at;card.time.dateTime=r.at;
+      card.button.setAttribute('aria-disabled',String(!present));card.button.setAttribute('aria-label',label(r)+', '+(r.label||r.author)+', '+preview+(present?'. Open message.':'. No longer unread.'));
       keep.add(r.key);nodes.push(card.item);
     }
     for(const key of cards.keys())if(!keep.has(key))cards.delete(key);

@@ -1,3 +1,4 @@
+import { maskSpoilers } from './link-text.mjs';
 // Shared scheduled-message UI. Entries supply their existing draft/host binding;
 // this never invokes ordinary Send, switches workspaces or installs a timer.
 import {captureSchedule,clearScheduledDraft,localScheduleTime,scheduleDue,scheduleEdit,scheduleReason,scheduleRefused,scheduleSummary,submitSchedule} from './schedule-model.mjs';
@@ -174,7 +175,7 @@ export function mountSchedule({root,host,owner,context,capture,getDraft,setDraft
   function paintSlot(s){
     const box=node('section');box.setAttribute('aria-label','Unconfirmed schedule save');
     box.append(para(s.status==='saving'?'Saving schedule…':s.status==='refused'?'Save refused':s.status==='confirmed'?'Confirmed save for another skin':'Unconfirmed save'));
-    if(s.attempt)box.append(para(s.attempt.payload.body),para(new Date(s.attempt.payload.due).toLocaleString()+' · '+s.attempt.payload.timezone));
+    if(s.attempt)box.append(para(maskSpoilers(s.attempt.payload.body)),para(new Date(s.attempt.payload.due).toLocaleString()+' · '+s.attempt.payload.timezone));
     for(const f of s.files)box.append(para(f.name+' · '+f.size+' bytes'));
     box.append(para(s.note||''));if(!s.durable)box.append(para('This unconfirmed save won’t be remembered if the page reloads. Keep AgentNet open until you resolve it.','status'));
     if(s.status==='confirmed')box.append(para('Reopen the creating skin to apply its confirmed draft clear. Your draft here is kept.'));
@@ -184,7 +185,7 @@ export function mountSchedule({root,host,owner,context,capture,getDraft,setDraft
       box.append(button('Forget…',()=>{forgetting=true;paint();},busy||s.status==='saving'));
     }
     if(found?.id===s.id&&!s.attempt){
-      box.append(para(found.body),para(new Date(found.due).toLocaleString()+' · '+(states[found.state]||'Unavailable')));
+      box.append(para(maskSpoilers(found.body||'')),para(new Date(found.due).toLocaleString()+' · '+(states[found.state]||'Unavailable')));
       for(const f of found.files||[])box.append(para(f.name+' · '+f.size+' bytes'));
       box.append(para('Compare this saved state with your draft. Attachment names and sizes do not prove identical contents.'),button('Keep draft and finish review',()=>{ledger.forget(conv,s.id);found=null;void openList();},busy));
     }
@@ -195,7 +196,7 @@ export function mountSchedule({root,host,owner,context,capture,getDraft,setDraft
     const s=slot();if(s&&s.status!=='refused')return;
     if(!snapshot)return;
     const form=node('form'),why=eligibility();form.onsubmit=e=>{e.preventDefault();start();};
-    form.append(para(snapshot.body||'Attachment message'));for(const f of snapshot.draft.files||[])form.append(para(f.name));
+    form.append(para(maskSpoilers(snapshot.body||'')||'Attachment message'));for(const f of snapshot.draft.files||[])form.append(para(f.name));
     form.append(timeFields('Send',due,v=>{due=v;}),para('Approved audience'),para(loading?'Verifying current audience…':audience?audienceText(audience,conv):'Audience unavailable'),para('This exact preview is saved as the audience ceiling. Membership and keys are checked again before sending.'));
     if(why)form.append(para(why,'alert'));
     form.append(button(s?'Save changed schedule':'Save schedule',start,busy||loading||!audience||!!why));content.append(form);
@@ -224,7 +225,7 @@ export function mountSchedule({root,host,owner,context,capture,getDraft,setDraft
     for(const draft of drafts){
       const article=node('article','',{className:'an-outbox-row'}),open=button('',()=>void resume(()=>resumeDraft?.(draft.key,draft.record)),busy||!resumeDraft);
       open.className+=' an-outbox-summary an-outbox-draft';open.setAttribute('aria-label','Resume draft: '+draft.title);
-      open.append(node('strong',draft.title,{className:'an-outbox-chat'}),node('span',draft.text?.trim().slice(0,140)||'Attachment draft',{className:'an-outbox-preview'}),node('span',draft.detail||'Unsent draft',{className:'hint an-outbox-meta'}));
+      open.append(node('strong',draft.title,{className:'an-outbox-chat'}),node('span',maskSpoilers(draft.text||'').trim().slice(0,140)||'Attachment draft',{className:'an-outbox-preview'}),node('span',draft.detail||'Unsent draft',{className:'hint an-outbox-meta'}));
       if(draft.files?.length)open.append(node('span',draft.files.map(f=>typeof f==='string'?f:f.name).join(', '),{className:'an-outbox-files'}));
       article.append(open);content.append(article);
     }
@@ -252,7 +253,7 @@ export function mountSchedule({root,host,owner,context,capture,getDraft,setDraft
     open.append(node('time',new Date(row.due).toLocaleString([], {dateStyle:'medium',timeStyle:'short'}),{className:'an-schedule-when',dateTime:row.due}),node('strong',chatText(row.conv),{className:'an-outbox-chat'}),node('span',row.body?.slice(0,140)||'Attachment message',{className:'an-outbox-preview'}),node('span',states[row.state]||'Unavailable',{className:'hint an-outbox-status'}));article.append(open);
     if(selected?.id===row.id){
       const original=selected,detail=node('section','',{className:'an-schedule-detail'});detail.setAttribute('aria-label','Scheduled message details');
-      detail.append(para(original.body||'Attachment message'),para(original.topic?topicText(original.topic,original.conv):'Main flow'),para(audienceText(original.audience||{},original.conv)));
+      detail.append(para(maskSpoilers(original.body||'')||'Attachment message'),para(original.topic?topicText(original.topic,original.conv):'Main flow'),para(audienceText(original.audience||{},original.conv)));
       for(const file of original.files||[])detail.append(para(file.name));
       if(original.timezone&&original.timezone!==zone())detail.append(para('Saved timezone: '+original.timezone));
       if(original.state==='needs_review')detail.append(para('The chat, audience or attachments need review before sending.'));
@@ -281,7 +282,7 @@ export function mountSchedule({root,host,owner,context,capture,getDraft,setDraft
     if(!loading&&!current.length)content.append(para('No scheduled messages pending here on this device.'));
     const renderRow=row=>{
       const article=node('article','',{className:'an-schedule-row'});article.setAttribute('aria-label','Scheduled message: '+(states[row.state]||'Unavailable'));
-      article.append(node('time',new Date(row.due).toLocaleString([], {dateStyle:'medium',timeStyle:'short'}),{className:'an-schedule-when',dateTime:row.due}),node('p',row.body||'Attachment message',{className:'an-schedule-preview'}),para(states[row.state]||'Unavailable'),para(row.topic?topicText(row.topic):'Main flow'));
+      article.append(node('time',new Date(row.due).toLocaleString([], {dateStyle:'medium',timeStyle:'short'}),{className:'an-schedule-when',dateTime:row.due}),node('p',maskSpoilers(row.body||'')||'Attachment message',{className:'an-schedule-preview'}),para(states[row.state]||'Unavailable'),para(row.topic?topicText(row.topic):'Main flow'));
       for(const f of row.files||[])article.append(para(f.name));
       const recipients=node('details','',{className:'an-schedule-recipients'});recipients.append(node('summary','Recipients'),para(audienceText(row.audience||{},conv)));
       if(row.timezone&&row.timezone!==zone())recipients.append(para('Saved timezone: '+row.timezone));

@@ -25,6 +25,8 @@ export default {
     "optimistic.mjs",
     "pictures.mjs",
     "link-text.mjs",
+    "text-formatting.mjs",
+    "message-markdown.mjs",
     "reaction-preferences.mjs",
     "native-request.mjs",
     "visible-rows.mjs",

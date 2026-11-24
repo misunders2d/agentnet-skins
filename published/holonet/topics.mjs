@@ -1,3 +1,4 @@
+import { maskSpoilers } from './link-text.mjs';
 import {personTopicEntries} from './person-topics.mjs';
 import {holdChoices,pagedChoices,placeChoices} from './choices.mjs';
 // Shared skin source, copied into each independent package at build time.
@@ -88,7 +89,7 @@ export function topicControls(root,{api,choose,chooseRoot,fresh,changed,announce
     card.topic=t;card.present=present;card.check.checked=selected.has(t.id);card.check.disabled=!present||busy||confirming||flat&&!t.native;card.check.setAttribute('aria-label','Select '+(t.title||'Untitled topic'));
     card.go.textContent=(t.title||'Untitled topic')+' · '+t.state;card.go.setAttribute('aria-disabled',String(!present));
     card.rename.textContent='Rename topic '+(t.title||'Untitled topic')+'…';card.rename.disabled=!present||busy||confirming;
-    card.summary.textContent=present?(t.count||0)+(t.count===1?' message':' messages')+(t.unread?' · '+t.unread+' unread':'')+(t.guests?' · '+t.guests+(t.guests===1?' guest':' guests'):''):'No longer available';card.preview.textContent=t.last||'';
+    card.summary.textContent=present?(t.count||0)+(t.count===1?' message':' messages')+(t.unread?' · '+t.unread+' unread':'')+(t.guests?' · '+t.guests+(t.guests===1?' guest':' guests'):''):'No longer available';card.preview.textContent=maskSpoilers(t.last||'');
     keep.add(t.id);nodes.push(card.row);
    }
    for(const id of cards.keys())if(!keep.has(id))cards.delete(id);placeChoices(rows,nodes);renderActions();
@@ -113,7 +114,7 @@ export function topicControls(root,{api,choose,chooseRoot,fresh,changed,announce
   const loaded=await Promise.all(captured.roots.map(async r=>[r.id,r.id===scope.conv&&captured.view?captured.view:await api('/api/dm?id='+encodeURIComponent(r.id))]));
   if(dead||seq!==visit||!person||person.main!==captured.main||version!==personSeq)return{topics:[],next:''};
   views=Object.fromEntries(loaded);personReady=true;paint();const words=q.toLowerCase().split(/\s+/).filter(Boolean);
-  return{topics:flatEntries().filter(t=>(q||t.state===state)&&words.every(w=>(t.title+' '+(t.native?.auto_title||'')+' '+t.last).toLowerCase().includes(w))).sort(unreadFirst).map(t=>({...t,id:t.key})),next:''};
+  return{topics:flatEntries().filter(t=>(q||t.state===state)&&words.every(w=>(t.title+' '+maskSpoilers(t.native?.auto_title||'')+' '+t.last).toLowerCase().includes(w))).sort(unreadFirst).map(t=>({...t,id:t.key})),next:''};
  }
  function paint(){
   if(dead)return;const nodes=[routing],keep=new Set(),put=(id,text,click)=>{let b=barNodes.get(id);if(!b){b=button(text,()=>{if(barNodes.get(id)===b)return b.run?.();});barNodes.set(id,b);}b.textContent=text;b.run=click;keep.add(id);nodes.push(b);return b;};

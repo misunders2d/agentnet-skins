@@ -1,5 +1,9 @@
 # Source provenance
 
+## v0.11.7 formatting gallery candidate
+
+AgentNet source `5bf17f541b6abdcb98685de81464ab1e897a9ad1`. Classic, Holonet, and Zoom carry byte-identical copies of the pinned `internal/ui/skins/shared/link-text.mjs` under their own manifests. QA Orbit inherits Holonet. Office and Pulp are built from the same pin’s Comic source. The local packaging workflow regenerates the five catalog packages. The existing gallery preview images are retained.
+
 ## v0.10.9 qualified candidate — November 3, 2026
 
 Pin: `cabe5c3c81893a85f9e236c29b1cde37b3440035`, version/candidate v0.10.9 (the

@@ -8,17 +8,17 @@
       "version": "1.11.1",
       "api": 1,
       "agentnet": "v0.11.7",
-      "digest": "a7d995e8afeed230d8a72fd68a81f702b44fcde53ba9ad7cd8b0ad1919510539",
+      "digest": "ade5697276ce1fc862de3e11dc56ff9dabf6351ec2cfd6cff8503fc154a7faf7",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "725a949fc7fdcad858857048904e8b9a205348788d05c3a230db3dddca4d62b7",
-          "size": 828
+          "sha256": "a4aa7d8b2a17816e63b152d6ef8e314287369d69926e5d66bac5253f47096b07",
+          "size": 883
         },
         {
           "path": "entry.mjs",
-          "sha256": "3ffac40c514384c5833071850be9b958c42727e1f51b24cdc1cecd5406ae0c2f",
-          "size": 468089
+          "sha256": "99cb855c8f22cdf55121620220aa8f7f2e0af7b5ccfeb16cfdcf262596aac94f",
+          "size": 470134
         },
         {
           "path": "composer-followup.mjs",
@@ -27,13 +27,13 @@
         },
         {
           "path": "manifest.mjs",
-          "sha256": "f4f5e415f02237afde369293d50edb63a8cbe125871f3b2d6383610d1071d268",
-          "size": 844
+          "sha256": "625e3f718b3e2ff485f79b49c516cc92736bb3660ec8445c08cc174efdaadd71",
+          "size": 899
         },
         {
           "path": "style.css",
-          "sha256": "d378706c5a2ee2a914f27ee7669bcc3cfb2465d634e5de7bd43b8b4412925490",
-          "size": 61196
+          "sha256": "5ce5f5d445b0df4e647428ff241f6b0c23b34c76733c2dd30151550f52d081fe",
+          "size": 64272
         },
         {
           "path": "template.mjs",
@@ -82,13 +82,13 @@
         },
         {
           "path": "topics.mjs",
-          "sha256": "7c9ce6ce8062f59105f8efba8b5f213af1d95aa3ce1f099c3703aaa0a4a1c116",
-          "size": 17866
+          "sha256": "7135dd66028ced25605a7a1dd2217247c337f9ab11ce737435bc6830f1533989",
+          "size": 17940
         },
         {
           "path": "person-topics.mjs",
-          "sha256": "1d80432b0355a36e1da70373ea48011ff040ded2eb10c07cde9631f9aeaf189a",
-          "size": 2922
+          "sha256": "7a7282fe499313f3d8a7c6f810a45249535724a0691228318b578b6fccd95d8c",
+          "size": 3162
         },
         {
           "path": "collective-mentions.mjs",
@@ -107,8 +107,18 @@
         },
         {
           "path": "link-text.mjs",
-          "sha256": "056f7388713161b5059c8a7a30ab5b6831fc0476a5844b1da5a1aa2102c19fb9",
-          "size": 52813
+          "sha256": "b589129752401bedcdecc3f91790507a9933fbe98395f08af0b958081801bd02",
+          "size": 60869
+        },
+        {
+          "path": "text-formatting.mjs",
+          "sha256": "ec7f41e97d717395708679b1368569857d3fdef359d74aa6c427cf3e324106bd",
+          "size": 8253
+        },
+        {
+          "path": "message-markdown.mjs",
+          "sha256": "065158932b279a424a49a7a526b02b0a30ac98c207eebb27ec5cdb4a18d09127",
+          "size": 4961
         },
         {
           "path": "reaction-preferences.mjs",
@@ -147,13 +157,13 @@
         },
         {
           "path": "unread-review.mjs",
-          "sha256": "7b20408a77bdcdf521182ef1b74598d458dab5dc088f30d393d85bbb95fb35a8",
-          "size": 4211
+          "sha256": "39e121395b0e2c93c931ed72edcb5f0e7d90e39677f204c1e06c932979bc389b",
+          "size": 4281
         },
         {
           "path": "schedule.mjs",
-          "sha256": "b997b0fc44449fd03b7d04dfefbf441fe64f047435bd5e2a0db8912d998470dd",
-          "size": 28547
+          "sha256": "7d51a25529db9b150f6c97b79e0e3bc9d6e9f3a8abe17a16255fc04b0beba8a0",
+          "size": 28698
         },
         {
           "path": "schedule-model.mjs",
@@ -200,17 +210,17 @@
       "version": "1.11.1",
       "api": 1,
       "agentnet": "v0.11.7",
-      "digest": "6dca266a823e55c2a27d8aabe44eaaf193538fbc7360023986e4a36c23ec9ab7",
+      "digest": "d48d7ef5388524a5617e62ba009a081e1e34ec23d68f6d257d5fce39978542ef",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "176f5c910e3d6469c70592e300c49c822f519c545db3cf968e860c41956a164b",
-          "size": 790
+          "sha256": "dfc655443fe5e3b348c7b99354426f9ddad102bd16cffe0bebe7af91d19336fc",
+          "size": 845
         },
         {
           "path": "entry.mjs",
-          "sha256": "221351a64752ce1784beee4f1e165676e81456d544f78ef5040923541920e5f2",
-          "size": 442539
+          "sha256": "e366bc539369227eb1187c1764f3b39d1f620affe744423d40878a18eb3e38cf",
+          "size": 444632
         },
         {
           "path": "composer-followup.mjs",
@@ -219,13 +229,13 @@
         },
         {
           "path": "manifest.mjs",
-          "sha256": "b98fc4e433ae6048c81b20b3fe1291cfffb49904fbc019e8ece8e3e8c0e74b94",
-          "size": 806
+          "sha256": "96359857aaa8becd255fb96c9535570c4cdd5526cb5912a376ff6ae6c79e1a90",
+          "size": 861
         },
         {
           "path": "style.css",
-          "sha256": "4d438b8d7ad09a41d7505068647e376b0745ae92a3a42eed03770df95c321d08",
-          "size": 75984
+          "sha256": "98b64e1ca66c7b481137822f689125f1a081353c33a32b56b8f9fee566d928d5",
+          "size": 79060
         },
         {
           "path": "template.mjs",
@@ -269,13 +279,23 @@
         },
         {
           "path": "link-text.mjs",
-          "sha256": "056f7388713161b5059c8a7a30ab5b6831fc0476a5844b1da5a1aa2102c19fb9",
-          "size": 52813
+          "sha256": "b589129752401bedcdecc3f91790507a9933fbe98395f08af0b958081801bd02",
+          "size": 60869
+        },
+        {
+          "path": "text-formatting.mjs",
+          "sha256": "ec7f41e97d717395708679b1368569857d3fdef359d74aa6c427cf3e324106bd",
+          "size": 8253
+        },
+        {
+          "path": "message-markdown.mjs",
+          "sha256": "065158932b279a424a49a7a526b02b0a30ac98c207eebb27ec5cdb4a18d09127",
+          "size": 4961
         },
         {
           "path": "topics.mjs",
-          "sha256": "8c0362f7620250da7f0754d3ce948c8447524cc1138eaf9fb3309f384f41404b",
-          "size": 18091
+          "sha256": "90c0d6671a669f768c2292de5a6a973ff6c189dbb8630c30c8486a954977c8e1",
+          "size": 18165
         },
         {
           "path": "optimistic.mjs",
@@ -314,8 +334,8 @@
         },
         {
           "path": "unread-review.mjs",
-          "sha256": "7b20408a77bdcdf521182ef1b74598d458dab5dc088f30d393d85bbb95fb35a8",
-          "size": 4211
+          "sha256": "39e121395b0e2c93c931ed72edcb5f0e7d90e39677f204c1e06c932979bc389b",
+          "size": 4281
         },
         {
           "path": "choices.mjs",
@@ -334,8 +354,8 @@
         },
         {
           "path": "schedule.mjs",
-          "sha256": "b997b0fc44449fd03b7d04dfefbf441fe64f047435bd5e2a0db8912d998470dd",
-          "size": 28547
+          "sha256": "7d51a25529db9b150f6c97b79e0e3bc9d6e9f3a8abe17a16255fc04b0beba8a0",
+          "size": 28698
         },
         {
           "path": "schedule-model.mjs",
@@ -349,8 +369,8 @@
         },
         {
           "path": "person-topics.mjs",
-          "sha256": "1d80432b0355a36e1da70373ea48011ff040ded2eb10c07cde9631f9aeaf189a",
-          "size": 2922
+          "sha256": "7a7282fe499313f3d8a7c6f810a45249535724a0691228318b578b6fccd95d8c",
+          "size": 3162
         }
       ],
       "previews": [
@@ -387,7 +407,7 @@
       "version": "1.8.2",
       "api": 1,
       "agentnet": "v0.11.7",
-      "digest": "5e21d74f77b6554c4616aa1619b5fefd7d0b66adef39195c462702634f8fccb4",
+      "digest": "955da2e2a119c02a9504ca240c647f13184b2a7d7e0215f6ccf24c2c86889cef",
       "files": [
         {
           "path": "skin.json",
@@ -396,13 +416,13 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "e0c379a8b21e2907febb6543b45fbbf7db94f36ff64c99714630c7d9de904e31",
-          "size": 1488613
+          "sha256": "642f484082de4108f465e48fe9ca3bcff0045134383ccc33953f0be40db657b2",
+          "size": 1509142
         },
         {
           "path": "style.css",
-          "sha256": "250290a8ad6a9d80542c9b298de293589b1baa0db3e4dea95c1898e77ba05304",
-          "size": 87272
+          "sha256": "a124b368cd22a17d2ba37648b00e449a4b02ca5ce6785ecc09db0303e7a44c92",
+          "size": 88088
         },
         {
           "path": "document.css",
@@ -509,7 +529,7 @@
       "version": "1.10.2",
       "api": 1,
       "agentnet": "v0.11.7",
-      "digest": "c95b9cfe862bd686433fdf6c736a6d976b59a62071a62b5b0e5cb8dfc295ad43",
+      "digest": "f8e38c7a1564afc0ad1250d2d9067ab94e4644675b0bd67890fa14f5611a1c24",
       "files": [
         {
           "path": "skin.json",
@@ -518,13 +538,13 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "7532befc6d4a0392702bd3998919b530164e56b90327d47a08af8fe922cf1291",
-          "size": 1491912
+          "sha256": "b3b598e8c6042eeafee1904026392a8b74494e850fc5ed4374acd9188f9bda31",
+          "size": 1512441
         },
         {
           "path": "style.css",
-          "sha256": "9a5530dc8c5f72cd0ae0e534928501f290b9327cfea138a1727e5f6d7b533dda",
-          "size": 90183
+          "sha256": "bce52fae6b8ee21a3cdc868dcc04104b6afb0da4961de3175c9a01bf19945fc5",
+          "size": 91122
         },
         {
           "path": "document.css",
@@ -671,17 +691,17 @@
       "version": "1.11.1",
       "api": 1,
       "agentnet": "v0.11.7",
-      "digest": "2a711b1b512c0bc75b0695045a6bd30ed050ecf8695c4538d56af1a6d84476dd",
+      "digest": "0ced0416687082d6aee791e76c4addfaf7c30988e106a3930e12b23733323657",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "888a07d04179628b7d4c5e050f23d1098b861fa535bfbaa9ea1bf49cfbcd5a03",
-          "size": 822
+          "sha256": "2185bad85a9bb388dfa13b9c6f827e5cf12410258fde8e57531fb24d36a3935a",
+          "size": 877
         },
         {
           "path": "entry.mjs",
-          "sha256": "51673f36b787c5cbacfc284b1830e839df582a303c14532a4ad424084618b8be",
-          "size": 501884
+          "sha256": "cf72fca5988a9068bbdf7bf591ecfe0f5185946be03833b8b541c6d758e8c3be",
+          "size": 501229
         },
         {
           "path": "composer-followup.mjs",
@@ -690,13 +710,13 @@
         },
         {
           "path": "manifest.mjs",
-          "sha256": "042ad936967fddcb15ca7b709c707911f2c6a18a71e6f282a98ee5853632dfd1",
-          "size": 838
+          "sha256": "7800757cfc0711dd0e0d8933a848d775e5fa7102193912b62b8b3679542e81e7",
+          "size": 893
         },
         {
           "path": "style.css",
-          "sha256": "5b8a9a9bbfa889a7047e3288b4b79446d4542b4db3780fd78b4e78304cf58581",
-          "size": 69789
+          "sha256": "a684cf497933c2be6083665d65cbb5128ccb7266e110329c7b999141dbaae789",
+          "size": 72146
         },
         {
           "path": "template.mjs",
@@ -745,13 +765,13 @@
         },
         {
           "path": "topics.mjs",
-          "sha256": "7c9ce6ce8062f59105f8efba8b5f213af1d95aa3ce1f099c3703aaa0a4a1c116",
-          "size": 17866
+          "sha256": "7135dd66028ced25605a7a1dd2217247c337f9ab11ce737435bc6830f1533989",
+          "size": 17940
         },
         {
           "path": "person-topics.mjs",
-          "sha256": "1d80432b0355a36e1da70373ea48011ff040ded2eb10c07cde9631f9aeaf189a",
-          "size": 2922
+          "sha256": "7a7282fe499313f3d8a7c6f810a45249535724a0691228318b578b6fccd95d8c",
+          "size": 3162
         },
         {
           "path": "collective-mentions.mjs",
@@ -770,8 +790,18 @@
         },
         {
           "path": "link-text.mjs",
-          "sha256": "056f7388713161b5059c8a7a30ab5b6831fc0476a5844b1da5a1aa2102c19fb9",
-          "size": 52813
+          "sha256": "b589129752401bedcdecc3f91790507a9933fbe98395f08af0b958081801bd02",
+          "size": 60869
+        },
+        {
+          "path": "text-formatting.mjs",
+          "sha256": "ec7f41e97d717395708679b1368569857d3fdef359d74aa6c427cf3e324106bd",
+          "size": 8253
+        },
+        {
+          "path": "message-markdown.mjs",
+          "sha256": "065158932b279a424a49a7a526b02b0a30ac98c207eebb27ec5cdb4a18d09127",
+          "size": 4961
         },
         {
           "path": "reaction-preferences.mjs",
@@ -810,13 +840,13 @@
         },
         {
           "path": "unread-review.mjs",
-          "sha256": "7b20408a77bdcdf521182ef1b74598d458dab5dc088f30d393d85bbb95fb35a8",
-          "size": 4211
+          "sha256": "39e121395b0e2c93c931ed72edcb5f0e7d90e39677f204c1e06c932979bc389b",
+          "size": 4281
         },
         {
           "path": "schedule.mjs",
-          "sha256": "b997b0fc44449fd03b7d04dfefbf441fe64f047435bd5e2a0db8912d998470dd",
-          "size": 28547
+          "sha256": "7d51a25529db9b150f6c97b79e0e3bc9d6e9f3a8abe17a16255fc04b0beba8a0",
+          "size": 28698
         },
         {
           "path": "schedule-model.mjs",

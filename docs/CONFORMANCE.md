@@ -1,6 +1,6 @@
 # Host API v1 conformance
 
-Authoritative: [pinned UI_SKINS.md](https://github.com/misunders2d/agentnet/blob/54abbf4c7a6a76d20ea5a2b8ea70dcb85f4e513b/docs/UI_SKINS.md) (AgentNet v0.9.7 source). This guide records the rules; it does not define a new API.
+Authoritative: [pinned UI_SKINS.md](https://github.com/misunders2d/agentnet/blob/5bf17f541b6abdcb98685de81464ab1e897a9ad1/docs/UI_SKINS.md) (AgentNet v0.11.7 candidate). This guide records the rules; it does not define a new API.
 
 | Requirement | Implementation / shared evidence |
 | --- | --- |
@@ -13,6 +13,7 @@ Authoritative: [pinned UI_SKINS.md](https://github.com/misunders2d/agentnet/blob
 | Optional native clipboard/app/project space | Retained reference guards and captured callbacks; absent/rejected optional methods, app replacement cancel/confirm and partial-status merge, update preparation and native text paste exercised; unavailable controls explained/omitted; native OS/live provider behavior separate |
 | Features/capabilities | Complete reference implementation; real sends/files, topics Done/Reopen, people/agents/activity/settings; core returns available actions |
 | Responsive/accessibility | 1440/390, light/dark, keyboard-sized viewport with visible messages, readable composer and 44px send target, reduced motion, measured semantic contrast, settings focus containment, wrapping/root overflow, screenshots per major view |
+| Message formatting (Classic, Holonet, Zoom, QA Orbit) | Right-click Formatting submenu, shortcuts, touch Formatting control, link URL and Apply link, and keyboard/tap spoiler reveal. The production-loader journey checks sent and edited text, collapsed previews, quotes and search. It measures local feedback with a 1.1 s bound and holds write responses to check draft, selection and retry behavior. |
 | Action-linked motion | Actual production-loader assertions: repeat selection cancels its prior sweep; dialog close/reopen preserves new shutters; reduced motion skips effects; drafts/topic focus survive; crew closes/restores across resize; unmount while open cancels live animations |
 | AgentNet’s own contract check | `internal/ui/testdata/skin_contract_check.cjs` of the pin, for every package against the pinned demo daemon (`agentnet ui --demo`): private globals, direct `/api`/`/events`, undeclared files, DOM writes outside the root, listeners left after unmount, errors, A/B/A; AgentNet’s Classic and Zoom journeys for those ids, its Comic journey for overlays |
 | Gallery | `published/` recomputed in `npm run check`; the pinned AgentNet’s `skin-gallery.mjs` and `local-skins.mjs` read it as the latest release, verify every file and preview and install each package whose id the pin does not reserve |

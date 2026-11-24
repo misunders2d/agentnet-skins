@@ -1,3 +1,4 @@
+import { maskSpoilers } from './link-text.mjs';
 // Presentation only. Every entry retains its signed root and native topic route.
 // Names never combine identities; guest-only rooms stay outside a person's chat.
 export function personRoots(overview, dm) {
@@ -35,12 +36,13 @@ export function personTopicEntries(roots, views, main = '') {
   for(const root of orderedPersonRoots(roots)) {
     const view=views[root.id], topics=view?.topics || [], messages=view?.messages?.filter(m=>!m.topic && !m.topic_event && !m.event);
     const count=messages ? messages.length : root.count;
-    const text=m=>m?.deleted ? 'Message deleted' : m?.edited ? m.text || '' : m?.body || '';
+    const text=m=>m?.deleted ? 'Message deleted' : maskSpoilers(m?.edited ? m.text || '' : m?.body || '');
     const body=messages ? text(messages[0]) : undefined;
-    const title=view?.main_topic?.title || (count ? body || root.title || 'Untitled topic' : 'Empty topic');
-    if(root.id !== main && (!view || count > 0 || !topics.length)) entries.push({key:root.id+':',conv:root.id,topic:'',title,last:messages ? text(messages.at(-1)) : root.last || '',count,
+    const named=view?.main_topic;
+    const title=(named?.renamed ? named.title : maskSpoilers(named?.title || '')) || (count ? body || maskSpoilers(root.title || '') || 'Untitled topic' : 'Empty topic');
+    if(root.id !== main && (!view || count > 0 || !topics.length)) entries.push({key:root.id+':',conv:root.id,topic:'',title,last:messages ? text(messages.at(-1)) : maskSpoilers(root.last || ''),count,
       unread:messages ? messages.filter(m=>m.unread).length : Math.max(0,(root.unread || 0)-topics.reduce((n,t)=>n+(t.unread || 0),0)),state:view?.main_topic?.state || 'active',guests:root.guests || 0,root,main:view?.main_topic});
-    for(const native of topics) entries.push({key:root.id+':'+native.id,conv:root.id,topic:native.id,title:native.title || 'Untitled topic',last:native.last || '',count:native.count,
+    for(const native of topics) entries.push({key:root.id+':'+native.id,conv:root.id,topic:native.id,title:(native.renamed ? native.title : maskSpoilers(native.title || '')) || 'Untitled topic',last:maskSpoilers(native.last || ''),count:native.count,
       unread:native.unread || 0,state:native.state || 'active',guests:root.guests || 0,root,native});
   }
   return entries;

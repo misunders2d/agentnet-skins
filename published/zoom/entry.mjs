@@ -9,7 +9,9 @@ import { composerFollowup, currentComposerFollowup, composerReplyFollowup, reply
 import { nativeRequestItem } from "./native-request.mjs";
 import { reactionChoices, recordReaction, humanReactionOrder } from "./reaction-preferences.mjs";
 import {collectiveOptions, parseCollective, collectiveHref} from './collective-mentions.mjs';
-import { rawLinkParts, previewText, portableLink, markdownTokens, markdownText, shortLinkLabel } from "./link-text.mjs";
+import { maskSpoilers, previewText, portableLink } from "./link-text.mjs";
+import { formattingField, restoreMessageEdits } from "./text-formatting.mjs";
+import { messageMarkdown } from "./message-markdown.mjs";
 function niceGoogleDevice(address) { const name = String(address || "").split("/").pop() || "device"; return name.charAt(0).toUpperCase() + name.slice(1); }
 import { avatarPicture, openPictureEditor, pastePictures } from "./pictures.mjs";
 import { topicControls } from './topics.mjs';
@@ -446,8 +448,9 @@ const size = (n) => n < 1024 ? n + " B" : n < 1 << 20 ? (n / 1024).toFixed(1) + 
 const mentionRef = /\[@([^\[\]\r\n]{1,80})\]\(agentnet:(person|guest|agent|collective)\/([A-Za-z0-9_.,/-]{1,280003})\)/g;
 const mentionName = (s) => String(s || "").replace(/[\[\]\r\n]/g, "").trim().slice(0, 80);
 const mentionPlain = (s) => typeof s === "string" ? s.replace(mentionRef, (all, name, kind, id) => kind!=="collective" || parseCollective("agentnet:collective/"+id)?"@"+name:all) : s;
+const collapsedText = s => mentionPlain(maskSpoilers(s || ""));
 const firstLine = (s, n) => {
-  const l = previewText(mentionPlain(s || "")).split("\n")[0]; // a person mention reads as @Name
+  const l = previewText(collapsedText(s)).split("\n")[0]; // a person mention reads as @Name
   return l.length > n ? l.slice(0, n - 1).trimEnd() + "…" : l;
 };
 const announce = (t) => { if (alive) $("live").textContent = t; };
@@ -489,7 +492,7 @@ async function loadOverview() {
   $("me").textContent = o.person ? o.person.label : "This device";
   $("me").title = "Key " + o.me.fingerprint;
   const m = machineLines(o);
-  $("machine").textContent = m.summary;
+  $("machine").textContent = collapsedText(m.summary);
   fill($("machine-detail"), ...m.details.filter(Boolean).map((t) => el("p", {}, t)));
   $("new-btn").hidden = !!(o.link && o.link.state === "pending"); // a device waiting for approval sends nothing
   renderOffline(o);
@@ -929,7 +932,7 @@ function reminderLine(m) {
 function remindAct(path,id,due,message) {
  const flights=reminderFlights(),existing=flights.get(id);if(existing)return existing.promise;
  const base=canonicalReminder(id),host=currentHost,gen=state.gen;
- const flight={path,id,due,base,host,gen,conv:base?.conv||state.dm||undefined,title:base?.title||firstLine(message?.body||'',90),phase:'pending',committed:false};
+ const flight={path,id,due,base,host,gen,conv:base?.conv||state.dm||undefined,title:base?.title ? collapsedText(base.title) : firstLine(message?.body||'',90),phase:'pending',committed:false};
  flights.set(id,flight);paintReminderChanges();
  flight.promise=runReminder(flight,flights);return flight.promise;
 }
@@ -1026,7 +1029,7 @@ async function resumeOutboxDraft(key,draft) {
  restoreDraft(key,view);state.draftKey=key;syncComposer();$('body').focus();
 }
 function outboxReminders() {
- return [...(canRemind()?projectedReminders():[])].sort((a,b)=>(Number(b.overdue)-Number(a.overdue))||a.due.localeCompare(b.due)).map(r=>({id:r.message,title:r.title||'A message',chat:r.conv?outboxChatText(r.conv):whoText(r.from),when:dueText(r.due),detail:'From '+whoText(r.from),overdue:r.overdue,open:()=>openReminder(r),change:()=>remindDialog({id:r.message,body:r.title||''},r),done:()=>remindAct('/api/remind/done',r.message),cancel:()=>remindAct('/api/remind/cancel',r.message)}));
+ return [...(canRemind()?projectedReminders():[])].sort((a,b)=>(Number(b.overdue)-Number(a.overdue))||a.due.localeCompare(b.due)).map(r=>({id:r.message,title:collapsedText(r.title)||'A message',chat:r.conv?outboxChatText(r.conv):whoText(r.from),when:dueText(r.due),detail:'From '+whoText(r.from),overdue:r.overdue,open:()=>openReminder(r),change:()=>remindDialog({id:r.message,body:r.title||''},r),done:()=>remindAct('/api/remind/done',r.message),cancel:()=>remindAct('/api/remind/cancel',r.message)}));
 }
 function outboxChanged(open) {
  const nav=$('nav-outbox');if(nav){nav.classList.toggle('selected',open);nav.setAttribute('aria-current',open?'page':'false');}
@@ -1438,7 +1441,7 @@ function contactsOf(threads) {
   for (const c of list) {
     c.conversations.sort(newest); c.singles.sort(newest); c.reports.sort(newest);
     const latest = [...c.conversations, ...c.singles].sort(newest)[0];
-    c.last = latest ? latest.last : "";
+    c.last = latest ? collapsedText(latest.last) : "";
   }
   return list.sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt));
 }
@@ -1453,13 +1456,13 @@ function searchKnown(q, threads, dir) {
   // the person's name. Nothing matched is merged or guessed.
   const has = (s) => (s || "").toLowerCase().includes(q);
   const people = (o.people || []).filter((p) => has(p.label) || has(p.address) || devicesOf(p).some((d) => has(d.address) || has(d.name) || has(deviceWords(d.address))));
-  const dms = (o.dms || []).filter((d) => has(d.title) || has(d.last) || has(d.peer.label));
+  const dms = (o.dms || []).filter((d) => has(d.kind === "group" || d.renamed ? d.title : collapsedText(d.title)) || has(collapsedText(d.last)) || has(d.peer.label));
   const agents = contactsOf(threads).filter((c) => whoMatches(o, c.peer, q));
   const known = new Set(threads.map((t) => t.peer));
   // Agents the server lists that there is no conversation with yet.
   const listed = ((dir && dir.members) || []).filter((m) => !known.has(m.address) && whoMatches(o, m.address, q));
   const conversations = threads.filter((t) => !t.notice_only &&
-    (t.title.toLowerCase().includes(q) || t.last.toLowerCase().includes(q)))
+    (has(t.renamed ? t.title : collapsedText(t.title)) || has(collapsedText(t.last))))
     .sort((a, b) => new Date(b.last_at) - new Date(a.last_at));
   return { people, dms, agents, conversations, listed };
 }
@@ -1604,7 +1607,7 @@ function reportLine(c) {
   // Every report from this sender: open ones (also any that got a reply and
   // so sit in a conversation) and dismissed ones, newest first.
   const open = ((state.overview && state.overview.review) || []).filter((it) => it.notice && it.peer === c.peer)
-    .map((it) => ({ id: it.id, at: it.at, text: it.excerpt, open: true }));
+    .map((it) => ({ id: it.id, at: it.at, text: collapsedText(it.excerpt), open: true }));
   const seen = new Set(open.map((r) => r.id));
   const all = [...open, ...c.reports.filter((t) => !seen.has(t.id)).map((t) => ({ id: t.id, at: t.last_at, text: t.title, open: false }))]
     .sort((a, b) => new Date(b.at) - new Date(a.at));
@@ -3222,48 +3225,9 @@ function mentionNodes(text, t = state.dmData) {
   if (last < text.length) out.push(text.slice(last));
   return out;
 }
-function messageNodes(text) {
-  return rawLinkParts(text).flatMap(part => typeof part === "string" ? mentionNodes(part, state.dm ? state.dmData : null) : [el("a", {href:part.href, target:"_blank", rel:"noopener noreferrer", title:part.href, "aria-label":part.href}, part.label)]);
-}
-// Same lexer and safe element decisions as Comic Markdown; message text never
-// becomes HTML. Compact bubbles remain a single button, with inert link labels.
-function formattedNodes(text, compact=false) {
-  const inline = tokens => tokens.flatMap(t => {
-    if(t.type==="br")return [el("br")];
-    if(t.type==="html" || t.type==="escape" || t.type==="codespan")return [t.type==="codespan"?el("code",{},t.text):t.text];
-    if(["strong","em","del"].includes(t.type))return [el(t.type,{},inline(t.tokens||[]))];
-    if(t.type==="link" || t.type==="image") {
-      if(t.type==="link" && /^agentnet:(person|guest|agent|collective)\//.test(t.href))return compact?[mentionPlain(t.raw)]:mentionNodes(t.raw,state.dm?state.dmData:null);
-      const children=t.type==="image"?[t.text||t.href]:inline(t.tokens||[]);
-      if(compact || !portableLink(t.href)&&!/^(https?:\/\/|mailto:)/i.test(t.href))return children;
-      const label=shortLinkLabel(t.text,t.href);
-      return [el("a",{href:t.href,target:"_blank",rel:"noopener noreferrer",title:t.href,"aria-label":t.href},label!==t.text?label:children)];
-    }
-    return t.tokens?inline(t.tokens):[t.type==="text"?markdownText(t.text):t.raw||""];
-  });
-  const blocks=tokens=>tokens.flatMap(t=>{
-    if(t.type==="space" || t.type==="def")return [];
-    if(t.type==="hr")return [compact?el("br"):el("hr")];
-    if(t.type==="code")return compact?[el("code",{},t.text),el("br")]:[el("pre",{},el("code",{},t.text))];
-    if(t.type==="list") {
-      if(compact)return t.items.flatMap((it,i)=>[el("span",{},t.ordered?String(Number(t.start||1)+i)+". ":"• ",blocks(it.tokens)),el("br")]);
-      return [el(t.ordered?"ol":"ul",t.ordered?{start:t.start}:{},t.items.map(it=>el("li",{},it.task?(it.checked?"☑ ":"☐ "):null,blocks(it.tokens))))];
-    }
-    if(t.type==="table") {
-      const rows=[t.header,...t.rows];
-      if(compact)return rows.flatMap(row=>[el("span",{},row.flatMap((c,i)=>[i?" · ":"",inline(c.tokens)])),el("br")]);
-      return [el("div",{class:"markdown-table"},el("table",{},el("thead",{},el("tr",{},t.header.map(c=>el("th",{},inline(c.tokens))))),el("tbody",{},t.rows.map(row=>el("tr",{},row.map(c=>el("td",{},inline(c.tokens))))))))];
-    }
-    const content=t.type==="html"?[t.text]:t.type==="blockquote"?blocks(t.tokens||[]):t.tokens?inline(t.tokens):[t.text||t.raw||""];
-    if(compact)return [el("span",{},t.type==="heading"?el("strong",{},content):content),el("br")];
-    return [el(t.type==="blockquote"?"blockquote":"p",{},t.type==="heading"?el("strong",{},content):content)];
-  });
-  return blocks(markdownTokens(text));
-}
-
-// Previews are buttons that open the full message, where links become live.
-function messagePreview(text) {
-  return rawLinkParts(text).map(part => typeof part === "string" ? mentionPlain(part) : part.label).join("");
+function formattedNodes(text, compact = false) {
+  return messageMarkdown(text, { el, compact,
+    mention: raw => compact ? [mentionPlain(raw)] : mentionNodes(raw, state.dm ? state.dmData : null) });
 }
 // decodeMentions gives text as it is edited (@Name) and its exact mentions.
 function decodeMentions(text) {
@@ -3858,7 +3822,7 @@ function guestInvitationRow(c) {
   const chat = (state.overview.dms || []).find(d => d.id === c.conv);
   return el("li", {"data-guest-invitation":c.pid},
     el("strong", {}, "Guest invitation"),
-    el("p", {class:"review-why"}, c.excerpt || chat?.title || "You are invited to a conversation."),
+    el("p", {class:"review-why"}, collapsedText(c.excerpt) || chat?.title || "You are invited to a conversation."),
     c.decide_on ? el("p", {class:"hint"}, "Decide on " + deviceWords(c.decide_on)) : el("div", {class:"agent-actions"}, join, decline));
 }
 
@@ -3892,10 +3856,10 @@ function renderReview(items) {
     el("button", { type: "button", onclick: () => { toggleReview(false); openThread(it.id, it.id); } },
       el("span", {}, who(it.peer), " · ", kindTag[it.kind] || it.kind),
       el("span", { class: "review-why" }, it.why),
-      el("span", { class: "review-text" }, it.excerpt)))) : conversations.length || invitations.length ? [] : [el("li", { class: "hint" }, "Nothing here waits for your decision.")]));
+      el("span", { class: "review-text" }, collapsedText(it.excerpt))))) : conversations.length || invitations.length ? [] : [el("li", { class: "hint" }, "Nothing here waits for your decision.")]));
   const held = (state.overview.held || []).map(c => el("li", {},
     el("button", {type:"button", onclick:()=>{ toggleReview(false); openMessage({id:c.id,conv:c.conv}); }},
-      el("strong", {}, "Asked of you"), el("span", {class:"review-text"}, c.excerpt)),
+      el("strong", {}, "Asked of you"), el("span", {class:"review-text"}, collapsedText(c.excerpt))),
     el("p", {class:"hint"}, !c.decide_on && (c.actions || []).includes("resolve") ? "Answer in the chat, or mark it as handled on this device. Nothing runs it." : "Answer in the chat if you want to. Nothing runs it."),
     !c.decide_on && (c.actions || []).includes("resolve") && el("button", {type:"button", class:"text-btn", onclick:()=>{
       const host = currentHost;
@@ -4007,7 +3971,7 @@ function searchItems(q, threads, open) {
     dms.length > 0 && el("li", { class: "result-head" }, dms.some(humanGroup) ? plural(dms.length, "conversation", "conversations") : plural(dms.length, "DM", "DMs")),
     ...dms.map((d) => el("li", {}, el("button", { type: "button", class: "result", onclick: (e) => open.dm(d, e.currentTarget) },
       el("span", { class: "result-kind" }, humanGroup(d) ? "Group" : "DM"),
-      el("span", { class: "result-main" }, el("span", { class: "result-title" }, d.title || "No messages yet"),
+      el("span", { class: "result-main" }, el("span", { class: "result-title" }, (d.kind === "group" || d.renamed ? d.title : collapsedText(d.title)) || "No messages yet"),
         el("span", { class: "hint" }, "with " + d.peer.label + " · " + when(d.last_at))), dmFlags(d)))),
     agents.length + listed.length > 0 && el("li", { class: "result-head" }, plural(agents.length + listed.length, "device", "devices")),
     ...agents.map((c) => el("li", {}, el("button", { type: "button", class: "result", onclick: (e) => open.contact(c, e.currentTarget) },
@@ -4017,7 +3981,7 @@ function searchItems(q, threads, open) {
     conversations.length > 0 && el("li", { class: "result-head" }, plural(conversations.length, "conversation or message", "conversations or messages")),
     ...shown.map((t) => el("li", {}, el("button", { type: "button", class: "result", onclick: (e) => open.conversation(t, e.currentTarget) },
       el("span", { class: "result-kind" }, kind(t)),
-      el("span", { class: "result-main" }, el("span", { class: "result-title" }, t.title),
+      el("span", { class: "result-main" }, el("span", { class: "result-title" }, t.renamed ? t.title : collapsedText(t.title)),
         el("span", { class: "hint" }, "with ", t.peer, " · ", when(t.last_at))), threadFlag(t)))),
     conversations.length > shown.length && el("li", { class: "hint result-more" }, (conversations.length - shown.length) + " more: type more to narrow the search.")];
 }
@@ -4336,6 +4300,8 @@ function editInPlace(m, conv, bubble) {
   const p = bubble.querySelector(".body");
   if (!p || bubble.querySelector(".edit-box")) return;
   const box = el("div", { class: "edit-box" });
+  box.originalBody = p;
+  box.messageSelector = bubble.matches("[data-mid]") ? '[data-mid="' + CSS.escape(m.id) + '"]' : "#m-" + CSS.escape(m.id);
   const ta = el("textarea", { rows: "3", "aria-label": "New text" });
   const decoded = decodeMentions(shownText(m)); // edited as @Name; each untouched mention keeps its exact reference
   let spans = decoded.spans, edited = decoded.text;
@@ -4346,14 +4312,25 @@ function editInPlace(m, conv, bubble) {
     spans = r.kept; edited = ta.value;
     if (r.dropped.length) err.textContent = r.dropped.map(s => "@" + s.name).join(", ") + " is no longer an exact mention; the text stays.";
   });
-  const cancel = () => { box.replaceWith(p); };
-  box.append(ta,
+  const cancel = () => { box.replaceWith(box.originalBody); };
+  const field = formattingField(ta, { el, browser: currentHost.platform === "browser",
+    refs: () => spans, write: (value, refs) => { spans = refs; edited = value; } });
+  box.append(field,
     (m.kind === "question" || m.kind === "task") && el("p", { class: "hint" }, "Editing changes the text shown here and on their devices. What their agent already received stays as sent; nothing runs again."),
     el("div", { class: "edit-actions" },
-      el("button", { type: "button", class: "btn primary", onclick: () => {
+      el("button", { type: "button", class: "btn primary", onclick: event => {
         if (!ta.value.trim()) { err.textContent = "Write the new text first."; return; }
         const text = encodeMentions(ta.value, spans).trim();
-        control("edit", { ...controlRef(m, conv), text }, (e) => { if (e) err.textContent = e.message; });
+        const save = event.currentTarget;
+        if (save.disabled) return;
+        save.disabled = true;
+        err.textContent = "";
+        announce("Saving edit…");
+        void control("edit", { ...controlRef(m, conv), text }, error => {
+          save.disabled = false;
+          if (error) { err.textContent = error.message; return; }
+          if (box.isConnected) cancel();
+        });
       } }, "Save"),
       el("button", { type: "button", class: "btn", onclick: cancel }, "Cancel")), err);
   p.replaceWith(box);
@@ -4362,7 +4339,7 @@ function editInPlace(m, conv, bubble) {
 
 function deleteDialog(m, conv) {
   dialog({ title: "Delete this message?", ok: "Delete",
-    body: [el("div", { class: "quote" }, mentionPlain(shownText(m)) || "(files only)"),
+    body: [el("div", { class: "quote" }, collapsedText(shownText(m)) || "(files only)"),
       el("p", {}, "It is removed here and on devices that can read deletions. Anyone who already read it, saved its files or gave it to an agent keeps what they have; nothing that is running is stopped."),
       (m.kind === "question" || m.kind === "task") && el("p", { class: "hint" }, "What was sent to their agent stays on record under Details.")],
     run: async () => { await control("delete", controlRef(m, conv)); } });
@@ -4376,12 +4353,18 @@ function reportText(m) {
     const v = JSON.parse(m.body);
     if (v && v.v === 2 && Array.isArray(v.items)) return plural(v.items.length || v.count || 0, "request", "requests") + " waiting on " + (v.host || m.from) + " at " + when(v.at) + ". See Activity for what they are" + (v.items.some((x) => x.actionable) ? " and to decide them from here." : ".");
   } catch (e) { /* the older count text */ }
-  return mentionPlain(shownText(m));
+  return collapsedText(shownText(m));
 }
 // lineOf is a message's first line as the page names it: a report by what it says.
 const lineOf = (m, n) => firstLine(isReport(m) ? reportText(m) : m.body || "(files)", n);
 
 function bodyOf(m) {
+  const body = messageBody(m);
+  if (canDo(m, "edit")) body.editSource = { dir: m.dir, revision: m.revision, text: shownText(m) };
+  return body;
+}
+
+function messageBody(m) {
   if (m.deleted) return el("p", { class: "body tombstone" }, "Message deleted");
   if (isReport(m)) return el("p", { class: "body report-body" }, reportText(m)); // a report from another machine: what it says, never its raw record
   const target = (m.kind === "question" || m.kind === "task") && m.pid ? agentOf(m.pid) : null;
@@ -4401,8 +4384,8 @@ function approvalBody(m, recipient = null) {
     el("p", {"data-proposal-provenance":""}, (m.proposal.edited ? (m.dir === "out" ? "You edited and sent this task" : "Edited and sent this task") : (m.dir === "out" ? "You approved this task" : "Approved this task")) + " · suggested by " + (target ? agentName(target) : "the agent")),
     original && el("button", {type:"button",class:"text-btn",onclick:()=>flash(original.id)}, "View proposal"),
     el("details", {"data-approved-task-text":""}, el("summary", {}, "Approved task text"),
-      el("p", {}, mentionNodes(m.body, state.dm ? state.dmData : null)),
-      m.edited && el("p", {}, "Edited message: ", mentionNodes(shownText(m), state.dm ? state.dmData : null))));
+      el("p", {}, collapsedText(m.body)),
+      m.edited && el("p", {}, "Edited message: ", collapsedText(shownText(m)))));
 }
 
 // controlDetails are the rows Details adds: the original text of an edited
@@ -4410,8 +4393,8 @@ function approvalBody(m, recipient = null) {
 // never shown in the tombstone).
 function controlDetails(m) {
   const rows = [];
-  if (m.edited && !m.deleted) rows.push(el("dt", {}, "Original text"), el("dd", {}, mentionPlain(m.body)));
-  if (m.deleted && (m.kind === "question" || m.kind === "task")) rows.push(el("dt", {}, "What was sent to their agent"), el("dd", {}, mentionPlain(m.body)));
+  if (m.edited && !m.deleted) rows.push(el("dt", {}, "Original text"), el("dd", {}, collapsedText(m.body)));
+  if (m.deleted && (m.kind === "question" || m.kind === "task")) rows.push(el("dt", {}, "What was sent to their agent"), el("dd", {}, collapsedText(m.body)));
   if (m.revision) rows.push(el("dt", {}, "Revision"), el("dd", { class: "mono" }, String(m.revision)));
   return rows;
 }
@@ -4507,7 +4490,7 @@ function reportItems(it) {
     return el("li", { class: "report-request" + (x.actionable ? " actionable" : "") },
       el("div", { class: "report-head" }, el("strong", {}, kindTag[x.kind] || x.kind || "request"), " from ", who(x.from || "?"), " · ", (execWord[x.state] || x.state || "state unknown"),
         x.blocker && el("span", { class: "hint" }, " · " + (blockerWord[x.blocker] || x.blocker)), x.since && el("span", { class: "hint" }, " · since " + when(x.since))),
-      x.excerpt ? (x.state === "needs_human" ? el("details", {}, el("summary", {}, "Read all available detail"), el("p", {class:"agent-detail"}, x.excerpt)) : el("p", { class: "report-excerpt" }, x.excerpt)) : el("p", { class: "hint" }, "Its text is not shared with this device."),
+      x.excerpt ? (x.state === "needs_human" ? el("details", {}, el("summary", {}, "Read all available detail"), el("p", {class:"agent-detail"}, collapsedText(x.excerpt))) : el("p", { class: "report-excerpt" }, collapsedText(x.excerpt))) : el("p", { class: "hint" }, "Its text is not shared with this device."),
       proposalCard(x.proposal),
       el("p", { class: "hint mono" }, "Request " + x.id.slice(0, 8) + "… on " + r.host),
       res, acts);
@@ -4597,12 +4580,12 @@ function answerDialog({identity, title, body, request, path, field, refresh, res
 
 function operatorDialog(it, x, action) {
   const host = it.report.host;
-  if(action==='reply')return answerDialog({identity:['report-reply',host,x.id,x.key,x.attempt,x.state],title:'Answer it on '+host+'?',body:[el('p',{},'The '+(kindTag[x.kind]||x.kind||'request').toLowerCase()+' from '+(x.from||'?')+', as '+host+' reported it at '+when(it.report.at)+' ('+(execWord[x.state]||x.state)+').'),x.excerpt&&el('div',{class:'quote'},x.excerpt),el('p',{class:'hint'},'The host applies this only if the request is still in that state; you see the real outcome here. Nothing runs on this computer.')],path:'/api/operator/decide',field:'text',request:{host,id:x.id,key:x.key,action,expect:x.state,attempt:x.attempt,report:it.id},refresh:()=>loadOverview(),result:x.result});
+  if(action==='reply')return answerDialog({identity:['report-reply',host,x.id,x.key,x.attempt,x.state],title:'Answer it on '+host+'?',body:[el('p',{},'The '+(kindTag[x.kind]||x.kind||'request').toLowerCase()+' from '+(x.from||'?')+', as '+host+' reported it at '+when(it.report.at)+' ('+(execWord[x.state]||x.state)+').'),x.excerpt&&el('div',{class:'quote'},collapsedText(x.excerpt)),el('p',{class:'hint'},'The host applies this only if the request is still in that state; you see the real outcome here. Nothing runs on this computer.')],path:'/api/operator/decide',field:'text',request:{host,id:x.id,key:x.key,action,expect:x.state,attempt:x.attempt,report:it.id},refresh:()=>loadOverview(),result:x.result});
   const needText = action === "reply" || action === "decline";
   const ta = needText ? el("textarea", { id: "decide-text", rows: "3", "aria-label": action === "reply" ? "Your answer" : "Why" }) : null;
   dialog({ title: (decisionWord[action] || action).replace(/…$/, "") + " on " + host + "?", ok: decisionWord[action] ? decisionWord[action].replace(/ there…$/, "") : action,
     body: [el("p", {}, "The " + (kindTag[x.kind] || x.kind || "request").toLowerCase() + " from " + (x.from || "?") + ", as " + host + " reported it at " + when(it.report.at) + " (" + (execWord[x.state] || x.state) + ")."),
-      x.excerpt && el("div", { class: "quote" }, x.excerpt),
+      x.excerpt && el("div", { class: "quote" }, collapsedText(x.excerpt)),
       ta, el("p", { class: "hint" }, "The host applies this only if the request is still in that state; you see the real outcome here. Nothing runs on this computer.")],
     run: async () => {
       const body = { host, id: x.id, key: x.key, action, expect: x.state, attempt: x.attempt, text: ta ? ta.value.trim() : "", report: it.id };
@@ -4762,7 +4745,7 @@ function decide(a, m, t) {
   }
   if (a === "do_it") return act({ do: a, id: m.id }).then(() => refetch(false)).catch(e => announce(e.message));
   if (a === "reply") return writeDialog(t, m);
-  const quote = el("div", { class: "quote" }, mentionPlain(m.body));
+  const quote = el("div", { class: "quote" }, collapsedText(m.body));
   const from = el("dl", {}, el("dt", {}, "From"), el("dd", {}, m.from));
   const runs = m.target && m.target.agent_id
     ? namedAgentOn(m.target.agent_id, m.target.address) + ", using its local configuration on that computer."
@@ -4906,7 +4889,7 @@ function newConversationDialog(prefill) {
   const body=el('textarea',{id:'new-body',rows:'4',placeholder:'What do you want to say?'});
   dialog({title:'New conversation',body:[el('label',{for:'new-to',class:'field-label'},'To'),to,el('label',{for:'new-kind',class:'field-label'},'Send as'),kind,
    el('label',{for:'new-agent',class:'field-label'},'Configured agent'),agent,el('button',{type:'button',class:'text-btn',onclick:()=>void load()},'Refresh agents'),note,
-   el('label',{for:'new-body',class:'field-label'},'Message'),body],ok:'Send',focus:to.value?body:to,run:async()=>{
+   el('label',{for:'new-body',class:'field-label'},'Message'),formattingField(body,{el,browser:host.platform==='browser'})],ok:'Send',focus:to.value?body:to,run:async()=>{
     throw Error(deviceReadOnly);
     if(!current())throw Error('Workspace changed. Reopen this conversation.');
     const address=to.value.trim(),selected=records.find(a=>a.id===agent.value),draft={to:address,kind:kind.value,body:body.value};
@@ -5334,7 +5317,7 @@ function setDMReply(m, plain = false) {
   if (m && (dmVisitor() || m.excerpt_pid)) return;
   if (state.dmReplyAgent && state.dmAgent === state.dmReplyAgent && m?.id !== state.dmReply?.id) { state.dmAgent = null; if (humanGroup()) refreshTyping(); } // it came only from the earlier Reply
   state.dmReplyAgent = null;
-  state.dmReply = m ? { id: m.id, body: m.body } : null;
+  state.dmReply = m ? { id: m.id, body: shownText(m) } : null;
   state.dmPlainReply = !!m && plain;
   if (m && state.dmAgent && !composerReplyFollowup(state.dmData,state.dmAgent,topicSelections[state.dm]||"",state.overview?.me,m.id)) setDMAgent(null);
   // A Reply on an agent's answer or clarification continues that exact
@@ -5349,7 +5332,7 @@ function setDMReply(m, plain = false) {
   $("replying").hidden = !m;
   if (m) {
     $("replying-label").textContent = "Replying to";
-    $("replying-text").textContent = firstLine(m.body, 70);
+    $("replying-text").textContent = firstLine(shownText(m), 70);
   }
   renderTarget();
 }
@@ -5358,7 +5341,7 @@ function setAnswering(m) {
   state.answering = m;
   $("replying").hidden = !m;
   $("replying-label").textContent = "Answering";
-  if (m) $("replying-text").textContent = (kindTag[m.kind] || "message").toLowerCase() + ": " + firstLine(m.body, 70);
+  if (m) $("replying-text").textContent = (kindTag[m.kind] || "message").toLowerCase() + ": " + firstLine(shownText(m), 70);
   syncComposer();
   kindHint();
 }
@@ -6406,18 +6389,30 @@ function dialogFiles(body) {
 
 // Writing without the composer (Zoom): an answer to m, or a new message in
 // thread t linked to its latest message (with the draft's files).
+function writeField(body, current) {
+  return formattingField(body, { el, browser: currentHost.platform === "browser", refs: () => state.mentions || [],
+    scope: () => current() ? state.draftKey : null,
+    write(value, refs) {
+      $("body").value = value;
+      state.mentions = refs; state.mentionText = value;
+      noteTyping(); keepDraft(); renderAgentTarget(); closeMentions();
+    },
+  });
+}
+
 function writeDialog(t, m) {
   const host = currentHost, gen = state.gen;
   const body = el("textarea", { id: "write-body", rows: "4" });
   body.value = $("body").value;
-  body.addEventListener("input", () => { $("body").value = body.value; keepDraft(); });
+  body.addEventListener("input", () => { $("body").value = body.value; trackMentions(); keepDraft(); });
+  const field = writeField(body, () => alive && gen === state.gen && host === currentHost && state.thread === t.id);
   const canFiles = !m && !!fileLimits() && !t.key.pending;
   const kind = el("select", { id: "write-kind" }, ["message", "question", "task"].map((k) => el("option", { value: k }, k[0].toUpperCase() + k.slice(1))));
   const last = t.messages[t.messages.length - 1];
   dialog({
     title: m ? "Answer " + m.from : (topicFresh[t.id] ? "New topic with " : "Write to ") + t.peer,
-    body: [m && el("div", { class: "quote" }, m.body),
-      el("label", { for: "write-body", class: "field-label" }, m ? "Your answer" : "Message"), body,
+    body: [m && el("div", { class: "quote" }, collapsedText(shownText(m))),
+      el("label", { for: "write-body", class: "field-label" }, m ? "Your answer" : "Message"), field,
       !m && [el("label", { for: "write-kind", class: "field-label" }, "Send as"), kind],
       canFiles && dialogFiles(body),
       el("p", { class: "hint" }, m ? "Your answer takes this " + m.kind + " over from your responder." : "It joins this conversation.")],
@@ -6445,6 +6440,7 @@ function dmWriteDialog(d) {
   body.addEventListener("input", e => {
     $("body").value = body.value;trackMentions(e.isComposing ? undefined : body.selectionStart);keepDraft();renderAgentTarget();showMentions();
   });
+  const field = writeField(body, () => alive && gen === state.gen && host === currentHost && state.dm === d.id);
   body.addEventListener("keydown", mentionKey);
   const mentions = el("div", {id:"write-mentions",hidden:true});
   const targets = el("div", {id:"write-agent-target"});
@@ -6453,7 +6449,7 @@ function dmWriteDialog(d) {
     el("button", { type: "button", class: "text-btn", "aria-label": "Do not reply to that message", onclick: () => { setDMReply(null); quote.remove(); retargetDraft(); } }, "×"));
   dialog({
     title: (topicFresh[d.id] ? "New topic with " : "Write to ") + (humanGroup(d) ? d.title : d.peer.label),
-    body: [quote, el("label", { for: "write-body", class: "field-label" }, "Message"), body, targets, mentions,
+    body: [quote, el("label", { for: "write-body", class: "field-label" }, "Message"), field, targets, mentions,
       canFiles && dialogFiles(body),el("div",{id:"write-schedule"}),
       el("p", { class: "hint" }, humanGroup(d) ? "Messages go to current members and accepted guests. Each selected assistant receives its own request, subject to its owner’s permissions." : "Messages stay in this DM. Each selected assistant receives its own request, subject to its owner’s permissions.")],
     ok: "Send", focus: body,
@@ -6578,6 +6574,7 @@ const Zoom = {
     const surface = $("zoom"), focused = root.getRootNode().activeElement;
     const ownedFocus = !!focused && surface.contains(focused);
     const oldContent = surface.querySelector(".zoom-layer:last-child .zoom-content");
+    const edits = [...(oldContent?.querySelectorAll(".edit-box") || [])];
     const scroll = oldContent?.scrollTop || 0;
     const atEnd = oldContent && oldContent.scrollHeight - scroll - oldContent.clientHeight < 60;
     const expanded = [...surface.querySelectorAll(".zoom-layer:last-child details[open]")].map(d => d.dataset.person || d.dataset.keep).filter(Boolean);
@@ -6588,6 +6585,7 @@ const Zoom = {
     fill(surface, this.layer());
     if(entry&&currentDM&&!groupContextWaiting())visit.opening=null;
     const content = surface.querySelector(".zoom-content");
+    const editFocused = restoreMessageEdits(edits, content, focused);
     for (const d of surface.querySelectorAll("details[data-person], details[data-keep]")) d.open = expanded.includes(d.dataset.person || d.dataset.keep);
     placeUnreadDivider(content,state.readVisit,state.dm?state.dmData:state.data,state.dm?"dm":"thread");
     content.scrollTop = this.level === 2 && (atEnd || this.revealEnd) ? content.scrollHeight : scroll;
@@ -6597,7 +6595,7 @@ const Zoom = {
       const search = surface.querySelector(".zoom-search");
       search.focus({preventScroll: true});
       search.setSelectionRange(...selection);
-    } else if (ownedFocus) {
+    } else if (ownedFocus && !editFocused) {
       const match = focusText && [...surface.querySelectorAll("button")].find(b => !b.disabled && b.textContent === focusText);
       if (match) match.focus({preventScroll: true}); else focusZoomLayer(surface);
     }
@@ -6858,7 +6856,7 @@ const Zoom = {
       selectedModelReports(),
       $("compose-error").textContent && el("p",{class:"error",role:"alert"},$("compose-error").textContent),
       el("ol", { class: "mini-chat" }, withDays(groupedSends(messages), ({m, compact: groupPart}) => {
-        if (m._local) return el("li", {class:"mc mine",id:"m-"+m.id}, el("div", {class:"mc-stack"}, el("div",{class:"mc-bubble"},m.pid && el("span",{class:"mc-who","data-agent-recipient":"",title:m.pid},"To @"+(agentOf(m.pid)?agentName(agentOf(m.pid)):"agent")),!groupPart && el("span",{class:"mc-text"},m.body), el("span",{class:"mc-files"},(m.attachments || m.files || []).map(f=>f.name).join(", "))),el("p",{class:"narr",role:"status"},m.state_text), m._failed && el("button",{type:"button",onclick:m._retry},"Retry")));
+        if (m._local) return el("li", {class:"mc mine",id:"m-"+m.id}, el("div", {class:"mc-stack"}, el("div",{class:"mc-bubble"},m.pid && el("span",{class:"mc-who","data-agent-recipient":"",title:m.pid},"To @"+(agentOf(m.pid)?agentName(agentOf(m.pid)):"agent")),!groupPart && el("span",{class:"mc-text"},collapsedText(m.body)), el("span",{class:"mc-files"},(m.attachments || m.files || []).map(f=>f.name).join(", "))),el("p",{class:"narr",role:"status"},m.state_text), m._failed && el("button",{type:"button",onclick:m._retry},"Retry")));
         if (m.event) return el("li", { class: "event-line" }, el("span", {}, m.event), el("time", { datetime: m.sent_at || m.at, title: fullStamp(m.sent_at || m.at) }, sentWhen(m)));
         const mine = m.dir === "out";
         const to = m.target && m.target.agent_id ? namedAgentLabel(m.target.agent_id, m.target.address, undefined, whoseAgent(m.pid && agentOf(m.pid))) : m.to && agentOf(m.pid) ? agentName(agentOf(m.pid)) : "";
@@ -6935,7 +6933,7 @@ const Zoom = {
       ownModelReport(t.peer,state.deviceAgentID||""),
       $("compose-error").textContent && el("p",{class:"error",role:"alert"},$("compose-error").textContent),
       el("ol", { class: "mini-chat" }, withDays(t.messages, (m) => {
-        if (m._local) return el("li", {class:"mc mine",id:"m-"+m.id}, el("div", {class:"mc-stack"}, el("div",{class:"mc-bubble"},el("span",{class:"mc-text"},[m.body,...(m.attachments || m.files || []).map(f=>f.name)].filter(Boolean).join("\n"))),el("p",{class:"narr",role:"status"},m.state_text), m._failed && el("button",{type:"button",onclick:m._retry},"Retry")));
+        if (m._local) return el("li", {class:"mc mine",id:"m-"+m.id}, el("div", {class:"mc-stack"}, el("div",{class:"mc-bubble"},el("span",{class:"mc-text"},[collapsedText(m.body),...(m.attachments || m.files || []).map(f=>f.name)].filter(Boolean).join("\n"))),el("p",{class:"narr",role:"status"},m.state_text), m._failed && el("button",{type:"button",onclick:m._retry},"Retry")));
         const mine = m.dir === "out";
         const compact = !m.deleted && confirmedTask(m);
         const bubble = el(compact ? "div" : "button", { ...(compact ? {} : {type:"button"}), class: compact ? "mc-bubble compact-approval-bubble" : "mc-bubble" },
@@ -6946,7 +6944,7 @@ const Zoom = {
         else bubble.addEventListener("click", () => this.go(3, { msg: m.id }, bubble));
         return el("li", { class: "mc " + (mine ? "mine" : "theirs"), id: "m-" + m.id },
           avatar(mine ? state.overview.me.address : m.from, "sm"), el("div",{class:"mc-stack"},messageReference(m,t),bubble),
-          m.summary && el("p", { class: "narr" }, "Your responder's summary: " + m.summary),
+          m.summary && el("p", { class: "narr" }, "Your responder's summary: " + collapsedText(m.summary)),
           execLine(m, t),
           working(m) && nativeActivity(m.detail),
           m.state_text && !needsYou(m) && el("p", { class: "narr" + (working(m) ? " running" : "") }, deviceSendText(m)),
@@ -6973,7 +6971,7 @@ const Zoom = {
       !m.deleted && reminderLine(m),
       !m.deleted && m.files && m.files.length && el("p", { class: "hint" }, "Files: " + m.files.map((f) => f.name + " (" + size(f.size) + ")").join(", ")),
       reactionsRow(m, ""), messageMenu(m, "", bubble),
-      m.summary && el("div", { class: "note" }, el("p", { class: "note-label" }, "Summary written on this computer by your responder"), el("p", { class: "body" }, m.summary)),
+      m.summary && el("div", { class: "note" }, el("p", { class: "note-label" }, "Summary written on this computer by your responder"), el("p", { class: "body" }, collapsedText(m.summary))),
       execLine(m, t),
       working(m) && nativeActivity(m.detail),
       m.state_text && el("p", { class: "hint" }, deviceSendText(m)),

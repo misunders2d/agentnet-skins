@@ -6,7 +6,7 @@ const pkg=process.env.AGENTNET_SKIN_PACKAGE,m=JSON.parse(fs.readFileSync(path.jo
 const family=process.env.AGENTNET_SKIN_FAMILY||m.id,rootClass='.'+family+'-root';
 const urls=JSON.parse(fs.readFileSync(path.join(world,'urls.json'))),seed=JSON.parse(fs.readFileSync(path.join(world,'seed.json'))),origin=new URL(urls.sergey.page).origin;
 const runID=Date.now().toString(36);
-const result={skin:m.id,family,pass:false,checks:[],failures:[],screenshots:[],limitations:['Viewport emulation, not physical phones or OS keyboard','No live Google account, real model or remote deployment','Classic-family and Zoom interaction adapters, not arbitrary skin certification']};
+const result={skin:m.id,family,pass:false,checks:[],failures:[],screenshots:[],pushedGetMs:[],limitations:['Viewport emulation, not physical phones or OS keyboard','No live Google account, real model or remote deployment','Classic-family and Zoom interaction adapters, not arbitrary skin certification']};
 let browser,page,ownAgent;const errors=[],fixtureAgentNames=new Map();
 // The verified catalog names the concrete program; the invitation PID is the
 // exact route. Never select an assistant by its generic owner subtitle/order.
@@ -108,8 +108,10 @@ const ui=family==='zoom'?zoom:classic;
    await page.route('**/api/dm?*',hold);
    try{
     await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().click();await bounded(first,'opening GET');
+    const pushAt = performance.now();
     await page.evaluate(([conv,body])=>window.agentnet.api('/api/dm/send',{conv,body}),[seed.dm_vitalii,'Current visit push '+destination+' '+runID]);
     await bounded(second,'pushed winning GET');
+    result.pushedGetMs.push(Math.round(performance.now() - pushAt));
     if(destination!=='conversation')await page.locator(destination==='chats'?'#nav-chats':'#review-btn').click();
     releaseSecond();await bounded(done2,'winning response');releaseFirst();await bounded(done1,'older response');
     if(destination==='conversation'){
@@ -137,8 +139,10 @@ const ui=family==='zoom'?zoom:classic;
     // This probes startup at an exact destination, including its cold DTO load.
     await page.goto('about:blank');const documentReady=page.waitForEvent('domcontentloaded');
     await page.goto(origin+'/?skin='+m.id+'#conv='+seed.dm_vitalii);await documentReady;await bounded(first,'exact destination opening');
-    const body='Current Zoom visit push '+newer+' '+runID;await page.evaluate(([conv,body])=>window.agentnet.api('/api/dm/send',{conv,body}),[seed.dm_vitalii,body]);
+    const body='Current Zoom visit push '+newer+' '+runID, pushAt=performance.now();
+    await page.evaluate(([conv,body])=>window.agentnet.api('/api/dm/send',{conv,body}),[seed.dm_vitalii,body]);
     await bounded(second,'pushed winning DTO');
+    result.pushedGetMs.push(Math.round(performance.now() - pushAt));
     if(newer)await page.evaluate(conv=>{location.hash='conv='+conv;},seed.dm_bohdan);
     releaseFirst();await bounded(done1,'discarded older response');
     if(newer){await z().locator('.zoom-chat-head').filter({hasText:'Bohdan'}).waitFor();await settled();assert.match(await z().locator('.zoom-chat-head').textContent(),/Bohdan/);}
@@ -269,5 +273,5 @@ const ui=family==='zoom'?zoom:classic;
  // Host switcher remains outside skin stylesheet, imports exact same package.
  await ui.list();await page.getByRole('button',{name:'Settings',exact:true}).click();await page.locator('#settings-appearance').getByRole('button',{name:'AgentNet controls',exact:true}).click();await page.getByRole('button',{name:/^Skin: /}).click();await page.getByRole('menuitem',{name:/Import or remove skins/}).click();await page.getByRole('dialog',{name:'Import or remove skins',exact:true}).getByLabel('Import skin files',{exact:true}).filter({visible:true}).setInputFiles(['skin.json',...m.files].map(n=>path.join(pkg,n)));await page.getByText('Stored '+m.name,{exact:false}).waitFor();await shot('browser-import');await page.getByRole('button',{name:'Done',exact:true}).click();await page.locator('#settings-appearance').getByRole('button',{name:'AgentNet controls',exact:true}).click();await page.getByRole('button',{name:/^Skin: /}).click();await page.getByRole('menuitemradio',{name:new RegExp(m.name+'.*stored in this browser','i')}).click();await page.getByRole('button',{name:'Use this skin',exact:true}).click();await mounted();assert.equal(new URL(page.url()).searchParams.get('skin'),'local:'+m.id);await ui.thread();await shot('browser-local');
  await ui.list();await page.getByRole('button',{name:'Settings',exact:true}).click();await page.locator('#settings-appearance').getByRole('button',{name:'AgentNet controls',exact:true}).click();await page.getByRole('button',{name:'Switch to Comic',exact:true}).click();await page.waitForFunction(()=>!!document.querySelector('#skin')?.shadowRoot?.querySelector('.an-root'));result.checks.push('Browser-local exact package import/trust/mount and independent host escape to Comic');
- assert.deepEqual(errors,[]);assert.deepEqual(result.failures,[],m.id+': failed checks');result.pass=true;fs.writeFileSync(path.join(evidence,m.id+'-browser.json'),JSON.stringify(result,null,2),{mode:0o600});console.log('PASS '+m.id+' production browser: '+result.checks.length+' journeys, '+result.screenshots.length+' screenshots');
+ assert.deepEqual(errors,[]);assert.deepEqual(result.failures,[],m.id+': failed checks');result.pass=true;fs.writeFileSync(path.join(evidence,m.id+'-browser.json'),JSON.stringify(result,null,2),{mode:0o600});console.log('PASS '+m.id+' production browser: '+result.checks.length+' journeys, '+result.screenshots.length+' screenshots, winning GET maximum '+Math.max(...result.pushedGetMs)+' ms');
 })().catch(async e=>{if(page)await page.screenshot({path:path.join(evidence,'screenshots',m.id+'-FAIL.png')}).catch(()=>{});fs.writeFileSync(path.join(evidence,m.id+'-browser.json'),JSON.stringify(result,null,2),{mode:0o600});console.error('FAIL production browser:',e.stack,'collected failures:',result.failures,'page errors:',errors);process.exitCode=1;}).finally(async()=>{await browser?.close();});

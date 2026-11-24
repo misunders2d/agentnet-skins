@@ -4280,7 +4280,7 @@ function editInPlace(m, conv, bubble) {
     if (r.dropped.length) err.textContent = r.dropped.map(s => "@" + s.name).join(", ") + " is no longer an exact mention; the text stays.";
   });
   const cancel = () => { box.replaceWith(box.originalBody); };
-  const field = formattingField(ta, { el, browser: currentHost.platform === "browser",
+  const field = formattingField(ta, { el, root, signal: abort.signal, browser: currentHost.platform === "browser",
     refs: () => spans, write: (value, refs) => { spans = refs; edited = value; } });
   box.append(...present([field,
     (m.kind === "question" || m.kind === "task") && el("p", { class: "hint" }, "Editing changes the text shown here and on their devices. What their agent already received stays as sent; nothing runs again."),
@@ -4866,7 +4866,7 @@ function newConversationDialog(prefill) {
   const body=el('textarea',{id:'new-body',rows:'4',placeholder:'What do you want to say?'});
   dialog({title:'New conversation',body:[el('label',{for:'new-to',class:'field-label'},'To'),to,el('label',{for:'new-kind',class:'field-label'},'Send as'),kind,
    el('label',{for:'new-agent',class:'field-label'},'Configured agent'),agent,el('button',{type:'button',class:'text-btn',onclick:()=>void load()},'Refresh agents'),note,
-   el('label',{for:'new-body',class:'field-label'},'Message'),formattingField(body,{el,browser:host.platform==='browser'})],ok:'Send',focus:to.value?body:to,run:async()=>{
+   el('label',{for:'new-body',class:'field-label'},'Message'),formattingField(body,{el,root,signal:abort.signal,browser:host.platform==='browser'})],ok:'Send',focus:to.value?body:to,run:async()=>{
     throw Error(deviceReadOnly);
     if(!current())throw Error('Workspace changed. Reopen this conversation.');
     const address=to.value.trim(),selected=records.find(a=>a.id===agent.value),draft={to:address,kind:kind.value,body:body.value};
@@ -6212,7 +6212,7 @@ function start() {
   try { theme = localStorage.getItem("agentnet-theme") || theme; } catch (e) { /* default */ }
   setTheme(theme);
   const field = $("body"), parent = field.parentNode, next = field.nextSibling;
-  parent.insertBefore(formattingField(field, { el, floating: true, browser: currentHost.platform === "browser", refs: () => state.mentions || [],
+  parent.insertBefore(formattingField(field, { el, root, signal: abort.signal, floating: true, browser: currentHost.platform === "browser", refs: () => state.mentions || [],
     scope: () => JSON.stringify([state.gen, state.draftKey, topicSelections[state.dm], topicFresh[state.dm]]),
     write(value, refs) {
       state.mentions = refs; state.mentionText = value;

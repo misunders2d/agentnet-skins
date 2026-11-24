@@ -4321,7 +4321,7 @@ function editInPlace(m, conv, bubble) {
     if (r.dropped.length) err.textContent = r.dropped.map(s => "@" + s.name).join(", ") + " is no longer an exact mention; the text stays.";
   });
   const cancel = () => { box.replaceWith(box.originalBody); };
-  const field = formattingField(ta, { el, browser: currentHost.platform === "browser",
+  const field = formattingField(ta, { el, root, signal: abort.signal, browser: currentHost.platform === "browser",
     refs: () => spans, write: (value, refs) => { spans = refs; edited = value; } });
   box.append(...present([field,
     (m.kind === "question" || m.kind === "task") && el("p", { class: "hint" }, "Editing changes the text shown here and on their devices. What their agent already received stays as sent; nothing runs again."),
@@ -4897,7 +4897,7 @@ function newConversationDialog(prefill) {
   const body=el('textarea',{id:'new-body',rows:'4',placeholder:'What do you want to say?'});
   dialog({title:'New conversation',body:[el('label',{for:'new-to',class:'field-label'},'To'),to,el('label',{for:'new-kind',class:'field-label'},'Send as'),kind,
    el('label',{for:'new-agent',class:'field-label'},'Configured agent'),agent,el('button',{type:'button',class:'text-btn',onclick:()=>void load()},'Refresh agents'),note,
-   el('label',{for:'new-body',class:'field-label'},'Message'),formattingField(body,{el,browser:host.platform==='browser'})],ok:'Send',focus:to.value?body:to,run:async()=>{
+   el('label',{for:'new-body',class:'field-label'},'Message'),formattingField(body,{el,root,signal:abort.signal,browser:host.platform==='browser'})],ok:'Send',focus:to.value?body:to,run:async()=>{
     throw Error(deviceReadOnly);
     if(!current())throw Error('Workspace changed. Reopen this conversation.');
     const address=to.value.trim(),selected=records.find(a=>a.id===agent.value),draft={to:address,kind:kind.value,body:body.value};
@@ -6398,7 +6398,7 @@ function dialogFiles(body) {
 // Writing without the composer (Zoom): an answer to m, or a new message in
 // thread t linked to its latest message (with the draft's files).
 function writeField(body, current) {
-  return formattingField(body, { el, browser: currentHost.platform === "browser", refs: () => state.mentions || [],
+  return formattingField(body, { el, root, signal: abort.signal, browser: currentHost.platform === "browser", refs: () => state.mentions || [],
     scope: () => current() ? state.draftKey : null,
     write(value, refs) {
       $("body").value = value;

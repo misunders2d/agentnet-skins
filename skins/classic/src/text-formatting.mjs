@@ -4,12 +4,14 @@ const validLink = value => /^(https?:\/\/|mailto:)[^<>\s]+$/i.test(value);
 
 // The textarea stays native. Only a selected range gets a custom menu;
 // touch users keep their native selection handles and get a separate button.
-export function formattingField(field, { el, refs = () => [], write, scope = () => field, floating = false, browser = false }) {
+export function formattingField(field, { el, root, signal, refs = () => [], write, scope = () => field, floating = false, browser = false }) {
   const view = field.ownerDocument.defaultView;
   const touch = view.matchMedia("(pointer: coarse)");
   const mac = /Mac|iPhone|iPad/.test(view.navigator.platform || view.navigator.userAgent);
   const trigger = el("button", { type: "button", class: "btn format-trigger", "aria-haspopup": "menu", "aria-expanded": "false", hidden: true }, "Formatting");
-  const menu = el("div", { class: "format-menu", popover: "auto", role: "menu", "aria-label": "Text formatting" });
+  // Some Chromium builds treat the initiating right-button release as an
+  // outside click on an auto popover. Own dismissal inside the skin instead.
+  const menu = el("div", { class: "format-menu", popover: "manual", role: "menu", "aria-label": "Text formatting" });
   const wrap = el("div", { class: "format-field" + (floating ? " format-floating" : "") }, field, trigger, menu);
   const choices = el("div", { role: "group", "aria-label": "Styles", hidden: true });
   const submenu = el("button", { type: "button", role: "menuitem", "aria-haspopup": "menu", "aria-expanded": "false" }, "Formatting ›");
@@ -73,8 +75,17 @@ export function formattingField(field, { el, refs = () => [], write, scope = () 
     input.focus();
   }
 
-  function run(style, saved) {
+  function closeMenu() {
+    root.removeEventListener("pointerdown", closeOnOutside, true);
     if (menu.matches(":popover-open")) menu.hidePopover();
+    trigger.setAttribute("aria-expanded", "false");
+  }
+  function closeOnOutside(event) {
+    if (!wrap.contains(event.target) || !menu.matches(":popover-open")) closeMenu();
+  }
+
+  function run(style, saved) {
+    closeMenu();
     if (!stillCurrent(saved)) return;
     focusField();
     if (style === "link") { openLink(saved); return; }
@@ -98,6 +109,7 @@ export function formattingField(field, { el, refs = () => [], write, scope = () 
     choices.hidden = !direct;
     submenu.setAttribute("aria-expanded", "false");
     if (!menu.matches(":popover-open")) menu.showPopover();
+    root.addEventListener("pointerdown", closeOnOutside, { capture: true, signal });
     trigger.setAttribute("aria-expanded", "true");
     (direct ? choices.firstElementChild : submenu).focus({ preventScroll: true });
   }
@@ -117,13 +129,14 @@ export function formattingField(field, { el, refs = () => [], write, scope = () 
     open(touch.matches);
   });
   menu.addEventListener("toggle", event => {
-    if (event.newState === "closed") trigger.setAttribute("aria-expanded", "false");
+    if (event.newState === "closed" && !menu.matches(":popover-open")) closeMenu();
   });
   menu.addEventListener("keydown", event => {
     const { key, target } = event;
     const buttons = choices.hidden ? [submenu] : [...choices.children];
     const index = buttons.indexOf(target);
     if (index < 0) return;
+    if (key === "Tab") { closeMenu(); focusField(); return; }
     if (key === "Escape" || key === "ArrowLeft" && !choices.hidden && !touch.matches) {
       event.preventDefault();
       event.stopPropagation();
@@ -132,7 +145,7 @@ export function formattingField(field, { el, refs = () => [], write, scope = () 
         submenu.hidden = false;
         submenu.setAttribute("aria-expanded", "false");
         submenu.focus();
-      } else { menu.hidePopover(); focusField(); }
+      } else { closeMenu(); focusField(); }
     } else if (key === "ArrowRight" && target === submenu) {
       event.preventDefault();
       showChoices();

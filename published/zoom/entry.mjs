@@ -6574,7 +6574,7 @@ const Zoom = {
     const surface = $("zoom"), focused = root.getRootNode().activeElement;
     const ownedFocus = !!focused && surface.contains(focused);
     const oldContent = surface.querySelector(".zoom-layer:last-child .zoom-content");
-    const edits = [...(oldContent?.querySelectorAll(".edit-box") || [])];
+    const edits = this.level === 3 && oldContent ? oldContent.querySelectorAll(".edit-box") : [];
     const scroll = oldContent?.scrollTop || 0;
     const atEnd = oldContent && oldContent.scrollHeight - scroll - oldContent.clientHeight < 60;
     const expanded = [...surface.querySelectorAll(".zoom-layer:last-child details[open]")].map(d => d.dataset.person || d.dataset.keep).filter(Boolean);
@@ -6585,7 +6585,7 @@ const Zoom = {
     fill(surface, this.layer());
     if(entry&&currentDM&&!groupContextWaiting())visit.opening=null;
     const content = surface.querySelector(".zoom-content");
-    const editFocused = restoreMessageEdits(edits, content, focused);
+    const editFocused = edits.length > 0 && restoreMessageEdits(edits, content, focused);
     for (const d of surface.querySelectorAll("details[data-person], details[data-keep]")) d.open = expanded.includes(d.dataset.person || d.dataset.keep);
     placeUnreadDivider(content,state.readVisit,state.dm?state.dmData:state.data,state.dm?"dm":"thread");
     content.scrollTop = this.level === 2 && (atEnd || this.revealEnd) ? content.scrollHeight : scroll;

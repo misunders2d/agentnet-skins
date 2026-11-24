@@ -8,7 +8,7 @@
       "version": "1.11.1",
       "api": 1,
       "agentnet": "v0.11.7",
-      "digest": "e4fbafebff099913ad6a951d8ffbf96fae8d2b816c22cf2af9e4c6d42592caca",
+      "digest": "c51079ca80c97ff5b3c3ed104ce82dfb4931eaa26bb3f96f502d7f120e654609",
       "files": [
         {
           "path": "skin.json",
@@ -117,8 +117,8 @@
         },
         {
           "path": "message-markdown.mjs",
-          "sha256": "065158932b279a424a49a7a526b02b0a30ac98c207eebb27ec5cdb4a18d09127",
-          "size": 4961
+          "sha256": "5d01cf0d630f34bbdd511cad719652f2260eb4e86db4a3dffae7ee086e2d8e00",
+          "size": 4989
         },
         {
           "path": "reaction-preferences.mjs",
@@ -210,7 +210,7 @@
       "version": "1.11.1",
       "api": 1,
       "agentnet": "v0.11.7",
-      "digest": "ee0a4a9f0029723d9334012abd458b3a8d93f0e0a7209b5d11201f5c46d6137a",
+      "digest": "f5fef2ab2a7a66dae76facd9b4d832eb300c16bd95329ca20eecc33d3492832a",
       "files": [
         {
           "path": "skin.json",
@@ -289,8 +289,8 @@
         },
         {
           "path": "message-markdown.mjs",
-          "sha256": "065158932b279a424a49a7a526b02b0a30ac98c207eebb27ec5cdb4a18d09127",
-          "size": 4961
+          "sha256": "5d01cf0d630f34bbdd511cad719652f2260eb4e86db4a3dffae7ee086e2d8e00",
+          "size": 4989
         },
         {
           "path": "topics.mjs",
@@ -691,7 +691,7 @@
       "version": "1.11.1",
       "api": 1,
       "agentnet": "v0.11.7",
-      "digest": "efbe841296405293702728503626360990d0bc6cc53e126ff497a5b460db7dfa",
+      "digest": "5731f09b1bfc8cd114071966825422a7f6b06e70ab3aec62d03d604301ef629b",
       "files": [
         {
           "path": "skin.json",
@@ -800,8 +800,8 @@
         },
         {
           "path": "message-markdown.mjs",
-          "sha256": "065158932b279a424a49a7a526b02b0a30ac98c207eebb27ec5cdb4a18d09127",
-          "size": 4961
+          "sha256": "5d01cf0d630f34bbdd511cad719652f2260eb4e86db4a3dffae7ee086e2d8e00",
+          "size": 4989
         },
         {
           "path": "reaction-preferences.mjs",

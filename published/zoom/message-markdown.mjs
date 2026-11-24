@@ -8,7 +8,7 @@ const decode = text => markdownText(spoilerFallback(text));
 export function messageMarkdown(text, { el, mention, compact = false }) {
   if (!text) return [];
   // Most timeline entries are plain messages and need no Markdown token tree.
-  if (!compact && !/[\\`*_~[\]<>!&#\n\r|^:@\t]|www\.|^ *[-+=]/i.test(text)) return [el("p", {}, text)];
+  if (!compact && !/[\\`*_~[\]<>!&#\n\r|^:@\t]|www\.|^ {4}|^ {0,3}(?:[-+=]|\d{1,9}[.)]\s)/i.test(text)) return [el("p", {}, text)];
   function spoiler(text) {
     const toggle = () => {
       const open = control.getAttribute("aria-pressed") !== "true";

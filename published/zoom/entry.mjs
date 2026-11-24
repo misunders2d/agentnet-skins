@@ -283,12 +283,20 @@ function refreshUnreadBack(){Zoom.refresh();}
 function viewReadyForRead(){return zoomHeaderReady&&Zoom.navigating===null&&Zoom.level>=2&&!Zoom.query.trim();}
 // Entry-owned view lifetimes; the shared modules retain their own contracts.
 let visibleRead = null, nativeVisible = currentHost.android?.visible?.() !== false;
+// Input can arrive after the header is ready and before the new read watcher binds.
+function releaseReadEntry(event) {
+  const read = state.readVisit;
+  if (read?.entryPinned && messageScrollRoot()?.contains(event.target)) read.entryPinned = false;
+}
+for (const type of ['wheel','touchmove','pointerdown','keydown']) {
+  root.addEventListener(type, releaseReadEntry, { passive: true, signal: abort.signal });
+}
 const videoFiles = new Map(), contentSubscribers = new Set();
 let mediaEpoch = 0, unreadRequest = 0, scheduleUI = null, scheduleContainer = null, scheduleEpoch = 0;
 function retireVisibleRead() {
  cancelHeaderSync();
  const previous=visibleRead;visibleRead=null;
- if(previous){previous.read.visible=new Set();previous.watcher.destroy();previous.resize.disconnect();previous.scroller.removeEventListener('scroll',previous.scroll);for(const type of ['wheel','touchmove','pointerdown','keydown'])previous.scroller.removeEventListener(type,previous.release);}
+ if(previous){previous.read.visible=new Set();previous.watcher.destroy();previous.resize.disconnect();previous.scroller.removeEventListener('scroll',previous.scroll);}
 }
 function retireViewMedia() {
  ++mediaEpoch;
@@ -332,8 +340,8 @@ function syncVisibleRead() {
  if(visibleRead&&(visibleRead.read!==read||visibleRead.scroller!==scroller))retireVisibleRead();
  if(!visibleRead){
   const host=currentHost,watcher=watchVisibleRows(scroller,{reserveTop:messageTopReserve,reserve:()=>0,allowed:()=>host===currentHost&&state.readVisit===read&&readAllowed(read,state.dm?state.dmData:state.data,kind)&&viewReadyForRead(),onChange:ids=>{if(state.readVisit!==read||host!==currentHost)return;read.visible=ids;void markPersonalRead(state.dm?state.dmData:state.data,kind);reportSeen();}});
-  const release=()=>{read.entryPinned=false;},scroll=()=>watcher.evaluate(),resize=new root.ownerDocument.defaultView.ResizeObserver(()=>{if(read.entryPinned)placeReadEntry(read,scroller);scroll();});
-  scroller.addEventListener('scroll',scroll,{passive:true});for(const type of ['wheel','touchmove','pointerdown','keydown'])scroller.addEventListener(type,release,{passive:true});visibleRead={read,scroller,watcher,resize,scroll,release};
+  const scroll=()=>watcher.evaluate(),resize=new root.ownerDocument.defaultView.ResizeObserver(()=>{if(read.entryPinned)placeReadEntry(read,scroller);scroll();});
+  scroller.addEventListener('scroll',scroll,{passive:true});visibleRead={read,scroller,watcher,resize,scroll};
  }
  visibleRead.resize.disconnect();visibleRead.resize.observe(scroller);for(const node of nodes)visibleRead.resize.observe(node);
  visibleRead.watcher.update(nodes,ids);

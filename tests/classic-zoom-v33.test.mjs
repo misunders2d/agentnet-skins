@@ -100,7 +100,16 @@ test('standalone current native activity uses existing local/remote Working and 
   if(skin==='zoom'&&width===390){
    await page.waitForFunction(()=>fixture.viewReadyForRead()&&!fixture.refetchLoading&&!fixture.state.readVisit.loading&&fixture.state.readVisit.fresh===fixture.state.dmData);const before=await page.evaluate(measureZoomReturn),split=await page.evaluate(()=>({visible:[...fixture.state.readVisit.visible],initialVisible,acks:posts.slice(reviewClosePosts).filter(x=>x.p==='/api/act'&&x.body.do==='read')}));if(process.env.AGENTNET_SCREENSHOTS)fs.writeFileSync(path.join(process.env.AGENTNET_SCREENSHOTS,'phone-before-scroll.json'),JSON.stringify({geometry:before,...split},null,2)+'\n');assert.equal(before.readiness.actual,true);assert.equal(before.readAllowed.actual,true);assert.equal(before.firstUnreadAnchor.id,phoneBeforeReview.firstUnreadAnchor.id);assert.equal(before.firstUnreadAnchor.offset,phoneBeforeReview.firstUnreadAnchor.offset,'Review preserves the first-unread anchored offset');assert.equal(before.scroller.scrollTop,phoneBeforeReview.scroller.scrollTop,'Review preserves the raw anchored scroll');assert(split.acks.every(ack=>ack.body.ids.every(id=>split.initialVisible.includes(id))),'Review return never ACKs previously unseen rows');if(before.intersectingCanonicalRows.length&&before.intersectingCanonicalRows.every(row=>row.visible<row.threshold)){for(const row of before.intersectingCanonicalRows)assert.equal(row.threshold,52.25);assert.deepEqual(split.visible,[]);assert.deepEqual(split.acks,[],'any subthreshold slivers remain nonreading');}
 
-   await page.locator('#zoom #m-'+(13).toString(16).padStart(32,'0')).evaluate(row=>{row.dispatchEvent(new WheelEvent('wheel',{bubbles:true}));row.scrollIntoView({block:'center'});});
+   const released = await page.locator('#zoom #m-'+(13).toString(16).padStart(32,'0')).evaluate(row=>{
+    // Model input between the new header becoming ready and its read watcher attaching.
+    fixture.retireVisibleRead();
+    fixture.state.readVisit.entryPinned = true;
+    row.dispatchEvent(new WheelEvent('wheel',{bubbles:true}));
+    row.scrollIntoView({block:'center'});
+    fixture.syncVisibleRead();
+    return !fixture.state.readVisit.entryPinned;
+   });
+   assert(released, 'wheel input releases the entry pin before the read watcher reattaches');
    const after=phoneAfterScroll=await page.evaluate(measureZoomReturn),target=after.nearestCanonicalRows.find(row=>row.id===(13).toString(16).padStart(32,'0'));if(process.env.AGENTNET_SCREENSHOTS)fs.writeFileSync(path.join(process.env.AGENTNET_SCREENSHOTS,'phone-after-scroll.json'),JSON.stringify(after,null,2)+'\n');assert(target,JSON.stringify(after));assert.equal(target.meetsWatcherGeometry,true,JSON.stringify(target));assert(target.visible>=target.threshold,JSON.stringify(target));
   }
   try{await page.waitForFunction(()=>fixture.state.readVisit.visible.size>0);}catch(error){

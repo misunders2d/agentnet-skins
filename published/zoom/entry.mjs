@@ -4315,7 +4315,7 @@ function editInPlace(m, conv, bubble) {
   const cancel = () => { box.replaceWith(box.originalBody); };
   const field = formattingField(ta, { el, browser: currentHost.platform === "browser",
     refs: () => spans, write: (value, refs) => { spans = refs; edited = value; } });
-  box.append(field,
+  box.append(...present([field,
     (m.kind === "question" || m.kind === "task") && el("p", { class: "hint" }, "Editing changes the text shown here and on their devices. What their agent already received stays as sent; nothing runs again."),
     el("div", { class: "edit-actions" },
       el("button", { type: "button", class: "btn primary", onclick: event => {
@@ -4332,7 +4332,7 @@ function editInPlace(m, conv, bubble) {
           if (box.isConnected) cancel();
         });
       } }, "Save"),
-      el("button", { type: "button", class: "btn", onclick: cancel }, "Cancel")), err);
+      el("button", { type: "button", class: "btn", onclick: cancel }, "Cancel")), err]));
   p.replaceWith(box);
   ta.focus();
 }

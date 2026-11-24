@@ -313,6 +313,7 @@ async function touch() {
     await preview().waitFor();
     const message = await openMessage();
     const editor = await edit(message);
+    assert(!(await message.locator('.edit-box').textContent()).includes('false'));
     await select(editor, revised);
     const editTrigger = editor.locator('..').getByRole('button', { name: 'Formatting', exact: true });
     await editTrigger.waitFor();

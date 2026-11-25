@@ -296,23 +296,25 @@ async function desktop() {
     await assertMask(message, revised);
     assert(!(await message.textContent()).includes(secret), 'Original text in Details stays masked');
     await reveal(message, revised, node => node.click(), 'edited');
-    const revealed = message.getByRole('button', { name: revised, exact: true, pressed: true });
-    const previousSpoiler = await revealed.elementHandle();
-    try {
-      assert(await previousSpoiler.evaluate(node => {
-        node.focus({preventScroll: true});
-        return node.getRootNode().activeElement === node;
-      }), 'The revealed spoiler can receive focus before refresh');
-      await page.evaluate(conv => window.agentnet.api('/api/dm/send', { conv, body: 'Unrelated update after a spoiler reveal' }), conv);
-      await page.waitForFunction(node => !node.isConnected, previousSpoiler);
-    } finally { await previousSpoiler.dispose(); }
-    const afterRefresh = await page.evaluate(({zoom, messageID, revised}) => {
+    const readSpoiler = ({zoom, messageID, revised, focus}) => {
       const root = document.querySelector('#skin').shadowRoot;
       const message = zoom ? root.querySelector('.zoom-layer:last-child .zoom-message') : root.getElementById(messageID);
       const selected = [...(message?.querySelectorAll('.message-spoiler[aria-pressed="true"]') || [])]
         .find(node => node.textContent === revised);
+      if (focus) {
+        selected?.focus({preventScroll: true});
+        if (!selected || root.activeElement !== selected) throw Error('The revealed spoiler can receive focus before refresh');
+        return selected;
+      }
       return {visible: !!selected?.getClientRects().length, focused: !!selected && root.activeElement === selected};
-    }, {zoom, messageID, revised});
+    };
+    const spoiler = {zoom, messageID, revised};
+    const previousSpoiler = await page.evaluateHandle(readSpoiler, {...spoiler, focus: true});
+    try {
+      await page.evaluate(conv => window.agentnet.api('/api/dm/send', { conv, body: 'Unrelated update after a spoiler reveal' }), conv);
+      await page.waitForFunction(node => !node.isConnected, previousSpoiler);
+    } finally { await previousSpoiler.dispose(); }
+    const afterRefresh = await page.evaluate(readSpoiler, spoiler);
     assert(afterRefresh.visible, 'A live refresh keeps the same spoiler revealed');
     assert(afterRefresh.focused, 'Refresh keeps focus on the revealed spoiler');
 

@@ -17,7 +17,7 @@ test('private runtime targets and Zoom Markdown use the current presentation', {
   try{
    let data=m[2]==='manifest.mjs'?'export default '+fs.readFileSync(path.join(base,'skins',m[1],'skin.json'),'utf8'):read(m[1],m[2]);
    if(m[2]==='entry.mjs'){
-    const expose='globalThis.fixture={state,firstLine,threadRow,bodyOf,ownModelReport,ownModelReports,renderAgentTarget,selectedModelReports,refreshModelReports,renderNamedAgents,inviteDialog,agentCard,editInPlace'+(m[1]==='zoom'?',Zoom':'')+'};';
+    const expose='globalThis.fixture={state,firstLine,threadRow,bodyOf,ownModelReport,ownModelReports,renderAgentTarget,selectedModelReports,refreshModelReports,renderNamedAgents,inviteDialog,inviteGroupDialog,agentCard,editInPlace'+(m[1]==='zoom'?',Zoom':'')+'};';
     const needle=m[1]==='zoom'?'\nstart();':'const ready = start();';
     assert(data.toString().includes(needle));data=data.toString().replace(needle,expose+(m[1]==='zoom'?'':'const ready=Promise.resolve();'));
    }
@@ -34,7 +34,7 @@ test('private runtime targets and Zoom Markdown use the current presentation', {
    const result=await page.evaluate(async({skin})=>{
     const shadow=document.querySelector('#skin').attachShadow({mode:'open'}),style=new CSSStyleSheet();style.replaceSync(await(await fetch('/'+skin+'/style.css')).text());shadow.adoptedStyleSheets=[style];
     const app=document.createElement('div');app.className='skin-root';shadow.append(app);let calls=0,writes=0,catalogView=null;
-    await(await import('/'+skin+'/entry.mjs')).mount(app,{version:1,workspace:{id:'fixture'},listen(){return()=>{}},onOpen(){},api:async(p,body)=>{calls++;if(body!==undefined){writes++;throw Error('Presentation wrote to API');}if(catalogView&&p.startsWith('/api/agents'))return {...catalogView,local:p==='/api/agents'};throw Error('Unexpected presentation API call');}});
+    await(await import('/'+skin+'/entry.mjs')).mount(app,{version:1,workspace:{id:'fixture'},listen(){return()=>{}},onOpen(){},api:async(p,body)=>{calls++;if(body!==undefined){writes++;if(p==='/api/groups/invite'&&window.historyWrites){window.historyWrites.push(body);throw Error('Fixture refusal');}throw Error('Presentation wrote to API');}if(catalogView&&p.startsWith('/api/agents'))return {...catalogView,local:p==='/api/agents'};throw Error('Unexpected presentation API call');}});
     for(const child of app.children)child.hidden=true;
     const view=document.createElement('section');view.className='presentation-fixture';app.append(view);
     const ids=['a'.repeat(32),'b'.repeat(32)],host='atlas/desk',key='11111111-11111111-11111111-11111111';
@@ -110,6 +110,58 @@ test('private runtime targets and Zoom Markdown use the current presentation', {
    assert.match(result.direct,/ledger-model/);assert(!result.direct.includes('DEFAULT_ONLY'));assert.match(result.defaultTarget,/DEFAULT_ONLY/);assert(!result.missingTarget.includes('DEFAULT_ONLY'));assert.equal(result.pickerRows,2);assert.deepEqual(result.pickerAgents,['atlas/desk#'+'a'.repeat(32),'atlas/desk#'+'b'.repeat(32)]);assert.equal(result.pickerDefault,false);assert.equal(result.nestedModel,false);assert.equal(result.calls,0);assert.equal(result.targetFits,true);assert.equal(result.detailsRows,2);assert.match(result.inviteNamed,/quill-model.*Reasoning: high/);assert.deepEqual(result.inviteOptions,['','a'.repeat(32),'b'.repeat(32)]);assert.match(result.inviteUnselected,/Choose a configured agent/);assert.equal(result.inviteNested,false);assert.equal(result.writes,0);assert.equal(result.catalogReads,2);
    assert.equal(result.preview,'Harbor order');assert.match(result.autoTitle,/Automatic title/);assert(!result.autoTitle.includes('**'));assert(result.renamedTitle.includes('**Literal custom title**'));
    if(skin==='zoom'){assert(result.bubbleStrong>=2);assert.equal(result.bubbleLinks,0);assert.equal(result.listItems,2);assert.equal(result.strong,2);assert.equal(result.code,'literal_*');assert.equal(result.active,0);assert.equal(result.href,'https://example.invalid/order');assert.equal(result.literalHTML,true);assert.equal(result.copyText,result.original);assert.equal(result.editorOriginal,result.original);assert.equal(result.restoredFormatted,2);assert.equal(result.literalCode,'raw_* &amp;');assert(result.literalText.includes('*literal*'));assert.equal(result.bodyFits,true);}
+
+   // MEL-820: use the real permanent invitation dialog and prove the
+   // preview's cutoff sends one exact reference, with no unrelated turns.
+   await page.clock.setFixedTime(new Date('2026-11-25T13:00:00Z'));
+   const expectedHistory = await page.evaluate(() => {
+    window.historyWrites = [];
+    const overview = fixture.state.overview;
+    const self = {...overview.person, admin:true};
+    const guest = {person:'briar',label:'Briar',address:'briar/desk',state:'pinned'};
+    overview.people = [guest];
+    const ref = {lid:'b'.repeat(32), author:'a'.repeat(32), hash:'f'.repeat(64)};
+    const id = 'c'.repeat(64);
+    const messages = [
+     {id:'old', at:new Date(Date.now()-3*3600e3).toISOString(), group_ref:{...ref,lid:'a'.repeat(32)}},
+     {id:'included', at:new Date(Date.now()-30*60e3).toISOString(), group_ref:ref},
+     {id:'unshareable', at:new Date(Date.now()-20*60e3).toISOString()},
+    ].map(m=>({dir:'in',from:self.address,body:'History message',...m}));
+    const thread = {id, kind:'group', role:'member', title:'Harbor team', members:[self], agents:[], guests:[], messages};
+    fixture.state.dm=id;
+    fixture.state.dmData=thread;
+    fixture.inviteGroupDialog(thread);
+    return {conv:id, person:guest.person, history:{refs:[ref]}};
+   });
+   const invitation = page.locator('#skin #dialog');
+   const since = invitation.getByRole('group',{name:'Share messages since'});
+   assert.equal(await since.isVisible(),false);
+   await invitation.locator('#group-history-mode').selectOption('since');
+   await since.getByRole('button',{name:'Today',exact:true}).click();
+   assert.equal(await since.getByLabel('Time',{exact:true}).inputValue(),'00:00');
+   const today = await since.getByLabel('Date',{exact:true}).inputValue();
+   await since.getByRole('button',{name:'Yesterday',exact:true}).click();
+   assert.notEqual(await since.getByLabel('Date',{exact:true}).inputValue(),today);
+   await since.getByLabel('Date',{exact:true}).fill('2099-01-01');
+   assert.match(await since.getByRole('status').innerText(),/up to now/);
+   await invitation.getByRole('button',{name:'Send invitation',exact:true}).click();
+   await page.waitForFunction(()=>document.querySelector('#skin').shadowRoot.querySelector('#dialog-error').textContent.includes('up to now'));
+   assert.deepEqual(await page.evaluate(()=>window.historyWrites),[]);
+   await since.getByLabel('Date',{exact:true}).fill('');
+   assert.match(await since.getByRole('status').innerText(),/valid local date and time/);
+   const beforePreset = await page.evaluate(()=>performance.now());
+   await since.getByRole('button',{name:'Last hour',exact:true}).click();
+   assert.match(await since.getByRole('status').innerText(),/^1 message to share, starting /);
+   assert.ok(await page.evaluate(async at=>{await new Promise(requestAnimationFrame);return performance.now()-at;},beforePreset)<1100);
+   const fits = await since.evaluate(box=>[...box.querySelectorAll('input,button')].every(control=>{
+    const rect=control.getBoundingClientRect();return rect.left>=0&&rect.right<=innerWidth&&rect.height>=44;
+   }));
+   assert.equal(fits,true,skin+' '+width+' accessible invitation fields');
+   await invitation.getByRole('button',{name:'Send invitation',exact:true}).click();
+   await page.waitForFunction(()=>window.historyWrites.length===1);
+   assert.deepEqual(await page.evaluate(()=>window.historyWrites),[expectedHistory]);
+   await invitation.locator('#dialog-cancel').click();
+
    assert.deepEqual(errors,[]);
    if(process.env.AGENTNET_SCREENSHOTS){fs.mkdirSync(process.env.AGENTNET_SCREENSHOTS,{recursive:true});await page.screenshot({path:path.join(process.env.AGENTNET_SCREENSHOTS,skin+'-presentation-'+width+'.png'),fullPage:true});}
    await context.close();

@@ -851,6 +851,10 @@ button.reaction { cursor: pointer; }
 .an-schedule-time { min-width: 0; margin-block: 12px; padding: 0; border: 0; }
 .an-schedule-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: 12px; }
 .an-schedule-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 12px; }
+/* Group invitation dates use the same field layout as scheduled sends. */
+.an-invite-since label { display: block; min-width: 0; }
+.an-invite-since input { display: block; box-sizing: border-box; width: 100%; min-width: 0; min-height: 44px; padding: 8px; font: inherit; color: var(--text); background: var(--canvas); border: 1px solid var(--line); border-radius: 8px; }
+.an-invite-since .an-hit { min-height: 44px; }
 .an-schedule-nav button[aria-pressed="true"] { font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
 .an-schedule-when { display: block; font-weight: 700; }
 .an-schedule-preview { white-space: pre-wrap; margin-block: 8px; }

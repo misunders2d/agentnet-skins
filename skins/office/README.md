@@ -28,9 +28,7 @@ settings, workspaces) and picks up Comic's fixes whenever it is rebuilt.
 
 ## Previews
 
-The four images below were regenerated and inspected through the production loader on AgentNet v0.9.7 at [`3374c1c812499100d3cc9b8dedfdda1bb40892b8`](https://github.com/misunders2d/agentnet/tree/3374c1c812499100d3cc9b8dedfdda1bb40892b8), using the disposable fictional Brightwater Ceramics company. They show desktop 1440 × 1000 and phone 390 × 844 in light/dark themes. Phone screenshots use Chromium viewport emulation; physical-phone behavior remains separate.
-
-The current candidate targets AgentNet v0.9.7 at [`3374c1c812499100d3cc9b8dedfdda1bb40892b8`](https://github.com/misunders2d/agentnet/tree/3374c1c812499100d3cc9b8dedfdda1bb40892b8). Exact-pin compatibility passes all 318 source/browser checks and 37 applicable runtime groups; this candidate is not published. [PROVENANCE.md](../../PROVENANCE.md) records retained and repeated checks, original failures and evidence limits.
+These four previews were rendered and inspected through the production loader on AgentNet v0.11.9 at [`1bbe7a4ce444`](https://github.com/misunders2d/agentnet/tree/1bbe7a4ce44487aae5452b0d55e1a1c1e1c3420c), using the fictional Brightwater Ceramics company. They show the full-width composer in both themes at 1440 × 1000 and 390 × 844 in Chromium.
 
 | Desktop, light | Desktop, dark |
 | --- | --- |
@@ -40,7 +38,7 @@ The current candidate targets AgentNet v0.9.7 at [`3374c1c812499100d3cc9b8dedfdd
 | --- | --- |
 | ![Office on a phone, light](previews/mobile-light.png) | ![Office on a phone, dark](previews/mobile-dark.png) |
 
-Targets Host API v1; `"agentnet": "v0.9.3"`. The overlay is rebuilt by the exact pinned Comic source.
+This overlay targets Host API v1 and is rebuilt from the Comic source pinned in `upstream.json`.
 
 ## What is in the overlay
 

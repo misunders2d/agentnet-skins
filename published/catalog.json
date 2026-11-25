@@ -498,26 +498,26 @@
       "previews": [
         {
           "path": "previews/desktop-light.png",
-          "sha256": "14b019028b76da0e0dc3f6a24b63837ca59cf85289130a127486a026ca080d73",
-          "size": 114113,
+          "sha256": "b1521ee9abec4bd1247d8e5b3f1c924acc52bf39af09c93df0f8452549f7ad63",
+          "size": 117816,
           "alt": "Office on a desktop, light: the chat list beside an open conversation with flat messages"
         },
         {
           "path": "previews/desktop-dark.png",
-          "sha256": "316684c727ac8118b19947cd2083e5c654f51fdaf6357afb6707dc4bb45a51eb",
-          "size": 117341,
+          "sha256": "50e862562203b670568f70cfbf5ebaf762a0d0168a90546be90a85920b7b5043",
+          "size": 120826,
           "alt": "Office on a desktop, dark: the same conversation on dark grey"
         },
         {
           "path": "previews/mobile-light.png",
-          "sha256": "9a0f41069e9ea6ccec8c7079b702fd976c744edf73b8fd6fd4b310cb1c77bb09",
-          "size": 59726,
+          "sha256": "f9056c0b32e8e29117577810c6021caf5420be8d31e32b0b1bc12463120ad174",
+          "size": 58688,
           "alt": "Office on a phone, light: an open conversation and the composer"
         },
         {
           "path": "previews/mobile-dark.png",
-          "sha256": "6e818c88054ce46447e99ff1a6049ecb61329d6438e2f4645e8854ebdaad299b",
-          "size": 62391,
+          "sha256": "91a410f2f9dcd69a2055a7e168e27d5295c1336a81f7ce6bc60e61d93030a7b9",
+          "size": 61471,
           "alt": "Office on a phone, dark"
         }
       ]
@@ -660,26 +660,26 @@
       "previews": [
         {
           "path": "previews/desktop-light.png",
-          "sha256": "134370fb6276497c83d6ec514626d12a57afa4f159ce8b637511e898dfa67c45",
-          "size": 130796,
+          "sha256": "d8c27b1f5ac13436dfe11f08bbdd1a15001a4369f428f271f41428a85848fec1",
+          "size": 132206,
           "alt": "Pulp on a desktop, day: the contents list beside a conversation with the fictional Tomasz Reyes"
         },
         {
           "path": "previews/desktop-dark.png",
-          "sha256": "77bf0b58a4d6f47de4ee377ae73f0c280d6e912f3719ab04f94a887a5a7cdbab",
-          "size": 131106,
+          "sha256": "492d2dd9992af9b53180d68ac9b22b45c07179e5033e4867d3918c476955bfd8",
+          "size": 132553,
           "alt": "Pulp on a desktop, night: the same fictional conversation in diner neon"
         },
         {
           "path": "previews/mobile-light.png",
-          "sha256": "36cddbd9c20201857deb8caa77a538a694d1b70908f7c10a0de1520ff09fb736",
-          "size": 66714,
+          "sha256": "498e97307b89f3f648622c833c9f9804e4cf0d920eae4efc8b7f66b7dfa41c2e",
+          "size": 65162,
           "alt": "Pulp on a phone, day: a conversation with the fictional Tomasz Reyes about a glaze test"
         },
         {
           "path": "previews/mobile-dark.png",
-          "sha256": "f6565636f3b4e00c38acf96f648444a2d0070e408526d10cd87ee6579ef6bf3b",
-          "size": 66757,
+          "sha256": "6c4e6ad04a025dd91a1f5e1098c6d58ce30ebe7c7c137f351e6f0ff63b12f530",
+          "size": 65352,
           "alt": "Pulp on a phone, night: the same fictional conversation and composer"
         }
       ]

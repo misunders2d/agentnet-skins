@@ -18,7 +18,7 @@ const peers=['Briar','Cedar','Dune','Ember','Fjord','Grove','Heath','Iris','Juni
 const at=i=>new Date(Date.now()-i*3600e3).toISOString();
 const chats=peers.map((peer,i)=>({id:i?String.fromCharCode(100+i).repeat(64):id,kind:'dm',title:peer.label,peer,role:'member',members:[me,peer],agents:[],guests:[],topics:[],last:'Note number '+i+' about the kiln schedule',last_at:at(i),
  messages:[{id:String(i+1).padStart(32,'0'),lid:String(i+1).padStart(32,'0'),kind:'message',dir:'in',from:peer.address,to:me.address,author:peer.label,body:'Hello from '+peer.label,at:at(i),reactions:[],can:['react']}]}));
-let opened;window.fixture={open:()=>opened(id,'conversation')};const calls=window.calls=[];
+let opened;window.fixture={open:()=>opened(id,'conversation'),review:()=>opened('','review')};const calls=window.calls=[];
 const overview={version:'fixture',seq:1,topic_list:true,me,person:me,persons:true,groups:true,files:{max_file:1024,max_count:10},people:peers,threads:[],topics:[],dms:chats,directory:{current:true,members:[]},review:[],quarantine:[],links:[]};
 const host={version:1,platform:'daemon',workspace:{id:'list-fixture',name:'List fixture',state:'enrolled',address:me.address},skins:[],onSkinsChange(){return()=>{}},onOpen:fn=>opened=fn,listen(){return()=>{}},
  api:async(p,b)=>{calls.push(b===undefined?'GET '+p:'POST '+p);if(p.startsWith('/api/overview'))return structuredClone(overview);if(p.startsWith('/api/dm?')){const c=chats.find(c=>p.includes(c.id));return structuredClone(c||chats[0]);}if(p.startsWith('/api/agents'))return{agents:[]};if(p.includes('/groups/invitations'))return[];if(p.startsWith('/api/typing/status'))return{send:false,scopes:[]};return{};}};
@@ -105,12 +105,20 @@ test('Classic, Holonet and QA Orbit hide, show and resize the desktop list colum
    await timed(page,tag+' double-click reset',()=>u.sep.dblclick(),async()=>(await width(u.side))===initial&&(await u.sep.getAttribute('aria-valuenow'))===String(initial),timings);
    assert.equal(await u.body.evaluate(el=>el.__mel824===true&&el.isConnected),true,tag+': resizing kept the composer');
 
+   assert.deepEqual(await page.evaluate(n=>calls.slice(n),callsBefore),[],tag+': hide, show and resize call no Host API');
    // People: the other item opens its list; its active press hides it; Chats shows it again.
    await u.people.click();assert.equal(await u.people.getAttribute('aria-expanded'),'true');assert.equal(await u.chats.getAttribute('aria-expanded'),null);
    await u.people.click();assert.equal(await u.people.getAttribute('aria-expanded'),'false');assert.equal(await u.side.getAttribute('data-hidden'),'');
    await u.chats.click();assert.equal(await u.side.getAttribute('data-hidden'),null,tag+': the other rail item shows the list');assert.equal(await u.chats.getAttribute('aria-current'),'page');
    // Activity shows a hidden list (it lives in the column).
    await u.chats.click();await u.review.click();assert.equal(await u.side.getAttribute('data-hidden'),null,tag+': Activity shows the list');assert.equal(await page.locator('#skin #review').isVisible(),true);
+   await u.review.click();
+   // Activity opened by a notification (not the rail) shows a hidden list and takes focus there.
+   await u.chats.click();assert.equal(await u.side.getAttribute('data-hidden'),'');
+   await page.evaluate(()=>fixture.review());await page.locator('#skin #review').waitFor();
+   await page.waitForFunction(()=>!document.querySelector('#skin').shadowRoot.querySelector('.side').hasAttribute('data-hidden'));
+   assert.equal(await page.locator('#skin #review').isVisible(),true,tag+': routed Activity visible');
+   assert.equal(await page.evaluate(()=>{const r=document.querySelector('#skin').shadowRoot,b=[...r.querySelectorAll('#review button, #review [tabindex]')].find(n=>n.checkVisibility());return !b||r.activeElement===b;}),true,tag+': routed Activity focuses its first visible control');
    await u.review.click();
    // "/" focuses search even when the list was hidden.
    await u.chats.click();assert.equal(await u.side.getAttribute('data-hidden'),'');
@@ -154,7 +162,7 @@ test('Classic, Holonet and QA Orbit hide, show and resize the desktop list colum
    assert.ok(zs.h<=37&&zs.f>=14,'zoom: compact search, same type '+JSON.stringify(zs));
    await page.locator('#skin .zoom-search').fill('Briar');await page.locator('#skin .zoom-results button').first().waitFor();
    const zr=await page.locator('#skin .zoom-results button').first().evaluate(el=>({h:el.getBoundingClientRect().height,f:parseFloat(getComputedStyle(el.querySelector('.conv-name')||el).fontSize),cls:el.className}));
-   assert.ok(zr.f>=14,'zoom: result name size '+JSON.stringify(zr));timings.push('zoom search '+JSON.stringify(zs)+' result '+JSON.stringify(zr));
+   assert.ok(zr.f>=14&&zr.h<=52,'zoom: compact result, same type '+JSON.stringify(zr));timings.push('zoom search '+JSON.stringify(zs)+' result '+JSON.stringify(zr));
    if(shots)await page.screenshot({path:path.join(shots,'list-zoom-1280-search.png')});
    if(shots)await page.screenshot({path:path.join(shots,'list-zoom-1280.png')});
    assert.deepEqual(errors,[]);ran.push('zoom 1280');await context.close();}

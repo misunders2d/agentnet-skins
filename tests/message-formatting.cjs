@@ -56,6 +56,8 @@ async function open(touch = false) {
   await page.locator('.' + family + '-root').waitFor();
   const peer = await page.evaluate(async id => (await window.agentnet.api('/api/overview')).dms.find(chat => chat.id === id).peer.label, conv);
   await page.locator('#nav-chats').click();
+  // Desktop: pressing the active Chats item hides the list column (MEL-824); press again to show it.
+  if (!zoom && await page.locator('.side[data-hidden]').count()) await page.locator('#nav-chats').click();
   if (zoom) {
     await settled();
     await page.locator('#zoom .ladder .rung').first().click();
@@ -311,6 +313,7 @@ async function desktop() {
     await send();
     await list().locator(zoom ? 'button.mc-bubble' : '.body-markdown').filter({ hasText: searchWord }).waitFor();
     await page.locator('#nav-chats').click();
+    if (!zoom && await page.locator('.side[data-hidden]').count()) await page.locator('#nav-chats').click();
     await settled();
     await search().fill(searchWord);
     const results = page.locator(zoom ? '.zoom-results .result' : '#conv-list .result');

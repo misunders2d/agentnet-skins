@@ -23,7 +23,7 @@ const check=(ok,message)=>{if(!ok)result.failures.push(message);};
 const delayedFileGate=()=>{let release,started;const gate=new Promise(r=>release=r),start=new Promise(r=>started=r);return {release,start,route:async route=>{started();await gate;await route.continue();}};};
 // Classic family (Holonet, Classic and their scaffolds): conversation list, timeline and composer.
 const classic={
- async list(){if(await page.locator('#back').isVisible())await page.locator('#back').click();await page.locator('#nav-chats').click();await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().waitFor();},
+ async list(){if(await page.locator('#back').isVisible())await page.locator('#back').click();await page.locator('#nav-chats').click();if(await page.locator('.side[data-hidden]').count())await page.locator('#nav-chats').click();await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().waitFor();},
  async thread(){await this.list();await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().click();await page.locator('#conv-name').filter({hasText:'Vitalii'}).waitFor();await page.locator('#composer').waitFor();},
  name:n=>page.locator('#conv-list').getByText(n,{exact:true}).first(),
  search:()=>page.locator('#search'),
@@ -138,7 +138,7 @@ const ui=family==='zoom'?zoom:classic;
     await page.evaluate(([conv,body])=>window.agentnet.api('/api/dm/send',{conv,body}),[seed.dm_vitalii,sentBody]);
     await bounded(second,'pushed winning GET ('+destination+')');
     result.pushedGetMs.push(Math.round(performance.now() - pushAt));
-    if(destination!=='conversation')await page.locator(destination==='chats'?'#nav-chats':'#review-btn').click();
+    if(destination!=='conversation'){await page.locator(destination==='chats'?'#nav-chats':'#review-btn').click();if(destination==='chats')if(await page.locator('.side[data-hidden]').count())await page.locator('#nav-chats').click();}
     releaseSecond();await bounded(done2,'winning response');releaseFirst();await bounded(done1,'older response');
     if(destination==='conversation'){
      await page.locator('#conv-name').filter({hasText:'Vitalii'}).waitFor();await page.locator('#composer').waitFor();

@@ -8,7 +8,7 @@ import { formattingField, restoreMessageEdits } from "./text-formatting.mjs";
 import { messageMarkdown } from "./message-markdown.mjs";
 import { avatarPicture, openPictureEditor, pastePictures, sniffVideo } from "./pictures.mjs";
 import { topicControls } from './topics.mjs';
-import { watchVisibleRows, listPanel } from './visible-rows.mjs';
+import { watchVisibleRows } from './visible-rows.mjs';
 import { nativeActivityDetail } from './native-activity.mjs';
 import { unreadReview } from './unread-review.mjs';
 import { mountVideoFile, videoFileName } from './video-file.mjs';
@@ -6189,7 +6189,7 @@ function start() {
   $("nav-people").addEventListener("click", () => selectSection("people"));
   // MEL-824: the active Chats or People item hides/shows the desktop list column
   // (a capture listener on the rail, so it runs before the handlers above).
-  const listColumn = listPanel({ grid: root.querySelector(".console-layout"), side: root.querySelector(".side"), toggles: [$("nav-chats"), $("nav-people")], reveals: [$("review-btn")],
+  const listColumn = listPanel({ grid: root.querySelector(".console-layout"), side: root.querySelector(".side"), toggles: [$("nav-chats"), $("nav-people")], reveals: [$("review-btn")], shows: [$("review")],
     key: manifest.id + ".listPanel", storage: () => root.ownerDocument.defaultView.localStorage, signal: abort.signal });
   $("profile-btn").addEventListener("click", showSettings);
   $("settings-btn").addEventListener("click", () => showSettings("appearance"));
@@ -6343,4 +6343,136 @@ const stop = () => {
 stop.ready = ready;
 return stop;
 
+}
+
+// ---- the desktop list column (gallery-owned; kept in this entry because a
+// package holds at most 32 files and visible-rows.mjs is AgentNet's vendored
+// shared copy). The same block is in Classic and Holonet.
+// The desktop list column (MEL-822/824), the standalone counterpart of
+// AgentNet's Comic list-panel: pressing the active list rail item hides the
+// column and pressing it again brings it back; a separator on its edge
+// resizes it by mouse and keyboard. The column stays mounted while hidden
+// (inert, aria-hidden, held at its width), so its scroll, search and the open
+// conversation beside it are untouched. Width and hidden state belong to this
+// browser only (localStorage under the skin's own key, never the Host API).
+// Phones (narrow) keep their layout: nothing here applies below the
+// breakpoint.
+//
+// The skin's CSS owns the track: it reads --list-width (unset = the skin's
+// own default) and [data-list-hidden] on the grid, and [data-hidden] on the
+// column. This module only measures, clamps and stores.
+const LIST_COLUMN = Object.freeze({ min: 240, max: 480, conversation: 440, step: 16, bigStep: 48 });
+
+const cssPx = (v) => parseFloat(v) || 0;
+
+function listPanel({ grid, side, toggles, reveals = [], shows = [], key, storage, narrow = "(max-width: 760px)", signal, id = "list-panel" }) {
+  const view = grid.ownerDocument.defaultView;
+  const mq = view.matchMedia(narrow);
+  const saved = (() => { try { const v = JSON.parse(storage().getItem(key) || "{}"); return { width: Number.isFinite(v.width) ? v.width : null, hidden: v.hidden === true }; } catch { return { width: null, hidden: false }; } })();
+  let width = saved.width === null ? null : Math.round(Math.min(LIST_COLUMN.max, Math.max(LIST_COLUMN.min, saved.width)));
+  let hidden = saved.hidden;
+  const save = () => { try { storage().setItem(key, JSON.stringify(width === null ? { hidden } : { width, hidden })); } catch { /* this browser only */ } };
+
+  side.id ||= id;
+  side.dataset.part = "list-panel";
+  const sep = grid.ownerDocument.createElement("div");
+  for (const [k, v] of Object.entries({ role: "separator", "aria-orientation": "vertical", "aria-label": "Resize the list", "aria-controls": side.id, tabindex: "0", "data-part": "list-resize", title: "Drag or use the arrow keys to resize. Double-click to reset." })) sep.setAttribute(k, v);
+  side.append(sep);
+
+  // room: the widest the column may be here, leaving the conversation its share.
+  const room = () => {
+    const cs = view.getComputedStyle(grid);
+    const inner = grid.clientWidth - cssPx(cs.paddingLeft) - cssPx(cs.paddingRight) - cssPx(cs.columnGap);
+    return Math.round(Math.max(LIST_COLUMN.min, Math.min(LIST_COLUMN.max, inner - LIST_COLUMN.conversation)));
+  };
+  const clamp = (w) => Math.round(Math.min(room(), Math.max(LIST_COLUMN.min, w)));
+  const shown = () => Math.round(side.getBoundingClientRect().width);
+  const live = (w) => { if (w === null) grid.style.removeProperty("--list-width"); else grid.style.setProperty("--list-width", w + "px"); };
+  const aria = () => {
+    if (mq.matches || hidden) return;
+    sep.setAttribute("aria-valuemin", LIST_COLUMN.min); sep.setAttribute("aria-valuemax", room()); sep.setAttribute("aria-valuenow", shown());
+  };
+  const sync = () => {
+    const desktop = !mq.matches, off = desktop && hidden;
+    if (off && !side.hasAttribute("data-hidden")) side.style.setProperty("--list-held", shown() + "px");
+    side.toggleAttribute("data-hidden", off);
+    grid.toggleAttribute("data-list-hidden", off);
+    side.inert = off;
+    if (off) side.setAttribute("aria-hidden", "true"); else side.removeAttribute("aria-hidden");
+    for (const t of toggles) {
+      if (desktop && t.getAttribute("aria-current") === "page") {
+        t.setAttribute("aria-expanded", String(!hidden)); t.setAttribute("aria-controls", side.id);
+        t.title = hidden ? "Show the list" : "Hide the list";
+      } else { t.removeAttribute("aria-expanded"); t.removeAttribute("aria-controls"); t.removeAttribute("title"); }
+    }
+    aria();
+  };
+  const setHidden = (h) => { if (h === hidden) return; hidden = h; save(); sync(); };
+  const commit = (w) => { width = w; live(w); save(); aria(); };
+
+  // Capture on the rail runs before the items' own handlers: the active list
+  // item only hides/shows (its section, search and scroll stay as they are);
+  // any other item, and Activity, shows a hidden list and then does its job.
+  const opts = { capture: true, signal };
+  const rails = new Set([...toggles, ...reveals].map((b) => b.parentElement.closest("nav") || b.parentElement));
+  for (const rail of rails) rail.addEventListener("click", (e) => {
+    if (mq.matches) return;
+    const item = e.target.closest?.("button");
+    if (!item) return;
+    if (toggles.includes(item)) {
+      if (item.getAttribute("aria-current") === "page") { e.stopPropagation(); setHidden(!hidden); return; }
+      setHidden(false);
+    } else if (reveals.includes(item) && hidden) {
+      setHidden(false);
+      if (item.getAttribute("aria-expanded") === "true") e.stopPropagation(); // already open: only show it
+    }
+  }, opts);
+
+  // Mouse: the grid follows the pointer through the CSS variable; the width
+  // is stored once, on release.
+  let drag = null;
+  sep.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault(); sep.focus();
+    sep.setPointerCapture(e.pointerId);
+    drag = { x: e.clientX, w: shown(), now: shown() };
+    grid.toggleAttribute("data-list-resizing", true);
+  }, { signal });
+  sep.addEventListener("pointermove", (e) => { if (!drag) return; drag.now = clamp(drag.w + e.clientX - drag.x); live(drag.now); sep.setAttribute("aria-valuenow", drag.now); }, { signal });
+  const up = () => { const d = drag; drag = null; grid.removeAttribute("data-list-resizing"); if (d && d.now !== d.w) commit(d.now); };
+  for (const kind of ["pointerup", "pointercancel", "lostpointercapture"]) sep.addEventListener(kind, up, { signal });
+  sep.addEventListener("dblclick", () => commit(null), { signal });
+  sep.addEventListener("keydown", (e) => {
+    const step = e.shiftKey ? LIST_COLUMN.bigStep : LIST_COLUMN.step, w = shown();
+    const next = e.key === "ArrowLeft" ? w - step : e.key === "ArrowRight" ? w + step : e.key === "Home" ? LIST_COLUMN.min : e.key === "End" ? room() : null;
+    if (next === null) return;
+    e.preventDefault();
+    commit(clamp(next));
+  }, { signal });
+
+  const observer = new view.ResizeObserver(() => aria());
+  observer.observe(grid);
+  const current = new view.MutationObserver(sync);
+  for (const t of toggles) current.observe(t, { attributes: true, attributeFilter: ["aria-current"] });
+  mq.addEventListener("change", sync, { signal });
+  // Something opened inside the hidden column without the rail (Activity from a
+  // notification or after an unread review): show the column, and give focus
+  // to what was opened, which could not take it while the column was inert.
+  const opened = new view.MutationObserver(() => {
+    if (mq.matches || !hidden) return;
+    const shown = shows.find((n) => !n.hidden);
+    if (!shown) return;
+    setHidden(false);
+    const active = grid.getRootNode().activeElement;
+    if (!active || active === grid.ownerDocument.body || !grid.contains(active)) [...shown.querySelectorAll("button, [tabindex]")].find((n) => n.checkVisibility())?.focus();
+  });
+  for (const n of shows) opened.observe(n, { attributes: true, attributeFilter: ["hidden"] });
+  signal?.addEventListener("abort", () => { observer.disconnect(); current.disconnect(); opened.disconnect(); });
+  live(width);
+  sync();
+  return {
+    // reveal: show a hidden list before something inside it takes focus.
+    reveal() { if (!mq.matches) setHidden(false); },
+    get hidden() { return !mq.matches && hidden; },
+  };
 }

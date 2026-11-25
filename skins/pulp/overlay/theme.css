@@ -107,8 +107,7 @@
   /* Square-cut buttons and tabs, like stamped cardboard; avatars stay round. */
   .an-root button.rounded-full, .an-root a.rounded-full, .an-root [data-part=topic-bar] .rounded-full, .an-root label.rounded-full,
   .an-root [data-part=composer-field] { border-radius: 3px; }
-  /* The field keeps its 2px ink edge but only 1px of it is border, so it is
-     exactly as tall as "+", "@" and Send beside it. */
+  /* Keep the thin inset ink edge around the full composer. */
   .an-root [data-part=composer-field].stroke { border-width: 1px; outline: 1px solid var(--an-outline); outline-offset: -2px; }
 
   /* The rail carries the wordmark, set on its side like a paperback's spine. */
@@ -138,12 +137,12 @@
 /* ---- Pulp's own pieces (overlay slots) --------------------------------------- */
   /* The send stamp. */
   .pulp-stamp {
-    min-width: 84px; min-height: 46px; padding: 0 12px; display: grid; place-items: center;
+    min-width: 52px; height: 44px; padding: 0 12px; display: grid; place-items: center;
     border: 3px solid var(--pulp-print); color: var(--pulp-print); background: transparent;
-    font: 900 18px/1 "Bitter", Georgia, serif; letter-spacing: .06em; text-transform: uppercase; transform: rotate(-3deg);
+    font: 900 16px/1 "Bitter", Georgia, serif; letter-spacing: .06em; text-transform: uppercase; transform: rotate(-3deg);
     transition: transform 120ms var(--ease-out-soft);
   }
-  @media (min-width: 64rem) { .pulp-stamp { min-height: 48px; } } /* the composer row is 48 px from lg */
+  @media (min-width: 64rem) { .pulp-stamp { height: 40px; } }
   .pulp-stamp:active { transform: rotate(-3deg) translate(1px, 1px) scale(.97); }
   .pulp-stamp-off { border-color: var(--an-hairline); color: var(--an-muted); }
 

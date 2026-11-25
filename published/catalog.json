@@ -8,7 +8,7 @@
       "version": "1.11.2",
       "api": 1,
       "agentnet": "v0.11.8",
-      "digest": "ac7d90f0153d8249577bb02f9f70220c61489e1c904ab4a377174053dbfcd3a5",
+      "digest": "a99088d693c12c309821123d1276178c25dccac5c0c6cc517822a1548f38abb4",
       "files": [
         {
           "path": "skin.json",
@@ -17,8 +17,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "97a4855724456489a0e6789f753068129c4a9aa8a01a1b24b4cd6665d51648ff",
-          "size": 478752
+          "sha256": "4753ec76677469a3f7d9aed5f14ed5332b91edded085baaf2cee83c186ed387e",
+          "size": 478941
         },
         {
           "path": "composer-followup.mjs",
@@ -210,7 +210,7 @@
       "version": "1.11.2",
       "api": 1,
       "agentnet": "v0.11.8",
-      "digest": "a4002d21e212df846ca680b108196c7c310f9ca54a5d452dbc52f5806adbda52",
+      "digest": "7eabecd300b5d041080a9cc9ced063d053dc95105c86e88375a2a03d6a944d01",
       "files": [
         {
           "path": "skin.json",
@@ -219,8 +219,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "286e1ea96fbba58cfbc074d64c8229aabc1085f448fdadb0ff2cb656f3bb79ce",
-          "size": 453259
+          "sha256": "7032e024f8464a662c644ac3902fbd83f2ca0e84ad4933f1d28829fbb410f14b",
+          "size": 453448
         },
         {
           "path": "composer-followup.mjs",

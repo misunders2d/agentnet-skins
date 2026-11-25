@@ -138,7 +138,8 @@ const ui=family==='zoom'?zoom:classic;
     await page.evaluate(([conv,body])=>window.agentnet.api('/api/dm/send',{conv,body}),[seed.dm_vitalii,sentBody]);
     await bounded(second,'pushed winning GET ('+destination+')');
     result.pushedGetMs.push(Math.round(performance.now() - pushAt));
-    if(destination!=='conversation'){await page.locator(destination==='chats'?'#nav-chats':'#review-btn').click();if(destination==='chats')if(await page.locator('.side[data-hidden]').count())await page.locator('#nav-chats').click();}
+    if(destination==='chats')await ui.list();
+    else if(destination==='activity')await page.locator('#review-btn').click();
     releaseSecond();await bounded(done2,'winning response');releaseFirst();await bounded(done1,'older response');
     if(destination==='conversation'){
      await page.locator('#conv-name').filter({hasText:'Vitalii'}).waitFor();await page.locator('#composer').waitFor();
@@ -152,6 +153,34 @@ const ui=family==='zoom'?zoom:classic;
   }
   result.checks.push('Native push before opening response commits the current visit; Chats/Activity invalidate entry intent even when the opening GET wins');
   await page.setViewportSize({width:1440,height:1000});
+  // A winning DM load can paint after beforeunload; its follow-up overview
+  // request is then refused by the host while it waits to see whether we leave.
+  await ui.list();
+  let openStarted, releaseOpen;
+  const opening = new Promise(resolve => { openStarted = resolve; });
+  const held = new Promise(resolve => { releaseOpen = resolve; });
+  const holdOpening = async route => {
+   if (new URL(route.request().url()).searchParams.get('id') !== seed.dm_bohdan) return route.continue();
+   const response = await route.fetch();
+   openStarted();
+   await held;
+   await route.fulfill({response});
+  };
+  await page.route('**/api/dm?*', holdOpening);
+  try {
+   await page.locator('#conv-list').getByText('Bohdan',{exact:true}).first().click();
+   await bounded(opening, 'DM opening before navigation');
+   await page.evaluate(() => window.dispatchEvent(new Event('beforeunload')));
+   releaseOpen();
+   await page.locator('#composer').waitFor();
+   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+   assert.deepEqual(errors, [], 'Opening a DM during pending navigation leaves no rejected promise');
+  } finally {
+   releaseOpen();
+   await page.unrouteAll({behavior:'wait'});
+   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  }
+  result.checks.push('A DM opening survives a navigation that never commits without an unhandled request');
  }
  if(family==='zoom'){
   const bounded=(promise,label)=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error(label+' exceeded the existing 15s bound')),15000);promise.then(v=>{clearTimeout(timer);resolve(v);},e=>{clearTimeout(timer);reject(e);});});

@@ -2756,7 +2756,14 @@ async function openDM(id, localView, readEntry = true, freshEntryView = false) {
   }
   await loadDM(true,localView,freshEntryView);
   if (gen !== state.gen) return;
-  if(!localView)await loadOverview();
+  if (!localView) {
+    try { await loadOverview(); }
+    catch (error) {
+      // The DM already opened. A navigation may cancel its follow-up read.
+      if (error?.name === "AbortError") return;
+      throw error;
+    }
+  }
   if (changed&&!localView) api("/api/refresh", { id }).catch(() => {}); // once per open: receipts the server still holds
 }
 

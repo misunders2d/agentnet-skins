@@ -296,6 +296,22 @@ async function desktop() {
     await assertMask(message, revised);
     assert(!(await message.textContent()).includes(secret), 'Original text in Details stays masked');
     await reveal(message, revised, node => node.click(), 'edited');
+    const revealed = message.getByRole('button', { name: revised, exact: true, pressed: true });
+    const previousSpoiler = await revealed.elementHandle();
+    try {
+      assert(await previousSpoiler.evaluate(node => {
+        node.focus({preventScroll: true});
+        return node.getRootNode().activeElement === node;
+      }), 'The revealed spoiler can receive focus before refresh');
+      await page.evaluate(conv => window.agentnet.api('/api/dm/send', { conv, body: 'Unrelated update after a spoiler reveal' }), conv);
+      await page.waitForFunction(node => !node.isConnected, previousSpoiler);
+    } finally { await previousSpoiler.dispose(); }
+    assert(await revealed.isVisible(), 'A live refresh keeps the same spoiler revealed');
+    const active = await revealed.evaluate(node => {
+      const active = node.getRootNode().activeElement;
+      return active === node ? 'spoiler' : [active?.tagName, active?.className];
+    });
+    assert.equal(active, 'spoiler', 'Refresh keeps focus on the revealed spoiler');
 
     await message.getByRole('button', { name: 'Reply', exact: true }).first().click();
     await assertMask(quote(), revised);

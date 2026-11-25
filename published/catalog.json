@@ -8,7 +8,7 @@
       "version": "1.11.2",
       "api": 1,
       "agentnet": "v0.11.8",
-      "digest": "2d2a3c1ba47766ea9f34ced9e0a5925ff271433cbf8246904f7ab6e3015f5c14",
+      "digest": "ed3ac321828bc58a4fe79daf71923366b9ececf8de574fb5b69fb8bbd36b4b9b",
       "files": [
         {
           "path": "skin.json",
@@ -17,8 +17,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "3b07e9487d330f9bbe27b77e24d5a0e97df57125f5858599fe9ee04b4d81f89e",
-          "size": 478397
+          "sha256": "97a4855724456489a0e6789f753068129c4a9aa8a01a1b24b4cd6665d51648ff",
+          "size": 478752
         },
         {
           "path": "composer-followup.mjs",
@@ -117,8 +117,8 @@
         },
         {
           "path": "message-markdown.mjs",
-          "sha256": "5d01cf0d630f34bbdd511cad719652f2260eb4e86db4a3dffae7ee086e2d8e00",
-          "size": 4989
+          "sha256": "2699bfb3d0d799d60216873f75514e21ceb31bb619940618f4f7f367121889d1",
+          "size": 6664
         },
         {
           "path": "reaction-preferences.mjs",
@@ -210,7 +210,7 @@
       "version": "1.11.2",
       "api": 1,
       "agentnet": "v0.11.8",
-      "digest": "bfed567a59e1951df88371a31fa9615a54eca5888537332c840dc05aaa55db7a",
+      "digest": "a5f31e92283905381a176264b17490a1f8b28aa80d2449002d8580ea70971f3b",
       "files": [
         {
           "path": "skin.json",
@@ -219,8 +219,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "70e611d758260751a9774ddf6d99a20fd84c9cee43fc99bedbdcf10e7df7dfb3",
-          "size": 452904
+          "sha256": "286e1ea96fbba58cfbc074d64c8229aabc1085f448fdadb0ff2cb656f3bb79ce",
+          "size": 453259
         },
         {
           "path": "composer-followup.mjs",
@@ -289,8 +289,8 @@
         },
         {
           "path": "message-markdown.mjs",
-          "sha256": "5d01cf0d630f34bbdd511cad719652f2260eb4e86db4a3dffae7ee086e2d8e00",
-          "size": 4989
+          "sha256": "2699bfb3d0d799d60216873f75514e21ceb31bb619940618f4f7f367121889d1",
+          "size": 6664
         },
         {
           "path": "topics.mjs",
@@ -569,7 +569,7 @@
       "version": "1.11.2",
       "api": 1,
       "agentnet": "v0.11.8",
-      "digest": "0e7bec8415dd4d1692ddfeec44b6fe09b5cc5dedf86ac653a3afe561ad37a93b",
+      "digest": "9419db313bd26a5e5678b04da2deb630b97cc5fb0bd8ff8c96ce53304f34f09d",
       "files": [
         {
           "path": "skin.json",
@@ -578,8 +578,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "c43a9533cb20d4c2518c7aaa4147fbcc6c5d24176389152776c1b285c3537310",
-          "size": 501647
+          "sha256": "c483f48057830c2aa251f05fd67a80f958e8bb3fcbad5e4c69e8a9db5eb1446b",
+          "size": 502082
         },
         {
           "path": "composer-followup.mjs",
@@ -678,8 +678,8 @@
         },
         {
           "path": "message-markdown.mjs",
-          "sha256": "5d01cf0d630f34bbdd511cad719652f2260eb4e86db4a3dffae7ee086e2d8e00",
-          "size": 4989
+          "sha256": "2699bfb3d0d799d60216873f75514e21ceb31bb619940618f4f7f367121889d1",
+          "size": 6664
         },
         {
           "path": "reaction-preferences.mjs",

@@ -11,7 +11,7 @@ import { reactionChoices, recordReaction, humanReactionOrder } from "./reaction-
 import {collectiveOptions, parseCollective, collectiveHref} from './collective-mentions.mjs';
 import { maskSpoilers, previewText, portableLink } from "./link-text.mjs";
 import { captureMessageEdits, formattingField, restoreMessageEdits } from "./text-formatting.mjs";
-import { messageMarkdown } from "./message-markdown.mjs";
+import { captureMessageSpoilers, messageMarkdown, restoreMessageSpoilers } from "./message-markdown.mjs";
 function niceGoogleDevice(address) { const name = String(address || "").split("/").pop() || "device"; return name.charAt(0).toUpperCase() + name.slice(1); }
 import { avatarPicture, openPictureEditor, pastePictures } from "./pictures.mjs";
 import { topicControls } from './topics.mjs';
@@ -253,8 +253,10 @@ function fill(parent, ...kids) {
 function fillTimeline(timeline, key, ...kids) {
   const host=currentHost,previous=timeline.pickerScope,opened=new Map();
   const active=timeline.getRootNode().activeElement;
-  const edits=previous?.host===host&&previous.key===key ? captureMessageEdits(timeline) : [];
-  if(previous?.host===host&&previous.key===key){
+  const sameView=previous?.host===host&&previous.key===key;
+  const edits=sameView ? captureMessageEdits(timeline) : [];
+  const spoilers=sameView ? captureMessageSpoilers(timeline,active) : null;
+  if(sameView){
     for(const picker of timeline.querySelectorAll('.react-pick[open]')){
       const message=picker.closest('.msg[id]');if(!message)continue;
       opened.set(message.id,picker.contains(active)?{tag:active.tagName,label:active.getAttribute('aria-label'),text:active.textContent}:null);
@@ -262,6 +264,7 @@ function fillTimeline(timeline, key, ...kids) {
   }
   fill(timeline,...kids);timeline.pickerScope={host,key};
   restoreMessageEdits(edits, timeline, active);
+  if(spoilers)restoreMessageSpoilers(timeline,spoilers);
   for(const picker of timeline.querySelectorAll('.react-pick')){
     const id=picker.closest('.msg[id]')?.id;if(!opened.has(id))continue;
     picker.open=true;
@@ -4545,7 +4548,10 @@ const lineOf = (m, n) => firstLine(isReport(m) ? reportText(m) : m.body || "(fil
 
 function bodyOf(m) {
   const body = messageBody(m);
-  if (canDo(m, "edit")) body.editSource = { dir: m.dir, revision: m.revision, text: shownText(m) };
+  const text = shownText(m);
+  if (body.classList.contains("body-markdown") && text?.includes("||"))
+    body.spoilerSource = { id: m.id, dir: m.dir, from: m.from, revision: m.revision, text };
+  if (canDo(m, "edit")) body.editSource = { dir: m.dir, revision: m.revision, text };
   return body;
 }
 

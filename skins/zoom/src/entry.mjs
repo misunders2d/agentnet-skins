@@ -11,7 +11,7 @@ import { reactionChoices, recordReaction, humanReactionOrder } from "./reaction-
 import {collectiveOptions, parseCollective, collectiveHref} from './collective-mentions.mjs';
 import { maskSpoilers, previewText, portableLink } from "./link-text.mjs";
 import { captureMessageEdits, formattingField, restoreMessageEdits } from "./text-formatting.mjs";
-import { messageMarkdown } from "./message-markdown.mjs";
+import { captureMessageSpoilers, messageMarkdown, restoreMessageSpoilers } from "./message-markdown.mjs";
 function niceGoogleDevice(address) { const name = String(address || "").split("/").pop() || "device"; return name.charAt(0).toUpperCase() + name.slice(1); }
 import { avatarPicture, openPictureEditor, pastePictures } from "./pictures.mjs";
 import { topicControls } from './topics.mjs';
@@ -4369,7 +4369,10 @@ const lineOf = (m, n) => firstLine(isReport(m) ? reportText(m) : m.body || "(fil
 
 function bodyOf(m) {
   const body = messageBody(m);
-  if (canDo(m, "edit")) body.editSource = { dir: m.dir, revision: m.revision, text: shownText(m) };
+  const text = shownText(m);
+  if (body.classList.contains("body-markdown") && text?.includes("||"))
+    body.spoilerSource = { id: m.id, dir: m.dir, from: m.from, revision: m.revision, text };
+  if (canDo(m, "edit")) body.editSource = { dir: m.dir, revision: m.revision, text };
   return body;
 }
 
@@ -6584,6 +6587,7 @@ const Zoom = {
     const ownedFocus = !!focused && surface.contains(focused);
     const oldContent = surface.querySelector(".zoom-layer:last-child .zoom-content");
     const edits = this.level === 3 && oldContent ? captureMessageEdits(oldContent) : [];
+    const spoilers = this.level === 3 && oldContent ? captureMessageSpoilers(oldContent, focused) : null;
     const scroll = oldContent?.scrollTop || 0;
     const atEnd = oldContent && oldContent.scrollHeight - scroll - oldContent.clientHeight < 60;
     const expanded = [...surface.querySelectorAll(".zoom-layer:last-child details[open]")].map(d => d.dataset.person || d.dataset.keep).filter(Boolean);
@@ -6596,6 +6600,7 @@ const Zoom = {
     if(entry&&currentDM&&!groupContextWaiting())visit.opening=null;
     const content = surface.querySelector(".zoom-content");
     const editFocused = edits.length > 0 && restoreMessageEdits(edits, content, focused);
+    const spoilerFocused = spoilers && restoreMessageSpoilers(content, spoilers);
     for (const d of surface.querySelectorAll("details[data-person], details[data-keep]")) d.open = expanded.includes(d.dataset.person || d.dataset.keep);
     placeUnreadDivider(content,state.readVisit,state.dm?state.dmData:state.data,state.dm?"dm":"thread");
     content.scrollTop = this.level === 2 && (atEnd || this.revealEnd) ? content.scrollHeight : scroll;
@@ -6605,7 +6610,7 @@ const Zoom = {
       const search = surface.querySelector(".zoom-search");
       search.focus({preventScroll: true});
       search.setSelectionRange(...selection);
-    } else if (ownedFocus && !editFocused) {
+    } else if (ownedFocus && !editFocused && !spoilerFocused) {
       const match = focusMenu ? surface.querySelector('details[data-keep="' + CSS.escape(focusMenu) + '"] > summary')
         : focusText && [...surface.querySelectorAll("button")].find(b => !b.disabled && b.textContent === focusText);
       if (match) match.focus({preventScroll: true}); else focusZoomLayer(surface);

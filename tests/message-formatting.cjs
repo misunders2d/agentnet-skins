@@ -351,6 +351,13 @@ async function touch() {
     const a = await editor.boundingBox(), b = await editTrigger.boundingBox();
     assert(b.y >= a.y + a.height && b.height >= 44, 'Edit Formatting is below the field with a 44px target');
     await timed('touch edit menu', () => editTrigger.tap(), () => item('Bold').waitFor());
+    const oldRow = await message.elementHandle();
+    try {
+      await page.evaluate(conv => window.agentnet.api('/api/dm/send', { conv, body: 'Unrelated update during touch formatting' }), conv);
+      await page.waitForFunction(row => !row.isConnected, oldRow);
+    } finally { await oldRow.dispose(); }
+    assert(await item('Bold').isVisible(), 'Formatting stays open across a same-message refresh');
+    assert(await item('Bold').evaluate(node => node.getRootNode().activeElement === node), 'Refresh keeps focus on the formatting choice');
     await screenshot('touch-edit');
     await timed('touch edit action', () => item('Bold').tap(), async () => {
       assert((await editor.inputValue()).includes('||**' + revised + '**||'));

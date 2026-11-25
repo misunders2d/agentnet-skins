@@ -174,9 +174,15 @@ export function formattingField(field, { el, root, signal, refs = () => [], writ
 
 // A same-view refresh can rebuild the bubble while an edit is still local.
 // Keep the actual editor and its selection only for the same message revision.
+export function captureMessageEdits(container) {
+  return Array.from(container.querySelectorAll(".edit-box"), box => ({
+    box, menu: box.querySelector(".format-menu:popover-open"),
+  }));
+}
+
 export function restoreMessageEdits(edits, container, focused) {
   let restore;
-  for (const box of edits) {
+  for (const { box, menu } of edits) {
     const row = container.querySelector(box.messageSelector);
     const body = row?.querySelector(".body");
     const next = body?.editSource, previous = box.originalBody.editSource;
@@ -184,7 +190,9 @@ export function restoreMessageEdits(edits, container, focused) {
     box.querySelector(".format-link[open]")?.close();
     box.originalBody = body;
     body.replaceWith(box);
-    if (box.contains(focused)) restore = focused.closest(".format-menu, dialog") ? box.querySelector("textarea") : focused;
+    // Disconnecting a row closes its popover in the browser's top layer.
+    if (menu) menu.showPopover();
+    if (box.contains(focused)) restore = focused.closest("dialog") ? box.querySelector("textarea") : focused;
   }
   restore?.focus({ preventScroll: true });
   return !!restore;

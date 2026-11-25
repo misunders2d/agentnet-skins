@@ -8,7 +8,7 @@
       "version": "1.11.2",
       "api": 1,
       "agentnet": "v0.11.8",
-      "digest": "7ebfd8a94c191db2216836289ef4ec3ba55ab05a4e2fdbc1cb2f0b8661579d05",
+      "digest": "2d2a3c1ba47766ea9f34ced9e0a5925ff271433cbf8246904f7ab6e3015f5c14",
       "files": [
         {
           "path": "skin.json",
@@ -17,8 +17,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "58c6e5b515d8a48c077c09b7e35709358c7a4b6d2e9f93d7c19ccaa6e2de8c36",
-          "size": 478390
+          "sha256": "3b07e9487d330f9bbe27b77e24d5a0e97df57125f5858599fe9ee04b4d81f89e",
+          "size": 478397
         },
         {
           "path": "composer-followup.mjs",
@@ -112,8 +112,8 @@
         },
         {
           "path": "text-formatting.mjs",
-          "sha256": "4877d0f7cb24292663fec3042fd9f17a02fc2e8dc884c67faa9ee7481b4657b1",
-          "size": 8850
+          "sha256": "2df2420558c5af3fa8b5e73ffa3410e3721ce77a8408802fc9fe3a8a7263d469",
+          "size": 9147
         },
         {
           "path": "message-markdown.mjs",
@@ -210,7 +210,7 @@
       "version": "1.11.2",
       "api": 1,
       "agentnet": "v0.11.8",
-      "digest": "7aa054e1fde5a42edf80363325d45a3bde01ab940223fd9993365e771b7bf82b",
+      "digest": "bfed567a59e1951df88371a31fa9615a54eca5888537332c840dc05aaa55db7a",
       "files": [
         {
           "path": "skin.json",
@@ -219,8 +219,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "ca6ad42f3acc14717f31b76760798661a11eeaabcc0ac4521988e7e72ead07a5",
-          "size": 452897
+          "sha256": "70e611d758260751a9774ddf6d99a20fd84c9cee43fc99bedbdcf10e7df7dfb3",
+          "size": 452904
         },
         {
           "path": "composer-followup.mjs",
@@ -284,8 +284,8 @@
         },
         {
           "path": "text-formatting.mjs",
-          "sha256": "4877d0f7cb24292663fec3042fd9f17a02fc2e8dc884c67faa9ee7481b4657b1",
-          "size": 8850
+          "sha256": "2df2420558c5af3fa8b5e73ffa3410e3721ce77a8408802fc9fe3a8a7263d469",
+          "size": 9147
         },
         {
           "path": "message-markdown.mjs",
@@ -569,7 +569,7 @@
       "version": "1.11.2",
       "api": 1,
       "agentnet": "v0.11.8",
-      "digest": "0ca1cdb9a76492bafd174a261808430f9e4f44b215f17e8878c01929cab41cc6",
+      "digest": "0e7bec8415dd4d1692ddfeec44b6fe09b5cc5dedf86ac653a3afe561ad37a93b",
       "files": [
         {
           "path": "skin.json",
@@ -578,8 +578,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "3e591b464c038fb5c3b85a701d2ad411c405ad1551185b179c9a19ba3da6fb6b",
-          "size": 501635
+          "sha256": "c43a9533cb20d4c2518c7aaa4147fbcc6c5d24176389152776c1b285c3537310",
+          "size": 501647
         },
         {
           "path": "composer-followup.mjs",
@@ -673,8 +673,8 @@
         },
         {
           "path": "text-formatting.mjs",
-          "sha256": "4877d0f7cb24292663fec3042fd9f17a02fc2e8dc884c67faa9ee7481b4657b1",
-          "size": 8850
+          "sha256": "2df2420558c5af3fa8b5e73ffa3410e3721ce77a8408802fc9fe3a8a7263d469",
+          "size": 9147
         },
         {
           "path": "message-markdown.mjs",

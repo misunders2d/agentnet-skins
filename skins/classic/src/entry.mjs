@@ -10,7 +10,7 @@ import { nativeRequestItem } from "./native-request.mjs";
 import { reactionChoices, recordReaction, humanReactionOrder } from "./reaction-preferences.mjs";
 import {collectiveOptions, parseCollective, collectiveHref} from './collective-mentions.mjs';
 import { maskSpoilers, previewText, portableLink } from "./link-text.mjs";
-import { formattingField, restoreMessageEdits } from "./text-formatting.mjs";
+import { captureMessageEdits, formattingField, restoreMessageEdits } from "./text-formatting.mjs";
 import { messageMarkdown } from "./message-markdown.mjs";
 function niceGoogleDevice(address) { const name = String(address || "").split("/").pop() || "device"; return name.charAt(0).toUpperCase() + name.slice(1); }
 import { avatarPicture, openPictureEditor, pastePictures } from "./pictures.mjs";
@@ -253,7 +253,7 @@ function fill(parent, ...kids) {
 function fillTimeline(timeline, key, ...kids) {
   const host=currentHost,previous=timeline.pickerScope,opened=new Map();
   const active=timeline.getRootNode().activeElement;
-  const edits=previous?.host===host&&previous.key===key ? [...timeline.querySelectorAll(".edit-box")] : [];
+  const edits=previous?.host===host&&previous.key===key ? captureMessageEdits(timeline) : [];
   if(previous?.host===host&&previous.key===key){
     for(const picker of timeline.querySelectorAll('.react-pick[open]')){
       const message=picker.closest('.msg[id]');if(!message)continue;

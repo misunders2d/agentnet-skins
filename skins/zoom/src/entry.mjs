@@ -10,7 +10,7 @@ import { nativeRequestItem } from "./native-request.mjs";
 import { reactionChoices, recordReaction, humanReactionOrder } from "./reaction-preferences.mjs";
 import {collectiveOptions, parseCollective, collectiveHref} from './collective-mentions.mjs';
 import { maskSpoilers, previewText, portableLink } from "./link-text.mjs";
-import { formattingField, restoreMessageEdits } from "./text-formatting.mjs";
+import { captureMessageEdits, formattingField, restoreMessageEdits } from "./text-formatting.mjs";
 import { messageMarkdown } from "./message-markdown.mjs";
 function niceGoogleDevice(address) { const name = String(address || "").split("/").pop() || "device"; return name.charAt(0).toUpperCase() + name.slice(1); }
 import { avatarPicture, openPictureEditor, pastePictures } from "./pictures.mjs";
@@ -6583,7 +6583,7 @@ const Zoom = {
     const surface = $("zoom"), focused = root.getRootNode().activeElement;
     const ownedFocus = !!focused && surface.contains(focused);
     const oldContent = surface.querySelector(".zoom-layer:last-child .zoom-content");
-    const edits = this.level === 3 && oldContent ? oldContent.querySelectorAll(".edit-box") : [];
+    const edits = this.level === 3 && oldContent ? captureMessageEdits(oldContent) : [];
     const scroll = oldContent?.scrollTop || 0;
     const atEnd = oldContent && oldContent.scrollHeight - scroll - oldContent.clientHeight < 60;
     const expanded = [...surface.querySelectorAll(".zoom-layer:last-child details[open]")].map(d => d.dataset.person || d.dataset.keep).filter(Boolean);

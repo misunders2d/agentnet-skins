@@ -6460,11 +6460,12 @@ function start() {
     for (const b of chatControls) b.addEventListener("click", () => $("dialog").close());
     dialog({ title: peer, body: [state.dmData ? deviceDisclosure(t.peer) : el("p", { class: "mono" }, state.data.key?.pinned || "Key not checked yet"), members, guests, past, actions, el("div",{class:"detail-actions"},linkButtons()), chatControls.length > 0 && el("div", { class: "detail-actions" }, chatControls), routing, remove], ok: "Close", run: async () => {} });
   });
-  // MEL-824: the active Chats or People item hides/shows the desktop list column.
-  const listColumn = listPanel({ grid: root.querySelector(".app"), side: root.querySelector(".side"), toggles: [$("nav-chats"), $("nav-people")], reveals: [$("review-btn")],
-    key: manifest.id + ".listPanel", storage: () => root.ownerDocument.defaultView.localStorage, signal: abort.signal });
   $("nav-chats").addEventListener("click", () => selectSection("chats"));
   $("nav-people").addEventListener("click", () => selectSection("people"));
+  // MEL-824: the active Chats or People item hides/shows the desktop list column
+  // (a capture listener on the rail, so it runs before the handlers above).
+  const listColumn = listPanel({ grid: root.querySelector(".app"), side: root.querySelector(".side"), toggles: [$("nav-chats"), $("nav-people")], reveals: [$("review-btn")],
+    key: manifest.id + ".listPanel", storage: () => root.ownerDocument.defaultView.localStorage, signal: abort.signal });
   $("profile-btn").addEventListener("click", showSettings);
   $("settings-btn").addEventListener("click", () => showSettings("appearance"));
   $("settings-tabs").addEventListener("keydown", (e) => {

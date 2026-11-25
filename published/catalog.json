@@ -404,25 +404,25 @@
       "id": "office",
       "name": "Office",
       "description": "A plain workplace messenger: white pages, thin hairlines, a dark neutral rail, the device's own font. Green for what you can do, blue for agents. Flat messages, a bordered composer, hairline request cards with a coloured edge. Everything Comic does, without the stickers.",
-      "version": "1.8.2",
+      "version": "1.8.3",
       "api": 1,
-      "agentnet": "v0.11.8",
-      "digest": "09fdb6db2d7464b0783d4f7ff01c6767ee10cfc0260bad8a2aad9d1bbfe4c43e",
+      "agentnet": "v0.11.9",
+      "digest": "eef2446796e4f20b73efb0607643c752551214dee212b3519df42c4060e5d173",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "2d0bf7ce1a34c7dc3aa3d82cef9a754130ea4e5c15d73a4f6dc6ff120f842094",
+          "sha256": "a0336ef3eeaf4cdffb72c7146d0f458103c3a8f2adbd31fff516688e187d5723",
           "size": 783
         },
         {
           "path": "entry.mjs",
-          "sha256": "642f484082de4108f465e48fe9ca3bcff0045134383ccc33953f0be40db657b2",
-          "size": 1509142
+          "sha256": "08420b1d2a6cbffb7a9f9fc856a31d2976fdefae985a92dff33f7bf53cca1b55",
+          "size": 1514712
         },
         {
           "path": "style.css",
-          "sha256": "a124b368cd22a17d2ba37648b00e449a4b02ca5ce6785ecc09db0303e7a44c92",
-          "size": 88088
+          "sha256": "734e33c9ac433605b0019285f0615b43ab4ed69d1e8d18da81fb21355e8b663d",
+          "size": 88701
         },
         {
           "path": "document.css",
@@ -526,25 +526,25 @@
       "id": "pulp",
       "name": "Pulp",
       "description": "A 1970s paperback by day and a roadside diner by night. Chats read like a table of contents, every topic opens with a chapter card, requests for your OK arrive as a glowing case, and your agents wear costumes. Everything Comic does, in a new look.",
-      "version": "1.10.2",
+      "version": "1.10.3",
       "api": 1,
-      "agentnet": "v0.11.8",
-      "digest": "79d44bdd7938522ceb2495df96ac3f80ecaa6f86ce9304fa3d57d30f36bcb501",
+      "agentnet": "v0.11.9",
+      "digest": "eb21a3d1a8cc6b073295f0bba0cef79afa8d81ef5a266f1a43fc683b5bf1c0b4",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "731c8350f799a0810743286ea099bf587b992c0a06cae523c3c1af74bbcf69b1",
+          "sha256": "4029773db8890b8b7db08ad42a3064614b6c538f4f7348efd27b4ff4287add75",
           "size": 1239
         },
         {
           "path": "entry.mjs",
-          "sha256": "b3b598e8c6042eeafee1904026392a8b74494e850fc5ed4374acd9188f9bda31",
-          "size": 1512441
+          "sha256": "d85e92a0004a1e199fafbf1e7f7fb7560ec3871dbd50fe72dc4982b49decbcdb",
+          "size": 1517985
         },
         {
           "path": "style.css",
-          "sha256": "bce52fae6b8ee21a3cdc868dcc04104b6afb0da4961de3175c9a01bf19945fc5",
-          "size": 91122
+          "sha256": "0b3f97a2c8b1512572b299f604b1b8b4349483bdfb8fa20e805742af8567090a",
+          "size": 91634
         },
         {
           "path": "document.css",

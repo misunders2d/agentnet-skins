@@ -306,12 +306,15 @@ async function desktop() {
       await page.evaluate(conv => window.agentnet.api('/api/dm/send', { conv, body: 'Unrelated update after a spoiler reveal' }), conv);
       await page.waitForFunction(node => !node.isConnected, previousSpoiler);
     } finally { await previousSpoiler.dispose(); }
-    assert(await revealed.isVisible(), 'A live refresh keeps the same spoiler revealed');
-    const active = await revealed.evaluate(node => {
-      const active = node.getRootNode().activeElement;
-      return active === node ? 'spoiler' : [active?.tagName, active?.className];
-    });
-    assert.equal(active, 'spoiler', 'Refresh keeps focus on the revealed spoiler');
+    const afterRefresh = await page.evaluate(({zoom, messageID, revised}) => {
+      const root = document.querySelector('#skin').shadowRoot;
+      const message = zoom ? root.querySelector('.zoom-layer:last-child .zoom-message') : root.getElementById(messageID);
+      const selected = [...(message?.querySelectorAll('.message-spoiler[aria-pressed="true"]') || [])]
+        .find(node => node.textContent === revised);
+      return {visible: !!selected?.getClientRects().length, focused: !!selected && root.activeElement === selected};
+    }, {zoom, messageID, revised});
+    assert(afterRefresh.visible, 'A live refresh keeps the same spoiler revealed');
+    assert(afterRefresh.focused, 'Refresh keeps focus on the revealed spoiler');
 
     await message.getByRole('button', { name: 'Reply', exact: true }).first().click();
     await assertMask(quote(), revised);

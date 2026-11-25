@@ -12,10 +12,18 @@ const rootClass='.'+(process.env.AGENTNET_SKIN_FAMILY||m.id)+'-root';
   await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().click();await page.locator('#composer').waitFor();
   if(!await page.locator('.topic-chip').count()){await page.getByRole('button',{name:'New topic',exact:true}).click();await page.locator('#body').fill('Motion fixture topic');await page.locator('#composer').evaluate(f=>f.requestSubmit());await page.locator('.topic-chip').first().waitFor();}
   const main=()=>page.locator('.topics-bar').getByRole('button',{name:/^Main(?: flow)?$/,exact:true});
-  await page.locator('#body').fill('Unsent motion draft');await main().click();
-  assert.equal(await page.locator(rootClass).evaluate(r=>{r.__motionPrevious=r.querySelector('.instrument-sweep').getAnimations()[0];return r.__motionPrevious?.playState;}),'running');
-  await page.locator('.topic-chip').first().click();
-  assert(await page.locator(rootClass).evaluate(r=>r.__motionPrevious.playState==='idle'&&r.querySelector('.instrument-sweep').getAnimations().length===1),'Repeated selection cancels the previous sweep');
+  await page.locator('#body').fill('Unsent motion draft');
+  // Both selections must happen before the first sweep can finish naturally.
+  const interrupted=await main().evaluate((button,selector)=>{
+   const r=button.closest(selector),sweep=r.querySelector('.instrument-sweep');
+   button.focus();button.click();
+   const previous=sweep.getAnimations()[0],running=previous?.playState;
+   const topic=r.querySelector('.topic-chip');
+   topic.focus();topic.click();
+   const next=sweep.getAnimations();
+   return {running,cancelled:previous?.playState==='idle',replacement:next.length===1&&next[0]!==previous};
+  },rootClass);
+  assert.deepEqual(interrupted,{running:'running',cancelled:true,replacement:true},'Repeated selection cancels the previous sweep');
   assert.equal(await page.locator('#body').inputValue(),'Unsent motion draft');
   assert(await page.locator('.topics-bar').evaluate(bar=>bar.contains(bar.getRootNode().activeElement)),'Topic rerender preserves keyboard focus');
   await page.locator('#profile-btn').click();assert.equal(await page.locator('#settings .panel-shutter').count(),2,'Panel has actual split shutters');
@@ -39,7 +47,7 @@ const rootClass='.'+(process.env.AGENTNET_SKIN_FAMILY||m.id)+'-root';
   assert(await page.locator('#crew-toggle').evaluate(n=>n===n.getRootNode().activeElement),'Crew trigger regains focus');
   await page.emulateMedia({reducedMotion:'no-preference'});await page.locator('#crew-toggle').click();
   assert.equal(await page.locator('#crew-drawer .panel-shutter').count(),2);
-  await page.locator(rootClass).evaluate(r=>{r.__pendingMotion=[...r.getAnimations({subtree:true})].filter(a=>a.effect?.target?.matches('.instrument-sweep,.panel-shutter'));delete r.__motionPrevious;});
+  await page.locator(rootClass).evaluate(r=>{r.__pendingMotion=[...r.getAnimations({subtree:true})].filter(a=>a.effect?.target?.matches('.instrument-sweep,.panel-shutter'));});
   // Same public module lifecycle as the host, retaining references to prove cancellation.
   const moduleURL=await page.evaluate(()=>performance.getEntriesByType('resource').filter(e=>new URL(e.name).pathname.endsWith('/entry.mjs')).at(-1)?.name);assert(moduleURL,'Production loader loaded the public package entry');
   const stopped=await page.locator(rootClass).evaluate(async(r,url)=>{const animations=r.__pendingMotion;delete r.__pendingMotion;await (await import(url)).unmount(r);return {children:r.childElementCount,cancelled:animations.every(a=>a.playState==='idle')};},moduleURL);

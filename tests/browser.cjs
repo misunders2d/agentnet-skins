@@ -73,7 +73,7 @@ const zoom={
 const ui=family==='zoom'?zoom:classic;
 (async()=>{
  browser=await chromium.launch({headless:true,executablePath:process.env.AGENTNET_CHROMIUM||undefined});
- const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
+ const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.stack||e.message));
  await page.addInitScript(()=>{
   const NativeEventSource = window.EventSource;
   let changeStream;

@@ -1024,12 +1024,15 @@ button.reaction { cursor: pointer; }
   background: var(--surface); color: var(--text); border: 1px solid var(--line);
   border-radius: 12px; box-shadow: var(--shadow);
 }
-@supports (position-anchor: --format-field) {
-  .format-field:has(> .format-menu:popover-open) { anchor-name: --format-field; }
-  .format-menu {
-    position-anchor: --format-field; inset: auto; translate: none;
-    position-area: top span-right; position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
-    margin: 4px; justify-self: start;
+/* Keep touch choices in the viewport when a live update moves the editor. */
+@media (pointer: fine) {
+  @supports (position-anchor: --format-field) {
+    .format-field:has(> .format-menu:popover-open) { anchor-name: --format-field; }
+    .format-menu {
+      position-anchor: --format-field; inset: auto; translate: none;
+      position-area: top span-right; position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+      margin: 4px; justify-self: start;
+    }
   }
 }
 .format-menu button {

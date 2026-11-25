@@ -112,7 +112,7 @@ test('private runtime targets and Zoom Markdown use the current presentation', {
    if(skin==='zoom'){assert(result.bubbleStrong>=2);assert.equal(result.bubbleLinks,0);assert.equal(result.listItems,2);assert.equal(result.strong,2);assert.equal(result.code,'literal_*');assert.equal(result.active,0);assert.equal(result.href,'https://example.invalid/order');assert.equal(result.literalHTML,true);assert.equal(result.copyText,result.original);assert.equal(result.editorOriginal,result.original);assert.equal(result.restoredFormatted,2);assert.equal(result.literalCode,'raw_* &amp;');assert(result.literalText.includes('*literal*'));assert.equal(result.bodyFits,true);}
 
    // MEL-820: use the real permanent invitation dialog and prove the
-   // preview's cutoff sends one exact reference, with no unrelated turns.
+   // preview's cutoff reports the cap and sends exactly the newest available references.
    await page.clock.setFixedTime(new Date('2026-11-25T13:00:00Z'));
    const expectedHistory = await page.evaluate(() => {
     window.historyWrites = [];
@@ -122,16 +122,18 @@ test('private runtime targets and Zoom Markdown use the current presentation', {
     overview.people = [guest];
     const ref = {lid:'b'.repeat(32), author:'a'.repeat(32), hash:'f'.repeat(64)};
     const id = 'c'.repeat(64);
+    const included = Array.from({length:65}, (_,i) => ({id:'included-'+i,
+     at:new Date(Date.now()-45*60e3+i*1000).toISOString(), group_ref:{...ref,lid:(i+1).toString(16).padStart(32,'0')}}));
     const messages = [
      {id:'old', at:new Date(Date.now()-3*3600e3).toISOString(), group_ref:{...ref,lid:'a'.repeat(32)}},
-     {id:'included', at:new Date(Date.now()-30*60e3).toISOString(), group_ref:ref},
+     ...included,
      {id:'unshareable', at:new Date(Date.now()-20*60e3).toISOString()},
     ].map(m=>({dir:'in',from:self.address,body:'History message',...m}));
     const thread = {id, kind:'group', role:'member', title:'Harbor team', members:[self], agents:[], guests:[], messages};
     fixture.state.dm=id;
     fixture.state.dmData=thread;
     fixture.inviteGroupDialog(thread);
-    return {conv:id, person:guest.person, history:{refs:[ref]}};
+    return {conv:id, person:guest.person, history:{refs:included.slice(-64).map(m=>m.group_ref)}};
    });
    const invitation = page.locator('#skin #dialog');
    const since = invitation.getByRole('group',{name:'Share messages since'});
@@ -151,7 +153,7 @@ test('private runtime targets and Zoom Markdown use the current presentation', {
    assert.match(await since.getByRole('status').innerText(),/valid local date and time/);
    const beforePreset = await page.evaluate(()=>performance.now());
    await since.getByRole('button',{name:'Last hour',exact:true}).click();
-   assert.match(await since.getByRole('status').innerText(),/^1 message to share, starting /);
+   assert.match(await since.getByRole('status').innerText(),/^Newest 64 of 65 messages to share, starting /);
    assert.ok(await page.evaluate(async at=>{await new Promise(requestAnimationFrame);return performance.now()-at;},beforePreset)<1100);
    const fits = await since.evaluate(box=>[...box.querySelectorAll('input,button')].every(control=>{
     const rect=control.getBoundingClientRect();return rect.left>=0&&rect.right<=innerWidth&&rect.height>=44;

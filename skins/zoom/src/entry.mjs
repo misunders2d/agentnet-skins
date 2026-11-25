@@ -1897,8 +1897,9 @@ function inviteGroupDialog(t, initialPerson) {
   const selection = groupPeopleSelection(t, host, gen, ws, null, () => { person.disabled = true; });
   const mode = el("select", { id: "group-history-mode" }, el("option", { value: "none" }, "Share nothing earlier"), el("option", { value: "last" }, "Last messages"), el("option", { value: "since" }, "Share messages since"), el("option", {value:"selected"},"Selected messages"));
   const last = el("input", { id: "group-history-last", type: "number", min: 1, max: 64, value: "10" });
-  const shareable = (t.messages || []).filter(m => m.group_ref).slice(-64);
-  const since = inviteHistorySince(el, mode, shareable);
+  const available = (t.messages || []).filter(m => m.group_ref);
+  const shareable = available.slice(-64);
+  const since = inviteHistorySince(el, mode, available);
   dialog({ title: "Invite to " + t.title, ok: "Send invitation", focus: person,
     body: [el("label", { for: "group-invite-person", class: "field-label" }, "Single person (people list selection below)"), person, ...selection.nodes,
       !people.length && el("p", { class: "hint" }, "No other pinned person available. Open a person's conversation to check their device first."),

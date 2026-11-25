@@ -29,10 +29,10 @@ export function inviteHistorySince(el, mode, shareable) {
   };
   const update = () => {
     try {
-      const picked = selection();
+      const matches = selection(), picked = matches.slice(-64);
       const first = picked[0] && new Date(picked[0].at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
       status.textContent = first
-        ? picked.length + (picked.length === 1 ? " message" : " messages") + " to share, starting " + first + "."
+        ? (matches.length > picked.length ? "Newest 64 of " + matches.length + " messages" : picked.length + (picked.length === 1 ? " message" : " messages")) + " to share, starting " + first + "."
         : "No messages to share since then.";
     } catch (error) {
       status.textContent = error.message;
@@ -59,7 +59,7 @@ export function inviteHistorySince(el, mode, shareable) {
     fields.hidden = mode.value !== "since";
     if (!fields.hidden) update();
   });
-  return { fields, history: () => ({ refs: selection().map(message => message.group_ref) }) };
+  return { fields, history: () => ({ refs: selection().slice(-64).map(message => message.group_ref) }) };
 }
 
 export function mountSchedule({root,host,owner,context,capture,getDraft,setDraft,audienceText=defaultAudience,topicText=()=> 'Named topic',subscribe,isCurrent=()=>true,onBlockingChange,outboxRoot,onOutboxChange,chatText=()=> 'Chat',getDrafts=()=>[],resumeDraft,getReminders=()=>[],getReminderStatus=()=>[],openOriginalSave}) {

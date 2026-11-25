@@ -74,7 +74,7 @@ const ui=family==='zoom'?zoom:classic;
 (async()=>{
  browser=await chromium.launch({headless:true,executablePath:process.env.AGENTNET_CHROMIUM||undefined});
  const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
- if(family!=='zoom')await page.addInitScript(()=>{
+ await page.addInitScript(()=>{
   const NativeEventSource = window.EventSource;
   let changeStream;
   window.fixtureChangeStreamOpen = () => changeStream?.readyState===NativeEventSource.OPEN;
@@ -157,15 +157,30 @@ const ui=family==='zoom'?zoom:classic;
   const bounded=(promise,label)=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error(label+' exceeded the existing 15s bound')),15000);promise.then(v=>{clearTimeout(timer);resolve(v);},e=>{clearTimeout(timer);reject(e);});});
   await page.setViewportSize({width:390,height:844});
   for(const newer of [false,true]){
-   let firstStart,secondStart,firstDone,secondDone,releaseFirst,releaseSecond,count=0;
+   const body='Current Zoom visit push '+newer+' '+runID;
+   let firstStart,secondStart,firstDone,secondDone,releaseFirst,releaseSecond,opening=false,winning=false;
    const first=new Promise(r=>firstStart=r),second=new Promise(r=>secondStart=r),done1=new Promise(r=>firstDone=r),done2=new Promise(r=>secondDone=r),hold1=new Promise(r=>releaseFirst=r),hold2=new Promise(r=>releaseSecond=r);
-   const hold=async route=>{if(new URL(route.request().url()).searchParams.get('id')!==seed.dm_vitalii)return route.continue();const n=++count,response=await route.fetch();if(n===1){firstStart();await hold1;}else if(n===2){secondStart();await hold2;}await route.fulfill({response});if(n===1)firstDone();if(n===2)secondDone();};
+   const hold=async route=>{
+    if(new URL(route.request().url()).searchParams.get('id')!==seed.dm_vitalii)return route.continue();
+    const opens=!opening;
+    opening=true;
+    const response=await route.fetch();
+    // A startup refresh can run before the push. Only hold a DTO with the new message.
+    const hasPush=!opens&&!winning&&response.ok()&&(await response.json()).messages?.some(message=>message.body===body);
+    const wins=hasPush&&!winning;
+    if(opens){firstStart();await hold1;}
+    else if(wins){winning=true;secondStart();await hold2;}
+    await route.fulfill({response});
+    if(opens)firstDone();
+    if(wins)secondDone();
+   };
    await page.route('**/api/dm?*',hold);
    try{
     // This probes startup at an exact destination, including its cold DTO load.
     await page.goto('about:blank');const documentReady=page.waitForEvent('domcontentloaded');
     await page.goto(origin+'/?skin='+m.id+'#conv='+seed.dm_vitalii);await documentReady;await bounded(first,'exact destination opening');
-    const body='Current Zoom visit push '+newer+' '+runID, pushAt=performance.now();
+    await page.waitForFunction(()=>window.fixtureChangeStreamOpen());
+    const pushAt=performance.now();
     await page.evaluate(([conv,body])=>window.agentnet.api('/api/dm/send',{conv,body}),[seed.dm_vitalii,body]);
     await bounded(second,'pushed winning DTO');
     result.pushedGetMs.push(Math.round(performance.now() - pushAt));

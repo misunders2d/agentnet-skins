@@ -1054,3 +1054,19 @@ button.reaction { cursor: pointer; }
     min-width: 44px; min-height: 44px; max-width: 100%; align-content: center;
   }
 }
+
+/* MEL-822: compact rows and search on a desktop pointer; the same type sizes.
+   Zoom has no list column to hide or resize (its side is the zoom ladder and
+   its Chats item steps out to the top level), so only the density changes. */
+@media (min-width: 761px) and (pointer: fine) {
+  .zoom-side { padding: 14px 10px; gap: 12px; }
+  .zoom-search { min-height: 36px; padding: 6px 10px; margin: 6px 0; }
+  .zoom-contact { gap: 6px; padding: 10px; }
+  .zoom-contact .thread-row { padding: 6px 10px; }
+  .search { padding: 0 12px 8px; }
+  .search input { min-height: 36px; padding: 6px 10px; }
+  .conv-list { padding: 0 6px 10px; }
+  .conv-item { padding: 7px 8px; gap: 10px; }
+  .contact-item .conv-item { padding: 8px; }
+  .conv-item .avatar { width: 32px; height: 32px; }
+}

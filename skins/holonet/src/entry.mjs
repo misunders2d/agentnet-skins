@@ -8,7 +8,7 @@ import { formattingField, restoreMessageEdits } from "./text-formatting.mjs";
 import { messageMarkdown } from "./message-markdown.mjs";
 import { avatarPicture, openPictureEditor, pastePictures, sniffVideo } from "./pictures.mjs";
 import { topicControls } from './topics.mjs';
-import { watchVisibleRows } from './visible-rows.mjs';
+import { watchVisibleRows, listPanel } from './visible-rows.mjs';
 import { nativeActivityDetail } from './native-activity.mjs';
 import { unreadReview } from './unread-review.mjs';
 import { mountVideoFile, videoFileName } from './video-file.mjs';
@@ -6185,6 +6185,9 @@ function start() {
     for (const b of chatControls) b.addEventListener("click", () => $("dialog").close());
     dialog({ title: peer, body: [state.dmData ? deviceDisclosure(t.peer) : el("p", { class: "mono" }, state.data.key?.pinned || "Key not checked yet"), members, guests, past, actions, el("div",{class:"detail-actions"},linkButtons()), chatControls.length > 0 && el("div", { class: "detail-actions" }, chatControls), routing, remove], ok: "Close", run: async () => {} });
   });
+  // MEL-824: the active Chats or People item hides/shows the desktop list column.
+  const listColumn = listPanel({ grid: root.querySelector(".console-layout"), side: root.querySelector(".side"), toggles: [$("nav-chats"), $("nav-people")], reveals: [$("review-btn")],
+    key: manifest.id + ".listPanel", storage: () => root.ownerDocument.defaultView.localStorage, signal: abort.signal });
   $("nav-chats").addEventListener("click", () => selectSection("chats"));
   $("nav-people").addEventListener("click", () => selectSection("people"));
   $("profile-btn").addEventListener("click", showSettings);
@@ -6252,6 +6255,7 @@ function start() {
     if (e.key === "Escape" && !$("review").hidden) { toggleReview(false); $("review-btn").focus(); return; }
     if (e.key === "/" && !$("settings").open && !$("dialog").open && !$("routing-settings").open && !e.target.closest("input, textarea, select")) {
       e.preventDefault();
+      listColumn.reveal();
       $("search").focus();
       return;
     }

@@ -74,7 +74,9 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .lost { background: var(--danger-soft); color: var(--danger); }
 
 /* layout */
-.app { flex: 1; min-height: 0; display: grid; grid-template-columns: 320px minmax(0, 1fr); }
+/* The list track: the person's width (--list-width, listPanel in visible-rows.mjs) or 320px,
+   kept between 240 and 480px and never leaving the conversation under 440px. */
+.app { flex: 1; min-height: 0; display: grid; --list-track: clamp(240px, var(--list-width, 320px), max(240px, min(480px, 100% - 440px))); grid-template-columns: var(--list-track) minmax(0, 1fr); }
 
 /* avatars: initials on a colour picked from the address */
 .avatar {
@@ -947,4 +949,29 @@ button.reaction { cursor: pointer; }
     display: inline-block; box-sizing: border-box; vertical-align: middle;
     min-width: 44px; min-height: 44px; max-width: 100%; align-content: center;
   }
+}
+
+/* MEL-824/822: the desktop list column hides from its active rail item and
+   resizes from its edge (listPanel in visible-rows.mjs); its rows and search are compact. */
+.side > [data-part=list-resize] { display: none; }
+@media (min-width: 761px) {
+  .app[data-list-hidden] { --list-track: 0px; }
+  .app[data-list-resizing] { cursor: col-resize; user-select: none; }
+  .side { position: relative; min-width: 0; }
+  /* Hidden: still mounted at its own width (nothing inside reflows, its scroll
+     is kept), out of sight, out of the accessibility tree and inert. */
+  .side[data-hidden] { width: var(--list-held, 320px); visibility: hidden; border-right: 0; }
+  .side > [data-part=list-resize] { display: block; position: absolute; z-index: 5; top: 0; bottom: 0; right: -5px; width: 9px; cursor: col-resize; touch-action: none; outline: none; }
+  .side > [data-part=list-resize]::after { content: ""; position: absolute; top: 0; bottom: 0; left: 4px; width: 2px; background: transparent; transition: background-color 120ms ease; }
+  .side > [data-part=list-resize]:hover::after, .app[data-list-resizing] [data-part=list-resize]::after { background: var(--line); }
+  .side > [data-part=list-resize]:focus-visible::after { background: var(--accent); }
+}
+@media (min-width: 761px) and (pointer: fine) {
+  .side-head { padding: 14px 16px 8px; }
+  .search { padding: 0 12px 8px; }
+  .search input { min-height: 36px; padding: 6px 10px; }
+  .conv-list { padding: 0 6px 10px; }
+  .conv-item { padding: 7px 8px; gap: 10px; }
+  .contact-item .conv-item { padding: 8px; }
+  .conv-item .avatar { width: 32px; height: 32px; }
 }

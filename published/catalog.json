@@ -7,12 +7,12 @@
       "description": "AgentNet's original interface: your chats in a list on the left and the open conversation on the right, with topics, people, agents, activity and every setting one click away. Plain, familiar and quick on a desktop or a phone, in light and dark.",
       "version": "1.11.3",
       "api": 1,
-      "agentnet": "v0.11.11",
-      "digest": "8853cfcb8b708f95910ad44d2bd54cdf77811f3092ac27425d766ff9d7f69416",
+      "agentnet": "v0.11.12",
+      "digest": "6fc40b36473f697f37084b99401aff309347e67a66498d7245a4a65c47bed46f",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "13cf4be1d3b97ed4444a9c936052247b77ae68628e773ac6d5a4f4e34e005d4f",
+          "sha256": "992bf320e8187dfb0af78a6549ffe0bbea9045fa60dcbfbe3f444d2ce62a32ee",
           "size": 884
         },
         {
@@ -27,7 +27,7 @@
         },
         {
           "path": "manifest.mjs",
-          "sha256": "c26cc243e95fa863a62d921b99cb67c784595238905a1349b12b69adf5697518",
+          "sha256": "769782e4367ea7f026b807d7452dd75e989ce4ab51e9c711af55c4b9db6cc2f7",
           "size": 900
         },
         {
@@ -209,12 +209,12 @@
       "description": "A starship comms console for AgentNet: command navigation across the top, a framed transmission display, a crew panel and a command dock for writing. A brief scanner sweep and split shutters mark what you open, and both stay still when your device asks for less motion. Every chat, topic, agent and setting is still there.",
       "version": "1.11.3",
       "api": 1,
-      "agentnet": "v0.11.11",
-      "digest": "1665073480d6e9a87d417acfd63b0fc241dd36bad4b71d60ad1aed2edff85e3d",
+      "agentnet": "v0.11.12",
+      "digest": "b500e5cbe0cf2e4944703b3397d5629adc64423f2d8477e95257dc9deb58f151",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "a64c9f68e6879dcaf385b960ecfb97e8cc5cfb2eb6ebd51959530eb78a05d4ce",
+          "sha256": "49e3a8d1c9d46ef71b1872dd4ab6fdd4fc6cbf950c4f08a0f74d5fc0e61cce8f",
           "size": 846
         },
         {
@@ -229,7 +229,7 @@
         },
         {
           "path": "manifest.mjs",
-          "sha256": "2c83b45d9569dfb6de65aa00e60cf58ba4707df8fb3cca85337ad63039543c8d",
+          "sha256": "72f7f5986276ab83849ad012cc4d9a9659a283dc62d5ec845a3fe76ba0e9bd13",
           "size": 862
         },
         {
@@ -406,18 +406,18 @@
       "description": "A 1970s paperback by day and a roadside diner by night. Chats read like a table of contents, every topic opens with a chapter card, requests for your OK arrive as a glowing case, and your agents wear costumes. Everything Comic does, in a new look.",
       "version": "1.10.5",
       "api": 1,
-      "agentnet": "v0.11.11",
-      "digest": "f7f23e111240d014be3e40cbe6bae721528b8b647254a593e6e346bf8e532089",
+      "agentnet": "v0.11.12",
+      "digest": "e6afb5bb789de132dce3af0d9c3fd7cf84a18b3de0a24e9e7b0dbd7f7369811f",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "eb151dc260a028c3d4c437e344d2e00da88b4179b8edb16f422eab73fc583b92",
+          "sha256": "0de9857a84aa9144c72ac017dd5237009d64ceb1b07164f28fbccb9252f2757c",
           "size": 1240
         },
         {
           "path": "entry.mjs",
-          "sha256": "6b16730153b1c04910e53feff68eb1c5995780ae7aaf7db5f67f03b9d3fb0a02",
-          "size": 1535863
+          "sha256": "5cfbae0dcb7f597aa06adb60f675d4fa2d1e8bceb9b2b34401ea33857c3d4b42",
+          "size": 1538072
         },
         {
           "path": "style.css",
@@ -568,12 +568,12 @@
       "description": "Move through your workspace by zooming in: everyone, then one person, then a conversation, then a single message with everything known about it. Esc steps back out. You write in a focused dialog, and every chat, topic, agent and setting is still there.",
       "version": "1.11.3",
       "api": 1,
-      "agentnet": "v0.11.11",
-      "digest": "b7b8e7797d1f2faa6777691019d6735f5b6d4bfc4957d081d3dd92b32bd81a1e",
+      "agentnet": "v0.11.12",
+      "digest": "e8ad85fab30bf97ba96a7fa88a953b1f0a0ee25882e03efcc4534a0333507167",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "260009f94e34c1635a233f172f12034112ddd2372c731408e80329d061d81b24",
+          "sha256": "831889dbecc1d802673d4f62ca8711efa440bc8324a43f408eac74c48399b1fe",
           "size": 878
         },
         {
@@ -588,7 +588,7 @@
         },
         {
           "path": "manifest.mjs",
-          "sha256": "aa922931dcad54b84371e120b5a7a2681ac1c54e6a3b133b9a75a60cb3d1b85a",
+          "sha256": "9dcd4ede7c71e7613cb856ee783fb51442dc65d2bc7d1dccb087e40822002732",
           "size": 894
         },
         {

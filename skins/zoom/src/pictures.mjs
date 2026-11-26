@@ -39,15 +39,31 @@ export function cleanPicturePNG(b) {
 
 // Native reads happen only in response to a paste, after browser files. Native
 // image + text pastes attach the image; text-only pastes keep their usual text.
-export function pastePictures(e, add, {clipboardImage:read, insertText=()=>{}, error=()=>{}}={}) {
+// A paste whose event carries no text and no file may still hold text the web
+// view did not offer (WPS Office cells in WebKitGTK): the native clipboard text
+// then wins over its picture; a picture with no text still attaches
+// (host.clipboardText, AgentNet v0.11.12). A box that takes no files
+// (files:false) only recovers the text.
+export function pastePictures(e, add, {clipboardImage:read, clipboardText:readText, insertText=()=>{}, error=()=>{}, files:takeFiles=true}={}) {
+  if(!takeFiles)read=undefined;
   const files=[...(e.clipboardData?.files||[])];
-  if(files.length){e.preventDefault();add(files);return;}
-  if(typeof read!=="function")return;
+  if(files.length){if(!takeFiles)return;e.preventDefault();add(files);return;}
   const text=e.clipboardData?.getData("text/plain")||"";
+  const recover=!text&&typeof readText==="function";
+  if(typeof read!=="function"&&!recover)return;
   e.preventDefault();
-  return Promise.resolve().then(()=>read()).then(file=>{
-    if(file)add([file]);else if(text)insertText(text);
-  }).catch(()=>{if(text)insertText(text);else error("Could not paste the picture. Choose it with Add files instead.");});
+  const picture=()=>{
+    if(typeof read!=="function")return;
+    return Promise.resolve().then(()=>read()).then(file=>{
+      if(file)add([file]);else if(text)insertText(text);
+    }).catch(()=>{if(text)insertText(text);else error("Could not paste the picture. Choose it with Add files instead.");});
+  };
+  if(!recover)return picture();
+  // A failed text read (too long) says why and attaches nothing.
+  return Promise.resolve().then(()=>readText()).then(native=>{
+    if(typeof native==="string"&&native)insertText(native.replace(/\r\n?/g,"\n").replace(/\n$/,""));
+    else return picture();
+  },()=>error("Could not paste this text. It may be too long; paste a smaller part."));
 }
 
 export function pictureCrop(width,height,zoom=1,x=width/2,y=height/2) {

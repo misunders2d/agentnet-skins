@@ -666,13 +666,18 @@ function addFiles(list, pasted) {
 }
 
 // Capture the open draft before the native clipboard read can yield.
-function pastedFiles(e, add) {
+function pastedFiles(e, add, files = true) {
   const field=e.target, key=state.draftKey, host=currentHost, gen=state.gen;
   const here=()=>alive && field.isConnected && key===state.draftKey && host===currentHost && gen===state.gen;
+  const pastedInto=field.value, from=field.selectionStart, to=field.selectionEnd;
   void pastePictures(e,files=>{if(here())add(files);},{
     clipboardImage:host.clipboardImage?()=>host.clipboardImage():undefined,
-    insertText:text=>{if(here()){field.setRangeText(text,field.selectionStart,field.selectionEnd,"end");field.dispatchEvent(new Event("input",{bubbles:true}));}},
-    error:text=>{if(here())$("compose-error").textContent=text;}
+    clipboardText:host.clipboardText?()=>host.clipboardText():undefined,
+    // Where the person pasted: an edit made while a native read resolves
+    // cancels the paste with a notice instead of replacing other text.
+    insertText:text=>{if(!here())return;if(field.value!==pastedInto){$("compose-error").textContent="The text changed while pasting. Paste again.";return;}field.setRangeText(text,from,to,"end");field.dispatchEvent(new Event("input",{bubbles:true}));},
+    error:text=>{if(here())$("compose-error").textContent=text;},
+    files
   });
 }
 
@@ -5810,6 +5815,7 @@ async function refetch(first) {
       again = false;
       const gen = state.gen;
       const landing=state.messageOpening?.waiting&&state.dm?loadDM(false):null;
+      landing?.catch(()=>{}); // awaited below; a failed overview (the page being left) must not leave it unhandled
       const o = await loadOverview();
       if(landing)await landing;
       if (gen !== state.gen) break; // the workspace changed: its own switch loads the next view
@@ -6307,10 +6313,8 @@ function start() {
   // Files: chosen, pasted (an image in the clipboard) or dropped on the composer.
   $("attach").addEventListener("click", () => $("file-input").click());
   $("file-input").addEventListener("change", () => { addFiles([...$("file-input").files]); $("file-input").value = ""; });
-  $("body").addEventListener("paste", (e) => {
-    if (!filesAllowed()) return;
-    pastedFiles(e, files => addFiles(files, true));
-  });
+  // A box that takes no files still recovers clipboard text (WPS cells).
+  $("body").addEventListener("paste", (e) => pastedFiles(e, files => addFiles(files, true), filesAllowed()));
   bindFileDrop($("composer"), filesAllowed, addFiles, text => { $("compose-error").textContent = text; });
   $("review-btn").addEventListener("click", () => toggleReview());
   $("new-btn").addEventListener("click", () => newConversationDialog());

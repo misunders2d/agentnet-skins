@@ -95,7 +95,7 @@ AgentNet’s gallery reads only the **latest published GitHub release** of this 
 2. Fill `skins/<id>/gallery.json`: `version`, a plain description of at most 400 characters, and up to six PNG/WebP previews (at most 1 MiB each) with alt text. A skin without a description or a preview is left out of the catalog.
 3. `npm run publish` writes `published/<id>/` (the exact `dist/<id>` package and its previews) and `published/catalog.json`, deterministically. `npm run check` then recomputes every hash and digest.
 4. Commit `published/` with the change.
-5. The owner creates the GitHub release; only then does the gallery offer it. A skin’s `agentnet` field names the release it was checked against; older AgentNet releases list it as incompatible.
+5. Whoever drives the AgentNet release (usually its agent) merges this and creates the GitHub release, right after the AgentNet tag; only then does the gallery offer it. A skin’s `agentnet` field names the release it was checked against; older AgentNet releases list it as incompatible.
 
 ## Provenance
 

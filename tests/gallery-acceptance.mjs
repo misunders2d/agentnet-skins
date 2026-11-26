@@ -16,7 +16,10 @@ const fetcher=async(url,init)=>{
 };
 const store=[],local={supported:()=>true,prepare,catalog:async()=>store.map(x=>({...x})),install:async files=>{const {item}=await prepare(files);store.push(item);return item;}};
 const g=gallery({running:()=>running,fetcher,local}),list=await g.list(),catalog=JSON.parse(fs.readFileSync(path.join(published,'catalog.json'),'utf8')),results={};
-if(list.skins.length!==catalog.skins.length)throw Error('gallery listed '+list.skins.length+' of '+catalog.skins.length+' catalog skins');
+// The gallery never offers a skin this AgentNet has built in (Office from v0.11.10): it is already here.
+const offered=catalog.skins.filter(s=>!reserved.includes(s.id));
+if(list.skins.length!==offered.length)throw Error('gallery listed '+list.skins.length+' of '+offered.length+' offered catalog skins');
+for(const s of catalog.skins.filter(s=>reserved.includes(s.id)))results[s.id]='not offered: built into this AgentNet';
 for(const s of list.skins){
  if(s.state!=='install')throw Error(s.id+': gallery state '+s.state+' on AgentNet '+running);
  for(let i=0;i<s.previews;i++){const blob=await g.preview(s.id,i);if(!blob.size)throw Error(s.id+': empty preview');}

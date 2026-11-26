@@ -4202,6 +4202,18 @@ const decisionActions = ["continue", "accept", "accept_always", "decline", "appr
 // an agent already got; a deletion hides text and files here and on
 // devices that can read one, and undoes nothing else.
 
+function editOutcome(m) {
+  if (m.deleted || !m.edited) return null;
+  const text = {
+    queued: "Edit queued for the agent",
+    running: "Agent processing the edit",
+    steered: "Edit reached the running agent",
+    answered: "Agent replied to the edit",
+    failed: "Edit could not be applied to the agent’s work",
+  }[m.edit_execution];
+  return typeof text === "string" ? el("span", { class: "edited", role: "status" }, " · " + text) : null;
+}
+
 const shownText = (m) => (m.deleted ? "" : m.edited && typeof m.text === "string" ? m.text : m.body);
 // A reactor is {id, label} (a person, or a device address): two people with
 // one label stay two entries; the label alone is never an identity. An
@@ -4382,7 +4394,7 @@ function messageBody(m) {
   const target = (m.kind === "question" || m.kind === "task") && m.pid ? agentOf(m.pid) : null;
   const recipient = (m.kind === "question" || m.kind === "task") && m.pid && el("span", {class:"addressed-agent", "data-agent-recipient":"", title:m.pid}, "To @" + (target ? agentName(target) : "agent") + "\n");
   if (confirmedTask(m)) return approvalBody(m, recipient);
-  return el("div", { class: "body body-markdown" }, recipient, formattedNodes(shownText(m)), m.edited && el("span", { class: "edited", title: "Revision " + (m.revision || "") }, " · edited"));
+  return el("div", { class: "body body-markdown" }, recipient, formattedNodes(shownText(m)), m.edited && el("span", { class: "edited", title: "Revision " + (m.revision || "") }, " · edited"), editOutcome(m));
 }
 
 // Only the signed projection's bound confirmation is compact, never matching text.
@@ -6881,7 +6893,7 @@ const Zoom = {
         const bubble = el(compact ? "div" : "button", { ...(compact ? {} : {type:"button"}), class: compact ? "mc-bubble compact-approval-bubble" : "mc-bubble" },
           el("span", { class: "mc-who", title: fullStamp(m.sent_at || m.at) }, dmAuthor(m, d) + (kindTag[m.kind] ? " · " + kindTag[m.kind] : "") + (to ? " · to " + to : "") + " · " + sentWhen(m)),
           !m.deleted && (m.kind === "question" || m.kind === "task") && m.pid && el("span", {class:"mc-who", "data-agent-recipient":"", title:m.pid}, "To @" + (agentOf(m.pid) ? agentName(agentOf(m.pid)) : "agent")),
-          compact ? approvalBody(m) : !groupPart && el("span", { class: "mc-text" + (m.deleted ? " tombstone" : "") }, m.deleted ? "Message deleted" : formattedNodes(shownText(m),true), !m.deleted && m.edited ? " · edited" : ""),
+          compact ? approvalBody(m) : !groupPart && el("span", { class: "mc-text" + (m.deleted ? " tombstone" : "") }, m.deleted ? "Message deleted" : formattedNodes(shownText(m),true), !m.deleted && m.edited ? " · edited" : "", editOutcome(m)),
           !m.deleted && (m.attachments || []).length > 0 && el("span", { class: "mc-files" }, "📎 " + m.attachments.map((f) => f.name).join(", ")),
           (m.reactions || []).length > 0 && el("span", { class: "mc-files" }, m.reactions.map((r) => r.emoji + " " + (r.by || []).length).join("  ")));
         if (compact) bubble.append(el("button", {type:"button",class:"text-btn",onclick:()=>this.go(3,{msg:m.id},bubble)}, "Message details"));
@@ -6954,7 +6966,7 @@ const Zoom = {
         const compact = !m.deleted && confirmedTask(m);
         const bubble = el(compact ? "div" : "button", { ...(compact ? {} : {type:"button"}), class: compact ? "mc-bubble compact-approval-bubble" : "mc-bubble" },
           el("span", { class: "mc-who", title: fullStamp(m.sent_at || m.at) }, authorName(m) + (kindTag[m.kind] ? " · " + kindTag[m.kind] : "") + " · " + sentWhen(m)),
-          compact ? approvalBody(m) : el("span", { class: "mc-text" + (m.deleted ? " tombstone" : "") }, m.deleted ? "Message deleted" : formattedNodes(shownText(m),true), !m.deleted && m.edited ? " · edited" : ""),
+          compact ? approvalBody(m) : el("span", { class: "mc-text" + (m.deleted ? " tombstone" : "") }, m.deleted ? "Message deleted" : formattedNodes(shownText(m),true), !m.deleted && m.edited ? " · edited" : "", editOutcome(m)),
           (m.reactions || []).length > 0 && el("span", { class: "mc-files" }, m.reactions.map((r) => r.emoji + " " + (r.by || []).length).join("  ")));
         if (compact) bubble.append(el("button", {type:"button",class:"text-btn",onclick:()=>this.go(3,{msg:m.id},bubble)}, "Message details"));
         else bubble.addEventListener("click", () => this.go(3, { msg: m.id }, bubble));

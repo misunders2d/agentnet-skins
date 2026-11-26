@@ -1744,14 +1744,14 @@ function incomingGroupInvites(invitations = []) {
   return incoming.filter(i => i.status !== "stale" || !current.has(JSON.stringify([i.conv, i.inviter])));
 }
 
-function groupsSection(open = openDM) {
+function groupsSection(open = openDM, includeChats = true) {
   const o = state.overview;
   if (!o?.groups) return [];
-  return [el("li", { class: "result-head" }, "Groups", el("button", { type: "button", class: "text-btn", onclick: newGroupDialog }, "New group…")),
+  return [el("li", { class: "result-head" }, includeChats && "Groups", el("button", { type: "button", class: "text-btn", onclick: newGroupDialog }, "New group…")),
     ...incomingGroupInvites(o.group_invitations || []).map(i => el("li", {},
       el("button", { type: "button", class: "thread-row", onclick: () => groupInvitationDialog(i) }, "Invitation: " + i.title + " · from " + i.inviter))),
     ...groupInvitationNotices().map(i => el("li", { class: "hint" }, groupInvitationNotice(i), i.direction === "out" && el("button", { type: "button", class: "text-btn", onclick: () => reviewFreshGroupInvitation(i, open) }, "Review fresh invitation for " + personLabelOf(i.target) + "…"))),
-    ...(o.dms || []).filter(humanGroup).map(d => dmRow(d, open))];
+    ...(includeChats ? (o.dms || []).filter(humanGroup).map(d => dmRow(d, open)) : [])];
 }
 
 // Team membership is only a reviewed person selection, never room authority.
@@ -3859,8 +3859,10 @@ function toggleReview(open) {
 
 // The everyday list shows recent people, not every device and conversation.
 // Directory browsing is explicit; search still covers everything held here.
-function sidebarEntries(threads) {
-  const o = state.overview || {}, dms = o.dms || [], contacts = contactsOf(threads);
+function sidebarEntries(threads, grouped = false) {
+  const o = state.overview || {};
+  const dms = (o.dms || []).filter(d => !grouped || !humanGroup(d));
+  const contacts = contactsOf(threads).filter(c => !grouped || !c.binding.agent);
   const entries = (o.people || []).map((p) => {
     const chats = dms.filter((d) => personKey(d.peer) === personKey(p)).sort((a, b) => new Date(b.last_at) - new Date(a.last_at));
     const devices = contacts.filter((c) => devicesOf(p).some((d) => d.address === c.peer));
@@ -3888,11 +3890,59 @@ function contactRow(c) {
           c.keyChanged && el("span", { class: "conv-flag danger" }, "Key changed"), counts(c)))));
 }
 
+const chatLayoutKey = "agentnet." + skinKey + ".chat-list-layout";
+let groupedChats = true;
+try { groupedChats = localStorage.getItem(chatLayoutKey) !== "recent"; } catch {}
+const closedChatSections = new Set();
+narrowView.addEventListener("change", () => {
+  if (state.overview) renderThreads(state.overview.threads);
+}, { signal: abort.signal });
+
+function chatSection(label, rows, unread) {
+  if (!rows.length) return null;
+  const id = "chat-section-" + label.toLowerCase();
+  const body = el("ul", { id, "aria-label": label, hidden: closedChatSections.has(label) }, rows);
+  const button = el("button", { type: "button", "aria-expanded": String(!body.hidden), "aria-controls": id }, label,
+    unread > 0 && el("span", { class: "count" }, unread + " unread"));
+  button.addEventListener("click", () => {
+    body.hidden = !body.hidden;
+    if (body.hidden) closedChatSections.add(label);
+    else closedChatSections.delete(label);
+    button.setAttribute("aria-expanded", String(!body.hidden));
+  });
+  return el("li", { class: "chat-section" }, button, body);
+}
+
+function groupedChatRows(o, threads) {
+  const groups = (o.dms || []).filter(humanGroup);
+  const dms = sidebarEntries(threads, true);
+  const agents = contactsOf(threads).filter(c => c.binding.agent);
+  const unread = rows => rows.reduce((n, row) => n + (row.unread || 0), 0);
+  return [
+    ...groupsSection(openDM, false),
+    chatSection("Groups", groups.map(d => dmRow(d, openDM)), unread(groups)),
+    chatSection("DMs", dms.map(e => e.person ? personRow(e.person, e.chats) : contactRow(e.contact)), unread(dms)),
+    chatSection("Agents", agents.map(contactRow), unread(agents)),
+    !groups.length && !dms.length && !agents.length && el("li", { class: "hint empty-list" }, "No recent conversations. Find someone in People or use search."),
+  ];
+}
+
 function contactControls() {
+  const modes = narrowView.matches ? { recent: "Recent", unread: "Unread" } : { grouped: "Grouped", recent: "Recent", unread: "Unread" };
+  const selected = !narrowView.matches && state.contactView === "recent" && groupedChats ? "grouped" : state.contactView;
   return el("div", { role: "group", "aria-label": "Browse conversations", class: "contact-modes" },
-    Object.entries(state.contactView === "people" ? {} : { recent: "Recent", unread: "Unread" }).map(([key, label]) =>
-      el("button", { type: "button", "aria-pressed": String(state.contactView === key),
-        onclick: () => { state.contactView = key; state.contactLimit = 20; rerenderContacts(); } }, label)));
+    Object.entries(modes).map(([key, label]) =>
+      el("button", { type: "button", "data-chat-layout": key, "aria-pressed": String(selected === key),
+        onclick: () => {
+          if (key !== "unread" && !narrowView.matches) {
+            groupedChats = key === "grouped";
+            try { localStorage.setItem(chatLayoutKey, groupedChats ? "grouped" : "recent"); } catch {}
+          }
+          state.contactView = key === "unread" ? "unread" : "recent";
+          state.contactLimit = 20;
+          rerenderContacts();
+          $("conv-list").querySelector('[data-chat-layout="' + key + '"]')?.focus();
+        } }, label)));
 }
 
 function moreContacts(total) {
@@ -3907,6 +3957,10 @@ function renderThreads(threads) {
   const labels = { recent: "Recent", unread: "Unread", people: "People" };
   $("list-title").textContent = labels[state.contactView];
   const tabs = state.contactView !== "people" && el("li", { class: "contact-tabs" }, contactControls());
+  if (!narrowView.matches && groupedChats && state.contactView === "recent") {
+    fill(list, tabs, ...linkNotices().map(n => el("li", {}, n)), ...groupedChatRows(state.overview || {}, threads));
+    return;
+  }
   const o = state.overview || {}, entries = sidebarEntries(threads), shown = entries.slice(0, state.contactLimit);
   fill(list, tabs, ...linkNotices().map((n) => el("li", {}, n)),
     state.contactView === "people" && (o.person ? el("li", { class: "directory-self" },
@@ -4177,6 +4231,18 @@ const decisionActions = ["continue", "accept", "accept_always", "decline", "appr
 // an agent already got; a deletion hides text and files here and on
 // devices that can read one, and undoes nothing else.
 
+function editOutcome(m) {
+  if (m.deleted || !m.edited) return null;
+  const text = {
+    queued: "Edit queued for the agent",
+    running: "Agent processing the edit",
+    steered: "Edit reached the running agent",
+    answered: "Agent replied to the edit",
+    failed: "Edit could not be applied to the agent’s work",
+  }[m.edit_execution];
+  return typeof text === "string" ? el("span", { class: "edited", role: "status" }, " · " + text) : null;
+}
+
 const shownText = (m) => (m.deleted ? "" : m.edited && typeof m.text === "string" ? m.text : m.body);
 // A reactor is {id, label} (a person, or a device address): two people with
 // one label stay two entries; the label alone is never an identity. An
@@ -4348,7 +4414,7 @@ function bodyOf(m) {
 function messageBody(m) {
   if (m.deleted) return el("p", { class: "body tombstone" }, "Message deleted");
   if (isReport(m)) return el("p", { class: "body report-body" }, reportText(m)); // a report from another machine: what it says, never its raw record
-  return el("div", { class: "body body-markdown" }, formattedNodes(shownText(m)), m.edited && el("span", { class: "edited", title: "Revision " + (m.revision || "") }, " · edited"));
+  return el("div", { class: "body body-markdown" }, formattedNodes(shownText(m)), m.edited && el("span", { class: "edited", title: "Revision " + (m.revision || "") }, " · edited"), editOutcome(m));
 }
 // messageNodes: a message's text with its links clickable and its exact
 // mentions as chips (Classic's link-text module).

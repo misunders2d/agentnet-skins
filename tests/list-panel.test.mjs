@@ -19,7 +19,9 @@ const at=i=>new Date(Date.now()-i*3600e3).toISOString();
 const chats=peers.map((peer,i)=>({id:i?String.fromCharCode(100+i).repeat(64):id,kind:'dm',title:peer.label,peer,role:'member',members:[me,peer],agents:[],guests:[],topics:[],last:'Note number '+i+' about the kiln schedule',last_at:at(i),
  messages:[{id:String(i+1).padStart(32,'0'),lid:String(i+1).padStart(32,'0'),kind:'message',dir:'in',from:peer.address,to:me.address,author:peer.label,body:'Hello from '+peer.label,at:at(i),reactions:[],can:['react']}]}));
 let opened;window.fixture={open:()=>opened(id,'conversation'),review:()=>opened('','review')};const calls=window.calls=[];
-const overview={version:'fixture',seq:1,topic_list:true,me,person:me,persons:true,groups:true,files:{max_file:1024,max_count:10},people:peers,threads:[],topics:[],dms:chats,directory:{current:true,members:[]},review:[],quarantine:[],links:[]};
+const group={...chats[0],id:'f'.repeat(64),kind:'group',title:'Kiln team',renamed:true,unread:2};
+const agent={id:'a'.repeat(32),peer:'atlas/srv',title:'Agent journal',last:'Review complete',last_at:at(0),count:2,review:0,unread:0,running:0,notices:0,agent_id:'b'.repeat(32),agent_host:'atlas/srv',agent_key:me.fingerprint};
+const overview={version:'fixture',seq:1,topic_list:true,me,person:me,persons:true,groups:true,files:{max_file:1024,max_count:10},people:peers,threads:skin==='zoom'?[]:[agent],topics:[],dms:skin==='zoom'?chats:[...chats,group],directory:{current:true,members:[]},review:[],quarantine:[],links:[]};
 const host={version:1,platform:'daemon',workspace:{id:'list-fixture',name:'List fixture',state:'enrolled',address:me.address},skins:[],onSkinsChange(){return()=>{}},onOpen:fn=>opened=fn,listen(){return()=>{}},
  api:async(p,b)=>{calls.push(b===undefined?'GET '+p:'POST '+p);if(p.startsWith('/api/overview'))return structuredClone(overview);if(p.startsWith('/api/dm?')){const c=chats.find(c=>p.includes(c.id));return structuredClone(c||chats[0]);}if(p.startsWith('/api/agents'))return{agents:[]};if(p.includes('/groups/invitations'))return[];if(p.startsWith('/api/typing/status'))return{send:false,scopes:[]};return{};}};
 const base='/skin/'+skin+'/',manifest=await(await fetch(base+'skin.json')).json();
@@ -55,6 +57,16 @@ test('Classic, Holonet and QA Orbit hide, show and resize the desktop list colum
    page.setDefaultTimeout(8000);page.on('pageerror',e=>errors.push(String(e.stack)));
    await page.goto(origin+'/?skin='+skin);await page.waitForFunction(()=>window.ready);
    const u=ui(page);await page.evaluate(()=>fixture.open());await u.body.waitFor();
+   const sections=u.list.locator('.chat-section');
+   assert.deepEqual(await sections.locator('> ul').evaluateAll(lists=>lists.map(list=>list.getAttribute('aria-label'))),['Groups','DMs','Agents']);
+   const groupToggle=sections.getByRole('button',{name:'Groups 2 unread'}),groupChats=sections.getByRole('list',{name:'Groups'});
+   await timed(page,tag+' group collapse',()=>groupToggle.click(),async()=>await groupToggle.getAttribute('aria-expanded')==='false'&&!(await groupChats.isVisible()),timings);
+   await u.search.fill('Kiln team');await u.list.getByText('Kiln team',{exact:true}).waitFor();
+   await u.search.clear();await groupToggle.waitFor();assert.equal(await groupToggle.getAttribute('aria-expanded'),'false');
+   await timed(page,tag+' group expand',()=>groupToggle.press('Enter'),async()=>await groupChats.isVisible(),timings);
+   const mode=u.list.getByRole('button',{name:'Recent',exact:true});
+   await timed(page,tag+' recent list',()=>mode.click(),async()=>await mode.getAttribute('aria-pressed')==='true'&&await sections.count()===0,timings);
+   await u.list.getByRole('button',{name:'Grouped',exact:true}).click();
    await u.body.fill('Draft kept while the list hides');
    await page.locator('#skin #file-input').setInputFiles({name:'panel-note.txt',mimeType:'text/plain',buffer:Buffer.from('kept')});
    await page.locator('#skin #attach-list').getByText('panel-note.txt').waitFor();
@@ -149,6 +161,7 @@ test('Classic, Holonet and QA Orbit hide, show and resize the desktop list colum
    assert.equal(await u.sep.count(),0,skin+' phone: no separator');
    assert.equal(await u.chats.getAttribute('aria-expanded'),null,skin+' phone: Chats is not a toggle');
    if(skin!=='zoom'){assert.equal(await u.side.getAttribute('data-hidden'),null,skin+' phone: list shown');assert.equal(await u.side.evaluate(el=>el.inert),false);assert.ok(await width(u.side)>=380,skin+' phone: full width list');}
+   assert.equal(await u.list.getByRole('button',{name:'Grouped',exact:true}).count(),0,skin+' phone: no desktop grouping control');
    if(shots)await page.screenshot({path:path.join(shots,'list-'+skin+'-390.png')});
    assert.deepEqual(errors,[]);ran.push(skin+' 390');await context.close();
   }

@@ -973,3 +973,15 @@ button.reaction { cursor: pointer; }
   .conv-list { padding: 0 6px 10px; }
   .contact-item .conv-item { padding: 8px; }
 }
+
+.chat-section { border-top: 1px solid var(--line); }
+.chat-section > button {
+  min-height: 36px; width: 100%; display: flex; align-items: center; gap: 8px; padding: 4px 8px;
+  border: 0; border-radius: 6px; background: transparent; color: var(--text); font: inherit;
+  font-size: 14px; font-weight: 650; text-align: left; cursor: pointer;
+}
+.chat-section > button::before { content: "▸"; }
+.chat-section > button[aria-expanded="true"]::before { content: "▾"; }
+.chat-section > button:hover { background: var(--sunken); }
+.chat-section > button .count { margin-inline-start: auto; }
+.chat-section > ul { list-style: none; padding: 0; margin: 0; }

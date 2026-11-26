@@ -210,7 +210,7 @@
       "version": "1.11.3",
       "api": 1,
       "agentnet": "v0.11.12",
-      "digest": "b500e5cbe0cf2e4944703b3397d5629adc64423f2d8477e95257dc9deb58f151",
+      "digest": "1a2d640511d5c3229c2a64ea7590ddf482431b340053c374a24adb6efec1e008",
       "files": [
         {
           "path": "skin.json",
@@ -264,8 +264,8 @@
         },
         {
           "path": "assistant-setup.mjs",
-          "sha256": "6dc94820288d2eaf084993bb82be2bc341a88825e806319ce6b3fccefe19f7c8",
-          "size": 20360
+          "sha256": "9e020e142ca2f5cb70b2ef07a69ccf2d12a99cc14229f7e2a8ae5ad119602dbc",
+          "size": 20675
         },
         {
           "path": "assistant-setup.css",

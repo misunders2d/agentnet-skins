@@ -310,9 +310,17 @@ async function desktop() {
     };
     const spoiler = {zoom, messageID, revised};
     const previousSpoiler = await page.evaluateHandle(readSpoiler, {...spoiler, focus: true});
+    const update = tag + ' while a spoiler is revealed';
     try {
-      await page.evaluate(conv => window.agentnet.api('/api/dm/send', { conv, body: 'Unrelated update after a spoiler reveal' }), conv);
-      await page.waitForFunction(node => !node.isConnected, previousSpoiler);
+      await page.evaluate(([conv, body]) => window.agentnet.api('/api/dm/send', { conv, body }), [conv, update]);
+      if (zoom) {
+        // Zoom's message detail does not show the other conversation rows.
+        await page.waitForFunction(node => !node.isConnected, previousSpoiler);
+      } else {
+        // The host write bypasses the composer. Seeing this exact new row
+        // proves the timeline applied a pushed refresh before we read focus.
+        await list().getByText(update, { exact: true }).waitFor();
+      }
     } finally { await previousSpoiler.dispose(); }
     const afterRefresh = await page.evaluate(readSpoiler, spoiler);
     assert(afterRefresh.visible, 'A live refresh keeps the same spoiler revealed');

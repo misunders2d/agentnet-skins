@@ -285,7 +285,14 @@ const ui=family==='zoom'?zoom:classic;
   finally{await page.unroute('**/api/dm/agent/ask',stop);}
   check(asked?.pid===agent.pid&&asked?.kind==='question','One Send from the exact concrete own-agent @ entry reaches that participation');check(asked&&!('reply_receiver' in asked),'An own-device agent is asked without a default reply receiver');
   check(await ui.asking(),'A failed ask keeps its assistant with the restored text');await shot('own-agent-ask');
-  await ui.reopen();check((await ui.draft()).includes('Own agent '+runID)&&await ui.asking(),'The restored ask (text and assistant) is kept as the draft across leaving and reopening the chat');
+  await ui.reopen();
+  const restoredText=(await ui.draft()).includes('Own agent '+runID);
+  // Reopening restores the target ID with the draft. Its verified display
+  // name can arrive separately, after the composer is already visible.
+  const restoredAssistant=family==='zoom'?await ui.asking():await page.locator('#send').and(page.getByRole('button',{
+   name:'Ask '+fixtureAgentNames.get(agent.pid).replace(/^Your/,'your'),exact:true,
+  })).waitFor().then(()=>true,()=>false);
+  check(restoredText&&restoredAssistant,'The restored ask (text and assistant) is kept as the draft across leaving and reopening the chat');
   await ui.clear();
   // Retrying a failed ask to A while drafting for B: the retry goes to A and
   // shows A, and B's draft and target stay. B is a synthetic second assistant

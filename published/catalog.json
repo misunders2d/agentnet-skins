@@ -8,7 +8,7 @@
       "version": "1.11.3",
       "api": 1,
       "agentnet": "v0.11.12",
-      "digest": "6fc40b36473f697f37084b99401aff309347e67a66498d7245a4a65c47bed46f",
+      "digest": "c021d5536cab8c2274133319fc7566293c72decf922a59092cd02a9a9fa538bc",
       "files": [
         {
           "path": "skin.json",
@@ -17,8 +17,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "2a03306c8bd42469613ceca7077f417b9f924ba769ac5e2e613ecaf56a6b2c5e",
-          "size": 482206
+          "sha256": "27283898a9ca9022b34ed1cf6c6b061e2261893eca4f6d81f3e49aac80f521c5",
+          "size": 482783
         },
         {
           "path": "composer-followup.mjs",
@@ -102,8 +102,8 @@
         },
         {
           "path": "pictures.mjs",
-          "sha256": "7adee51f9967fe8b1c59fc9f6d7fc444d81d09d96c6362c7c75291f2c9508eec",
-          "size": 12898
+          "sha256": "624a2feb1f55b47f6220aa6b5b2cab26034ff3989be0ca7a890e6647e2a1392d",
+          "size": 13850
         },
         {
           "path": "link-text.mjs",
@@ -210,7 +210,7 @@
       "version": "1.11.3",
       "api": 1,
       "agentnet": "v0.11.12",
-      "digest": "1a2d640511d5c3229c2a64ea7590ddf482431b340053c374a24adb6efec1e008",
+      "digest": "4e93e0cd74b331cad0d6e11b170e52ad63d71cabc60d962ec5a04d638602d9b4",
       "files": [
         {
           "path": "skin.json",
@@ -219,8 +219,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "7da39a476ff13163c1abdcafcc5c68797c718cbb32bebd87d71e7aac488fdc1b",
-          "size": 456713
+          "sha256": "c7dc1d293476d25f99eb876130a8fdfe77bafd07004b12973defc51b25f0f633",
+          "size": 457290
         },
         {
           "path": "composer-followup.mjs",
@@ -304,8 +304,8 @@
         },
         {
           "path": "pictures.mjs",
-          "sha256": "7adee51f9967fe8b1c59fc9f6d7fc444d81d09d96c6362c7c75291f2c9508eec",
-          "size": 12898
+          "sha256": "624a2feb1f55b47f6220aa6b5b2cab26034ff3989be0ca7a890e6647e2a1392d",
+          "size": 13850
         },
         {
           "path": "signal.svg",
@@ -407,7 +407,7 @@
       "version": "1.10.5",
       "api": 1,
       "agentnet": "v0.11.12",
-      "digest": "e6afb5bb789de132dce3af0d9c3fd7cf84a18b3de0a24e9e7b0dbd7f7369811f",
+      "digest": "d3366150eeea195dea94f51539abb975d8e41b4a5e52d1aaceb685d680800d95",
       "files": [
         {
           "path": "skin.json",
@@ -416,8 +416,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "5cfbae0dcb7f597aa06adb60f675d4fa2d1e8bceb9b2b34401ea33857c3d4b42",
-          "size": 1538072
+          "sha256": "308fb948e728c0e1047d9bea702d1c8c7a23075cf7fea7c3f44609e8d773d5cc",
+          "size": 1538653
         },
         {
           "path": "style.css",
@@ -569,7 +569,7 @@
       "version": "1.11.3",
       "api": 1,
       "agentnet": "v0.11.12",
-      "digest": "e8ad85fab30bf97ba96a7fa88a953b1f0a0ee25882e03efcc4534a0333507167",
+      "digest": "84e1a5d22647e29eebab40b7cbb76767a8af32b30752130bf645672f3a3e5749",
       "files": [
         {
           "path": "skin.json",
@@ -578,8 +578,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "88aef94d733effaf98226ce564ddfd8023c6236b8156dd218bb9ddc7fbab08e9",
-          "size": 502585
+          "sha256": "a0c745b98147f178083a4fa7c0e034b09724c0197ae136193abd41b9dffd7d9f",
+          "size": 503162
         },
         {
           "path": "composer-followup.mjs",
@@ -663,8 +663,8 @@
         },
         {
           "path": "pictures.mjs",
-          "sha256": "7adee51f9967fe8b1c59fc9f6d7fc444d81d09d96c6362c7c75291f2c9508eec",
-          "size": 12898
+          "sha256": "624a2feb1f55b47f6220aa6b5b2cab26034ff3989be0ca7a890e6647e2a1392d",
+          "size": 13850
         },
         {
           "path": "link-text.mjs",

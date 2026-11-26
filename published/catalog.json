@@ -5,10 +5,10 @@
       "id": "classic",
       "name": "Classic",
       "description": "AgentNet's original interface: your chats in a list on the left and the open conversation on the right, with topics, people, agents, activity and every setting one click away. Plain, familiar and quick on a desktop or a phone, in light and dark.",
-      "version": "1.11.1",
+      "version": "1.11.2",
       "api": 1,
       "agentnet": "v0.11.8",
-      "digest": "16e3a57ab373f4dc5f4e9f828f461f11845d6f22ce23fa77aa6f22b45ded2ae1",
+      "digest": "a99088d693c12c309821123d1276178c25dccac5c0c6cc517822a1548f38abb4",
       "files": [
         {
           "path": "skin.json",
@@ -17,8 +17,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "f5aa7ee2e077fe36ea8279263b5808c656093af4a9e87bc02f70f4a6f70a9e0c",
-          "size": 470200
+          "sha256": "4753ec76677469a3f7d9aed5f14ed5332b91edded085baaf2cee83c186ed387e",
+          "size": 478941
         },
         {
           "path": "composer-followup.mjs",
@@ -32,13 +32,13 @@
         },
         {
           "path": "style.css",
-          "sha256": "5ce5f5d445b0df4e647428ff241f6b0c23b34c76733c2dd30151550f52d081fe",
-          "size": 64272
+          "sha256": "16314c2fd162348eb330a59cda240a80294bf2755f05f9f05bcb919fb8eb9215",
+          "size": 66707
         },
         {
           "path": "template.mjs",
-          "sha256": "079b9e9469977b100c4e4af12c7500b3faa0e898f87bfac8d72bba01c7ddb3d7",
-          "size": 14172
+          "sha256": "3ffc2654887f6fb527dab7ae91ef6e5390091d4f2764f4687b7f7826ff790db5",
+          "size": 14153
         },
         {
           "path": "typing.mjs",
@@ -112,13 +112,13 @@
         },
         {
           "path": "text-formatting.mjs",
-          "sha256": "4877d0f7cb24292663fec3042fd9f17a02fc2e8dc884c67faa9ee7481b4657b1",
-          "size": 8850
+          "sha256": "2df2420558c5af3fa8b5e73ffa3410e3721ce77a8408802fc9fe3a8a7263d469",
+          "size": 9147
         },
         {
           "path": "message-markdown.mjs",
-          "sha256": "5d01cf0d630f34bbdd511cad719652f2260eb4e86db4a3dffae7ee086e2d8e00",
-          "size": 4989
+          "sha256": "2699bfb3d0d799d60216873f75514e21ceb31bb619940618f4f7f367121889d1",
+          "size": 6664
         },
         {
           "path": "reaction-preferences.mjs",
@@ -162,8 +162,8 @@
         },
         {
           "path": "schedule.mjs",
-          "sha256": "ac33b4f3512a6aa543e0a1f9bf685d85bb88a89fe7b01ffe7c4befa177414b7b",
-          "size": 28715
+          "sha256": "719b6ed8fb5a2bcd254d3efb39d1c74c996e5e24113b52d15197d5e085293755",
+          "size": 31328
         },
         {
           "path": "schedule-model.mjs",
@@ -207,10 +207,10 @@
       "id": "holonet",
       "name": "Holonet",
       "description": "A starship comms console for AgentNet: command navigation across the top, a framed transmission display, a crew panel and a command dock for writing. A brief scanner sweep and split shutters mark what you open, and both stay still when your device asks for less motion. Every chat, topic, agent and setting is still there.",
-      "version": "1.11.1",
+      "version": "1.11.2",
       "api": 1,
       "agentnet": "v0.11.8",
-      "digest": "cf1589f665a4fe0f13a85f891a679f05d4e8354f77a11579a1fdee10cea52467",
+      "digest": "7eabecd300b5d041080a9cc9ced063d053dc95105c86e88375a2a03d6a944d01",
       "files": [
         {
           "path": "skin.json",
@@ -219,8 +219,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "a8f8cd035628571e00bb32b5bbf2cdbad5caba3e2b7016bb08ab3a06cfc12951",
-          "size": 444698
+          "sha256": "7032e024f8464a662c644ac3902fbd83f2ca0e84ad4933f1d28829fbb410f14b",
+          "size": 453448
         },
         {
           "path": "composer-followup.mjs",
@@ -234,13 +234,13 @@
         },
         {
           "path": "style.css",
-          "sha256": "98b64e1ca66c7b481137822f689125f1a081353c33a32b56b8f9fee566d928d5",
-          "size": 79060
+          "sha256": "711928fc41a52315ccf726a390320fbd4b45fc516d5cfbefbb9017b5e494cdc1",
+          "size": 81173
         },
         {
           "path": "template.mjs",
-          "sha256": "918541c5545ed609a4b22e3078ff212162695d7748dec98238cc19dd892a67ff",
-          "size": 15832
+          "sha256": "8fe9d4a20351d819669f27ae7ab1e67ee1bdd75b47ea567140605444baf338e5",
+          "size": 15813
         },
         {
           "path": "typing.mjs",
@@ -284,13 +284,13 @@
         },
         {
           "path": "text-formatting.mjs",
-          "sha256": "4877d0f7cb24292663fec3042fd9f17a02fc2e8dc884c67faa9ee7481b4657b1",
-          "size": 8850
+          "sha256": "2df2420558c5af3fa8b5e73ffa3410e3721ce77a8408802fc9fe3a8a7263d469",
+          "size": 9147
         },
         {
           "path": "message-markdown.mjs",
-          "sha256": "5d01cf0d630f34bbdd511cad719652f2260eb4e86db4a3dffae7ee086e2d8e00",
-          "size": 4989
+          "sha256": "2699bfb3d0d799d60216873f75514e21ceb31bb619940618f4f7f367121889d1",
+          "size": 6664
         },
         {
           "path": "topics.mjs",
@@ -354,8 +354,8 @@
         },
         {
           "path": "schedule.mjs",
-          "sha256": "ac33b4f3512a6aa543e0a1f9bf685d85bb88a89fe7b01ffe7c4befa177414b7b",
-          "size": 28715
+          "sha256": "719b6ed8fb5a2bcd254d3efb39d1c74c996e5e24113b52d15197d5e085293755",
+          "size": 31328
         },
         {
           "path": "schedule-model.mjs",
@@ -401,150 +401,28 @@
       ]
     },
     {
-      "id": "office",
-      "name": "Office",
-      "description": "A plain workplace messenger: white pages, thin hairlines, a dark neutral rail, the device's own font. Green for what you can do, blue for agents. Flat messages, a bordered composer, hairline request cards with a coloured edge. Everything Comic does, without the stickers.",
-      "version": "1.8.3",
-      "api": 1,
-      "agentnet": "v0.11.9",
-      "digest": "eef2446796e4f20b73efb0607643c752551214dee212b3519df42c4060e5d173",
-      "files": [
-        {
-          "path": "skin.json",
-          "sha256": "a0336ef3eeaf4cdffb72c7146d0f458103c3a8f2adbd31fff516688e187d5723",
-          "size": 783
-        },
-        {
-          "path": "entry.mjs",
-          "sha256": "08420b1d2a6cbffb7a9f9fc856a31d2976fdefae985a92dff33f7bf53cca1b55",
-          "size": 1514712
-        },
-        {
-          "path": "style.css",
-          "sha256": "734e33c9ac433605b0019285f0615b43ab4ed69d1e8d18da81fb21355e8b663d",
-          "size": 88701
-        },
-        {
-          "path": "document.css",
-          "sha256": "992f1097d465671d2698924d4c847ad2936fb0d723fdf72b0c6a85a67d050dd7",
-          "size": 3860
-        },
-        {
-          "path": "m/chunks/Composer.video-AAKLROU5.mjs",
-          "sha256": "95c4206340dfaf363d677e46cdc985c7444cf45033656442a6b2011df31a0736",
-          "size": 473119
-        },
-        {
-          "path": "m/chunks/chunk-QSFGMLXL.mjs",
-          "sha256": "af09ca070e75e1165a4e5f899944be6cd72faa37b87d5d7259622e6c8971aaae",
-          "size": 4089
-        },
-        {
-          "path": "m/emoji/en/data.json",
-          "sha256": "ed014f1049bd370c5794f815850156196ac382850f51c3e9f6a9e83553fb3f01",
-          "size": 775157
-        },
-        {
-          "path": "m/emoji/en/messages.json",
-          "sha256": "6bffab078a0d90c4cca03bd3ff1045fdba33a77d31b1408b1cf1c414d7f1ab3c",
-          "size": 6499
-        },
-        {
-          "path": "m/fonts/onest-cyrillic-ext-wght-normal.woff2",
-          "sha256": "268f03691b3d06e57abcf20f9277e314ea8784298983aab5b40c1b91965027e1",
-          "size": 10540
-        },
-        {
-          "path": "m/fonts/onest-cyrillic-wght-normal.woff2",
-          "sha256": "68e5e01d6265bd68967746d4f5a9d18d0e6cbb5d15583c7082d6384ab1229b27",
-          "size": 15860
-        },
-        {
-          "path": "m/fonts/onest-latin-ext-wght-normal.woff2",
-          "sha256": "14e7d3079b75860e2ab50efc6c318c398fdb46ede9b56e625f12ae70a3c5d9a4",
-          "size": 28452
-        },
-        {
-          "path": "m/fonts/onest-latin-wght-normal.woff2",
-          "sha256": "052df74533250c2e0ca0c4bdd32de594e107d99c1648e63820ef9c6142067828",
-          "size": 33760
-        },
-        {
-          "path": "m/fonts/rubik-cyrillic-ext-wght-normal.woff2",
-          "sha256": "35e30483bb79be6fd8de0fec4e038fda9e637fc7337f6ff61418c7d08077878b",
-          "size": 12388
-        },
-        {
-          "path": "m/fonts/rubik-cyrillic-wght-normal.woff2",
-          "sha256": "bdb2b33ab916e9e7b42edb61f8aea5f5dd83ad773d6ee4e9b55665daf8954ce8",
-          "size": 15112
-        },
-        {
-          "path": "m/fonts/rubik-latin-ext-wght-normal.woff2",
-          "sha256": "09472f217ad1ebb61a7669cf532f9f2f80685e07652ee862fde9a79665aef479",
-          "size": 19400
-        },
-        {
-          "path": "m/fonts/rubik-latin-wght-normal.woff2",
-          "sha256": "691cd1d9b4c0cdf31a1dcf04259c86f92c85e69f6622abab7964d81e36890691",
-          "size": 35348
-        },
-        {
-          "path": "m/fonts/twemoji.woff2",
-          "sha256": "5d141786e7df2be7a886855c79d081f11ae469f2776a85b755488e82142a1773",
-          "size": 479168
-        }
-      ],
-      "previews": [
-        {
-          "path": "previews/desktop-light.png",
-          "sha256": "b1521ee9abec4bd1247d8e5b3f1c924acc52bf39af09c93df0f8452549f7ad63",
-          "size": 117816,
-          "alt": "Office on a desktop, light: the chat list beside an open conversation with flat messages"
-        },
-        {
-          "path": "previews/desktop-dark.png",
-          "sha256": "50e862562203b670568f70cfbf5ebaf762a0d0168a90546be90a85920b7b5043",
-          "size": 120826,
-          "alt": "Office on a desktop, dark: the same conversation on dark grey"
-        },
-        {
-          "path": "previews/mobile-light.png",
-          "sha256": "f9056c0b32e8e29117577810c6021caf5420be8d31e32b0b1bc12463120ad174",
-          "size": 58688,
-          "alt": "Office on a phone, light: an open conversation and the composer"
-        },
-        {
-          "path": "previews/mobile-dark.png",
-          "sha256": "91a410f2f9dcd69a2055a7e168e27d5295c1336a81f7ce6bc60e61d93030a7b9",
-          "size": 61471,
-          "alt": "Office on a phone, dark"
-        }
-      ]
-    },
-    {
       "id": "pulp",
       "name": "Pulp",
       "description": "A 1970s paperback by day and a roadside diner by night. Chats read like a table of contents, every topic opens with a chapter card, requests for your OK arrive as a glowing case, and your agents wear costumes. Everything Comic does, in a new look.",
-      "version": "1.10.3",
+      "version": "1.10.4",
       "api": 1,
-      "agentnet": "v0.11.9",
-      "digest": "eb21a3d1a8cc6b073295f0bba0cef79afa8d81ef5a266f1a43fc683b5bf1c0b4",
+      "agentnet": "v0.11.10",
+      "digest": "8bd5ef35bf25ef11ca60d127a294df16b3ecaf31af365a8868d8caffdbf75b6e",
       "files": [
         {
           "path": "skin.json",
-          "sha256": "4029773db8890b8b7db08ad42a3064614b6c538f4f7348efd27b4ff4287add75",
-          "size": 1239
+          "sha256": "ebd0526ef91238e1ff425f103bdb759c900107ca575ca25030f730a027404d87",
+          "size": 1240
         },
         {
           "path": "entry.mjs",
-          "sha256": "d85e92a0004a1e199fafbf1e7f7fb7560ec3871dbd50fe72dc4982b49decbcdb",
-          "size": 1517985
+          "sha256": "107c2c8d1e48fba32c7b168f7536591e6d1f9b686c1ee1d1a33c08b42def57a7",
+          "size": 1533547
         },
         {
           "path": "style.css",
-          "sha256": "0b3f97a2c8b1512572b299f604b1b8b4349483bdfb8fa20e805742af8567090a",
-          "size": 91634
+          "sha256": "b3ffd51dfeb3c0c6cedfdbefbcc8a22aa2a87fbdb03d48661edf6aa3cb2acbc4",
+          "size": 93085
         },
         {
           "path": "document.css",
@@ -688,10 +566,10 @@
       "id": "zoom",
       "name": "Zoom",
       "description": "Move through your workspace by zooming in: everyone, then one person, then a conversation, then a single message with everything known about it. Esc steps back out. You write in a focused dialog, and every chat, topic, agent and setting is still there.",
-      "version": "1.11.1",
+      "version": "1.11.2",
       "api": 1,
       "agentnet": "v0.11.8",
-      "digest": "6e316f75ee4a0a07aa9650e98f495bc0e49044f75ba9162640e693fe8011048a",
+      "digest": "5a22c5b5c60b4252a88951ace31bd027261f7a3fa09596f62e450e2dbbbe7bb4",
       "files": [
         {
           "path": "skin.json",
@@ -700,8 +578,8 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "d274d74b0b83071388ba12360b9200e73783f5d35578ed4c160e4576ceea70f9",
-          "size": 501760
+          "sha256": "c483f48057830c2aa251f05fd67a80f958e8bb3fcbad5e4c69e8a9db5eb1446b",
+          "size": 502082
         },
         {
           "path": "composer-followup.mjs",
@@ -715,8 +593,8 @@
         },
         {
           "path": "style.css",
-          "sha256": "a684cf497933c2be6083665d65cbb5128ccb7266e110329c7b999141dbaae789",
-          "size": 72146
+          "sha256": "4326e34d033ef102efc3fe95a694f61fc1bb3880638d44626bfa0c7be731f251",
+          "size": 73202
         },
         {
           "path": "template.mjs",
@@ -795,13 +673,13 @@
         },
         {
           "path": "text-formatting.mjs",
-          "sha256": "4877d0f7cb24292663fec3042fd9f17a02fc2e8dc884c67faa9ee7481b4657b1",
-          "size": 8850
+          "sha256": "2df2420558c5af3fa8b5e73ffa3410e3721ce77a8408802fc9fe3a8a7263d469",
+          "size": 9147
         },
         {
           "path": "message-markdown.mjs",
-          "sha256": "5d01cf0d630f34bbdd511cad719652f2260eb4e86db4a3dffae7ee086e2d8e00",
-          "size": 4989
+          "sha256": "2699bfb3d0d799d60216873f75514e21ceb31bb619940618f4f7f367121889d1",
+          "size": 6664
         },
         {
           "path": "reaction-preferences.mjs",
@@ -845,8 +723,8 @@
         },
         {
           "path": "schedule.mjs",
-          "sha256": "ac33b4f3512a6aa543e0a1f9bf685d85bb88a89fe7b01ffe7c4befa177414b7b",
-          "size": 28715
+          "sha256": "719b6ed8fb5a2bcd254d3efb39d1c74c996e5e24113b52d15197d5e085293755",
+          "size": 31328
         },
         {
           "path": "schedule-model.mjs",

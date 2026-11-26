@@ -56,6 +56,8 @@ async function open(touch = false) {
   await page.locator('.' + family + '-root').waitFor();
   const peer = await page.evaluate(async id => (await window.agentnet.api('/api/overview')).dms.find(chat => chat.id === id).peer.label, conv);
   await page.locator('#nav-chats').click();
+  // Desktop: pressing the active Chats item hides the list column (MEL-824); press again to show it.
+  if (!zoom && await page.locator('.side[data-hidden]').count()) await page.locator('#nav-chats').click();
   if (zoom) {
     await settled();
     await page.locator('#zoom .ladder .rung').first().click();
@@ -294,6 +296,35 @@ async function desktop() {
     await assertMask(message, revised);
     assert(!(await message.textContent()).includes(secret), 'Original text in Details stays masked');
     await reveal(message, revised, node => node.click(), 'edited');
+    const readSpoiler = ({zoom, messageID, revised, focus}) => {
+      const root = document.querySelector('#skin').shadowRoot;
+      const message = zoom ? root.querySelector('.zoom-layer:last-child .zoom-message') : root.getElementById(messageID);
+      const selected = [...(message?.querySelectorAll('.message-spoiler[aria-pressed="true"]') || [])]
+        .find(node => node.textContent === revised);
+      if (focus) {
+        selected?.focus({preventScroll: true});
+        if (!selected || root.activeElement !== selected) throw Error('The revealed spoiler can receive focus before refresh');
+        return selected;
+      }
+      return {visible: !!selected?.getClientRects().length, focused: !!selected && root.activeElement === selected};
+    };
+    const spoiler = {zoom, messageID, revised};
+    const previousSpoiler = await page.evaluateHandle(readSpoiler, {...spoiler, focus: true});
+    const update = tag + ' while a spoiler is revealed';
+    try {
+      await page.evaluate(([conv, body]) => window.agentnet.api('/api/dm/send', { conv, body }), [conv, update]);
+      if (zoom) {
+        // Zoom's message detail does not show the other conversation rows.
+        await page.waitForFunction(node => !node.isConnected, previousSpoiler);
+      } else {
+        // The host write bypasses the composer. Seeing this exact new row
+        // proves the timeline applied a pushed refresh before we read focus.
+        await list().getByText(update, { exact: true }).waitFor();
+      }
+    } finally { await previousSpoiler.dispose(); }
+    const afterRefresh = await page.evaluate(readSpoiler, spoiler);
+    assert(afterRefresh.visible, 'A live refresh keeps the same spoiler revealed');
+    assert(afterRefresh.focused, 'Refresh keeps focus on the revealed spoiler');
 
     await message.getByRole('button', { name: 'Reply', exact: true }).first().click();
     await assertMask(quote(), revised);
@@ -311,6 +342,7 @@ async function desktop() {
     await send();
     await list().locator(zoom ? 'button.mc-bubble' : '.body-markdown').filter({ hasText: searchWord }).waitFor();
     await page.locator('#nav-chats').click();
+    if (!zoom && await page.locator('.side[data-hidden]').count()) await page.locator('#nav-chats').click();
     await settled();
     await search().fill(searchWord);
     const results = page.locator(zoom ? '.zoom-results .result' : '#conv-list .result');
@@ -348,6 +380,13 @@ async function touch() {
     const a = await editor.boundingBox(), b = await editTrigger.boundingBox();
     assert(b.y >= a.y + a.height && b.height >= 44, 'Edit Formatting is below the field with a 44px target');
     await timed('touch edit menu', () => editTrigger.tap(), () => item('Bold').waitFor());
+    const oldRow = await message.elementHandle();
+    try {
+      await page.evaluate(conv => window.agentnet.api('/api/dm/send', { conv, body: 'Unrelated update during touch formatting' }), conv);
+      await page.waitForFunction(row => !row.isConnected, oldRow);
+    } finally { await oldRow.dispose(); }
+    assert(await item('Bold').isVisible(), 'Formatting stays open across a same-message refresh');
+    assert(await item('Bold').evaluate(node => node.getRootNode().activeElement === node), 'Refresh keeps focus on the formatting choice');
     await screenshot('touch-edit');
     await timed('touch edit action', () => item('Bold').tap(), async () => {
       assert((await editor.inputValue()).includes('||**' + revised + '**||'));

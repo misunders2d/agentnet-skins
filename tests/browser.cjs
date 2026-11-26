@@ -23,7 +23,7 @@ const check=(ok,message)=>{if(!ok)result.failures.push(message);};
 const delayedFileGate=()=>{let release,started;const gate=new Promise(r=>release=r),start=new Promise(r=>started=r);return {release,start,route:async route=>{started();await gate;await route.continue();}};};
 // Classic family (Holonet, Classic and their scaffolds): conversation list, timeline and composer.
 const classic={
- async list(){if(await page.locator('#back').isVisible())await page.locator('#back').click();await page.locator('#nav-chats').click();await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().waitFor();},
+ async list(){if(await page.locator('#back').isVisible())await page.locator('#back').click();await page.locator('#nav-chats').click();if(await page.locator('.side[data-hidden]').count())await page.locator('#nav-chats').click();await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().waitFor();},
  async thread(){await this.list();await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().click();await page.locator('#conv-name').filter({hasText:'Vitalii'}).waitFor();await page.locator('#composer').waitFor();},
  name:n=>page.locator('#conv-list').getByText(n,{exact:true}).first(),
  search:()=>page.locator('#search'),
@@ -73,7 +73,7 @@ const zoom={
 const ui=family==='zoom'?zoom:classic;
 (async()=>{
  browser=await chromium.launch({headless:true,executablePath:process.env.AGENTNET_CHROMIUM||undefined});
- const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
+ const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.stack||e.message));
  await page.addInitScript(()=>{
   const NativeEventSource = window.EventSource;
   let changeStream;
@@ -138,7 +138,8 @@ const ui=family==='zoom'?zoom:classic;
     await page.evaluate(([conv,body])=>window.agentnet.api('/api/dm/send',{conv,body}),[seed.dm_vitalii,sentBody]);
     await bounded(second,'pushed winning GET ('+destination+')');
     result.pushedGetMs.push(Math.round(performance.now() - pushAt));
-    if(destination!=='conversation')await page.locator(destination==='chats'?'#nav-chats':'#review-btn').click();
+    if(destination==='chats')await ui.list();
+    else if(destination==='activity')await page.locator('#review-btn').click();
     releaseSecond();await bounded(done2,'winning response');releaseFirst();await bounded(done1,'older response');
     if(destination==='conversation'){
      await page.locator('#conv-name').filter({hasText:'Vitalii'}).waitFor();await page.locator('#composer').waitFor();
@@ -152,6 +153,34 @@ const ui=family==='zoom'?zoom:classic;
   }
   result.checks.push('Native push before opening response commits the current visit; Chats/Activity invalidate entry intent even when the opening GET wins');
   await page.setViewportSize({width:1440,height:1000});
+  // A winning DM load can paint after beforeunload; its follow-up overview
+  // request is then refused by the host while it waits to see whether we leave.
+  await ui.list();
+  let openStarted, releaseOpen;
+  const opening = new Promise(resolve => { openStarted = resolve; });
+  const held = new Promise(resolve => { releaseOpen = resolve; });
+  const holdOpening = async route => {
+   if (new URL(route.request().url()).searchParams.get('id') !== seed.dm_bohdan) return route.continue();
+   const response = await route.fetch();
+   openStarted();
+   await held;
+   await route.fulfill({response});
+  };
+  await page.route('**/api/dm?*', holdOpening);
+  try {
+   await page.locator('#conv-list').getByText('Bohdan',{exact:true}).first().click();
+   await bounded(opening, 'DM opening before navigation');
+   await page.evaluate(() => window.dispatchEvent(new Event('beforeunload')));
+   releaseOpen();
+   await page.locator('#composer').waitFor();
+   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+   assert.deepEqual(errors, [], 'Opening a DM during pending navigation leaves no rejected promise');
+  } finally {
+   releaseOpen();
+   await page.unrouteAll({behavior:'wait'});
+   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  }
+  result.checks.push('A DM opening survives a navigation that never commits without an unhandled request');
  }
  if(family==='zoom'){
   const bounded=(promise,label)=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error(label+' exceeded the existing 15s bound')),15000);promise.then(v=>{clearTimeout(timer);resolve(v);},e=>{clearTimeout(timer);reject(e);});});
@@ -256,7 +285,14 @@ const ui=family==='zoom'?zoom:classic;
   finally{await page.unroute('**/api/dm/agent/ask',stop);}
   check(asked?.pid===agent.pid&&asked?.kind==='question','One Send from the exact concrete own-agent @ entry reaches that participation');check(asked&&!('reply_receiver' in asked),'An own-device agent is asked without a default reply receiver');
   check(await ui.asking(),'A failed ask keeps its assistant with the restored text');await shot('own-agent-ask');
-  await ui.reopen();check((await ui.draft()).includes('Own agent '+runID)&&await ui.asking(),'The restored ask (text and assistant) is kept as the draft across leaving and reopening the chat');
+  await ui.reopen();
+  const restoredText=(await ui.draft()).includes('Own agent '+runID);
+  // Reopening restores the target ID with the draft. Its verified display
+  // name can arrive separately, after the composer is already visible.
+  const restoredAssistant=family==='zoom'?await ui.asking():await page.locator('#send').and(page.getByRole('button',{
+   name:'Ask '+fixtureAgentNames.get(agent.pid).replace(/^Your/,'your'),exact:true,
+  })).waitFor().then(()=>true,()=>false);
+  check(restoredText&&restoredAssistant,'The restored ask (text and assistant) is kept as the draft across leaving and reopening the chat');
   await ui.clear();
   // Retrying a failed ask to A while drafting for B: the retry goes to A and
   // shows A, and B's draft and target stay. B is a synthetic second assistant

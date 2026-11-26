@@ -23,3 +23,37 @@ test('phone tap measures its center after scroll-triggered layout, and rejects r
   }
  }finally{await browser.close();}
 });
+
+test('touch formatting stays tappable when a redraw moves its editor offscreen', async () => {
+ const {chromium}=require(process.env.AGENTNET_PLAYWRIGHT||'playwright');
+ const browser=await chromium.launch({executablePath:process.env.AGENTNET_CHROMIUM||undefined});
+ try {
+  const page=await browser.newPage({viewport:{width:390,height:620},hasTouch:true,isMobile:true});
+  for(const id of ['classic','holonet','zoom']){
+   const css=fs.readFileSync(path.join(collection,'skins',id,'src','style.css'),'utf8');
+   await page.setContent(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>${css}</style><main style="position:fixed;inset:0;overflow:auto">
+    <div style="height:1400px"></div><div class="format-field"><textarea>Selected text</textarea>
+    <div class="format-menu" popover="manual" role="menu"><button role="menuitem">Bold</button></div></div></main>`);
+   const geometry=await page.evaluate(async () => {
+    const timeline=document.querySelector('main'),field=document.querySelector('.format-field');
+    const menu=field.querySelector('.format-menu'),button=menu.querySelector('button');
+    button.addEventListener('click',event=>{if(event.isTrusted)button.dataset.tapped='true';});
+    timeline.scrollTop=timeline.scrollHeight;
+    menu.showPopover();
+    // Reattach the existing editor and restore its open menu as the skins do.
+    field.remove();
+    timeline.append(field);
+    timeline.scrollTop=0;
+    menu.showPopover();
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    return {fieldTop:field.getBoundingClientRect().top,height:innerHeight,button:button.getBoundingClientRect().toJSON()};
+   });
+   assert(geometry.fieldTop>=geometry.height, id+' fixture moves the editor below the viewport');
+   assert(geometry.button.top>=0 && geometry.button.bottom<=geometry.height && geometry.button.height>=44,
+    id+' has no tappable Bold action after redraw: '+JSON.stringify(geometry));
+   await page.getByRole('menuitem',{name:'Bold',exact:true}).tap({timeout:1100});
+   assert.equal(await page.getByRole('menuitem',{name:'Bold',exact:true}).getAttribute('data-tapped'),'true');
+  }
+ } finally {await browser.close();}
+});

@@ -11,6 +11,57 @@ const zone=()=>Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
 const freezeAudience=a=>Object.freeze({...a,persons:Object.freeze([...(a.persons||[])]),pids:Object.freeze([...(a.pids||[])])});
 const defaultAudience=a=>[...(a.persons||[]).map(id=>'Verified participant ('+id.slice(0,8)+')'),...(a.pids||[]).map(id=>'Invited participant ('+id.slice(0,8)+')')].join(', ')||'No recipients';
 
+
+// Group invitations send the same verified message references shown here.
+export function inviteHistorySince(el, mode, shareable) {
+  const [day, clock] = localScheduleTime(new Date(Date.now() - 24 * 3600e3)).split("T");
+  const date = el("input", { type: "date", value: day });
+  const time = el("input", { type: "time", value: clock });
+  const status = el("p", { class: "hint", role: "status" });
+  const selection = () => {
+    const local = date.value + "T" + time.value;
+    const cutoff = new Date(local);
+    if (!Number.isFinite(cutoff.getTime()) || localScheduleTime(cutoff) !== local) {
+      throw Error("Choose a valid local date and time.");
+    }
+    if (cutoff.getTime() > Date.now()) throw Error("Choose a date and time up to now.");
+    return shareable.filter(message => Date.parse(message.at) >= cutoff.getTime());
+  };
+  const update = () => {
+    try {
+      const matches = selection(), picked = matches.slice(-64);
+      const first = picked[0] && new Date(picked[0].at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+      status.textContent = first
+        ? (matches.length > picked.length ? "Newest 64 of " + matches.length + " messages" : picked.length + (picked.length === 1 ? " message" : " messages")) + " to share, starting " + first + "."
+        : "No messages to share since then.";
+    } catch (error) {
+      status.textContent = error.message;
+    }
+  };
+  const presets = el("div", { class: "an-schedule-nav" },
+    ["Last hour", "Today", "Yesterday"].map(label => el("button", {
+      type: "button", class: "an-hit", onclick: () => {
+        const now = new Date();
+        const cutoff = label === "Last hour" ? new Date(now.getTime() - 3600e3)
+          : new Date(now.getFullYear(), now.getMonth(), now.getDate() - (label === "Yesterday" ? 1 : 0));
+        [date.value, time.value] = localScheduleTime(cutoff).split("T");
+        update();
+      }
+    }, label)));
+  const fields = el("fieldset", { class: "an-schedule-time an-invite-since", hidden: true },
+    el("legend", {}, "Share messages since"),
+    presets,
+    el("div", { class: "an-schedule-fields" }, el("label", {}, "Date", date), el("label", {}, "Time", time)),
+    el("p", { class: "hint" }, "Local timezone: " + zone() + ". Up to 64 available messages."),
+    status);
+  for (const input of [date, time]) input.addEventListener("input", update);
+  mode.addEventListener("change", () => {
+    fields.hidden = mode.value !== "since";
+    if (!fields.hidden) update();
+  });
+  return { fields, history: () => ({ refs: selection().slice(-64).map(message => message.group_ref) }) };
+}
+
 export function mountSchedule({root,host,owner,context,capture,getDraft,setDraft,audienceText=defaultAudience,topicText=()=> 'Named topic',subscribe,isCurrent=()=>true,onBlockingChange,outboxRoot,onOutboxChange,chatText=()=> 'Chat',getDrafts=()=>[],resumeDraft,getReminders=()=>[],getReminderStatus=()=>[],openOriginalSave}) {
   if(typeof owner!=='string'||!owner)throw Error('Supply the creating skin draft namespace.');
   const doc=root.ownerDocument,win=doc.defaultView,handle=host.workspace.handle;

@@ -10,11 +10,11 @@ export function messageMarkdown(text, { el, mention, compact = false }) {
   // Most timeline entries are plain messages and need no Markdown token tree.
   if (!compact && !/[\\`*_~[\]<>!&#\n\r|^:@\t]|www\.|^ {4}|^ {0,3}(?:[-+=]|\d{1,9}[.)]\s)/i.test(text)) return [el("p", {}, text)];
   function spoiler(text) {
-    const toggle = () => {
-      const open = control.getAttribute("aria-pressed") !== "true";
+    const setOpen = open => {
       control.setAttribute("aria-pressed", String(open));
       control.replaceChildren(...(open ? inline(markdownInlineTokens(text)) : [hiddenText]));
     };
+    const toggle = () => setOpen(control.getAttribute("aria-pressed") !== "true");
     const control = el("span", { class: "message-spoiler", role: "button", tabindex: "0", "aria-pressed": "false",
       onclick: event => {
         const link = event.target.closest("a[href]");
@@ -28,6 +28,7 @@ export function messageMarkdown(text, { el, mention, compact = false }) {
         event.stopPropagation();
         toggle();
       } }, hiddenText);
+    control.setSpoilerOpen = setOpen;
     return control;
   }
 
@@ -89,4 +90,45 @@ export function messageMarkdown(text, { el, mention, compact = false }) {
   }
 
   return blocks(markdownTokens(text, compact ? "mask" : "reveal"));
+}
+
+
+// A live refresh creates new message nodes. Carry a reveal only to the same
+// message and exact displayed revision inside the caller's current view.
+const spoilerSelector = '.message-spoiler';
+export function captureMessageSpoilers(view, active) {
+  const open = new Map();
+  for (const control of view.querySelectorAll(spoilerSelector + '[aria-pressed="true"]')) {
+    const body = control.closest('.body-markdown');
+    const source = body?.spoilerSource;
+    if (!source) continue;
+    if (!open.has(source.id)) open.set(source.id, { source, indexes: [], focused: -1 });
+    const saved = open.get(source.id);
+    const index = [...body.querySelectorAll(spoilerSelector)].indexOf(control);
+    saved.indexes.push(index);
+    if (control === active) saved.focused = index;
+  }
+  return open;
+}
+
+export function restoreMessageSpoilers(view, open) {
+  if (!open.size) return false;
+  let focused = false;
+  for (const body of view.querySelectorAll('.body-markdown')) {
+    const source = body.spoilerSource;
+    const saved = source && open.get(source.id);
+    if (!saved || saved.source.dir !== source.dir || saved.source.from !== source.from ||
+        saved.source.revision !== source.revision || saved.source.text !== source.text) continue;
+    const controls = body.querySelectorAll(spoilerSelector);
+    for (const index of saved.indexes) {
+      const control = controls[index];
+      if (!control?.setSpoilerOpen) continue;
+      control.setSpoilerOpen(true);
+      if (index === saved.focused) {
+        control.focus({ preventScroll: true });
+        focused = true;
+      }
+    }
+  }
+  return focused;
 }

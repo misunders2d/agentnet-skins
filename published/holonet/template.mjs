@@ -59,7 +59,7 @@ export const markup = `
 
     <div class="search">
       <label class="sr-only" for="search">Search people, agents and conversations</label>
-      <input id="search" type="search" placeholder="Search people, agents and conversations" autocomplete="off" spellcheck="false">
+      <input id="search" type="search" placeholder="Search conversations" autocomplete="off" spellcheck="false">
     </div>
           <div id="review" class="review" hidden>
             <h2>Waiting for your decision</h2>

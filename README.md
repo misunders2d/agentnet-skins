@@ -12,11 +12,10 @@ Portable interfaces for [AgentNet](https://github.com/misunders2d/agentnet). Bui
 | [Classic](skins/classic) | AgentNet’s original interface: chat list beside the open conversation, with topics, people, agents, activity and settings. Built into AgentNet up to v0.8.24; lives here from v0.8.25. | Screenshots, source and installable build |
 | [Zoom](skins/zoom) | Zoom through the workspace: everyone, one person, one conversation, one message; Esc steps back out; writing happens in a focused dialog. Built into AgentNet up to v0.8.24; lives here from v0.8.25. | Screenshots, source and installable build |
 | [Pulp](skins/pulp) | An overlay skin on Comic: a 1970s paperback by day and a roadside diner by night. Chats read like a table of contents, topics open with chapter cards, requests for your OK arrive as a case, and agents wear costumes. Everything Comic does. | Screenshots, overlay source and installable build |
-| [Office](skins/office) | A plain workplace messenger: white pages, thin hairlines, a dark neutral rail, the device's own font, flat messages and a bordered composer. An overlay skin on Comic: everything Comic does, without the stickers. | Screenshots, overlay source and installable build |
 
 Each skin’s own README links real rendered screenshots covering desktop/mobile and supported themes, and records their actual capture revision. Keep this root catalogue compact; put previews and skin-specific guidance in `skins/<id>/`. Use synthetic content with invented names, label the tested revision, and refresh previews when visible behavior changes. A gallery entry without a preview is incomplete; a preview never replaces compatibility tests. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-From v0.8.25 AgentNet keeps only **Comic** built in. Comic is also the base of every *overlay skin* below.
+AgentNet ships **Comic** and **Office**. Office is maintained in AgentNet itself. Its [gallery source and previews through v0.11.9](https://github.com/misunders2d/agentnet-skins/tree/7a4e38c2efc2592974397574ba9c239b8e08b8df/skins/office) remain in that release's history. Comic is the base of every overlay skin.
 
 ## Three kinds of skin
 

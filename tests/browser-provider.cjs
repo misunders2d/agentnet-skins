@@ -18,7 +18,7 @@ const ui=family==='zoom'?{
  sent:text=>z().locator('.mini-chat').getByText(text,{exact:true}),
  async fileView(name){await settled();await z().locator('button.mc-bubble').filter({hasText:name}).click();await z().locator('.zoom-message').waitFor();await settled();return z().locator('.zoom-message');},
 }:{
- async list(){if(await page.locator('#back').isVisible())await page.locator('#back').click();await page.locator('#nav-chats').click();await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().waitFor();},
+ async list(){if(await page.locator('#back').isVisible())await page.locator('#back').click();await page.locator('#nav-chats').click();if(await page.locator('.side[data-hidden]').count())await page.locator('#nav-chats').click();await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().waitFor();},
  async thread(){await page.locator('#conv-list').getByText('Vitalii',{exact:true}).first().click();await page.locator('#composer').waitFor();},
  async send(text,file){if(file)await page.locator('#file-input').setInputFiles(file);if(text)await page.locator('#body').fill(text);await page.locator('#composer').evaluate(f=>f.requestSubmit());},
  sent:text=>page.locator('#timeline').getByText(text,{exact:true}),

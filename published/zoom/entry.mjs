@@ -4,14 +4,14 @@ import {mountVideoFile,videoFileName} from './video-file.mjs';
 import {mountFileFetch,waitsForTap} from './file-fetch.mjs';
 import {sniffVideo} from './pictures.mjs';
 import {unreadReview} from './unread-review.mjs';
-import {mountSchedule} from './schedule.mjs';
+import {inviteHistorySince,mountSchedule} from './schedule.mjs';
 import { composerFollowup, currentComposerFollowup, composerReplyFollowup, replyFollowupAgent, currentDirectComposerFollowup, sameFollowup, concreteAgentLabel, directBinding, directChatKey, sameDirectAgent, ComposerRecovery, directTopicQuery, directAgentKey } from "./composer-followup.mjs";
 import { nativeRequestItem } from "./native-request.mjs";
 import { reactionChoices, recordReaction, humanReactionOrder } from "./reaction-preferences.mjs";
 import {collectiveOptions, parseCollective, collectiveHref} from './collective-mentions.mjs';
 import { maskSpoilers, previewText, portableLink } from "./link-text.mjs";
-import { formattingField, restoreMessageEdits } from "./text-formatting.mjs";
-import { messageMarkdown } from "./message-markdown.mjs";
+import { captureMessageEdits, formattingField, restoreMessageEdits } from "./text-formatting.mjs";
+import { captureMessageSpoilers, messageMarkdown, restoreMessageSpoilers } from "./message-markdown.mjs";
 function niceGoogleDevice(address) { const name = String(address || "").split("/").pop() || "device"; return name.charAt(0).toUpperCase() + name.slice(1); }
 import { avatarPicture, openPictureEditor, pastePictures } from "./pictures.mjs";
 import { topicControls } from './topics.mjs';
@@ -1895,22 +1895,23 @@ function inviteGroupDialog(t, initialPerson) {
   const person = el("select", { id: "group-invite-person" }, people.map(p => el("option", { value: p.person }, p.label + (p.email ? " · " + p.email : ""))));
   if (initialPerson) { if (!people.some(p => p.person === initialPerson)) { announce("That person is no longer eligible. Review current group members and people."); return; } person.value = initialPerson; }
   const selection = groupPeopleSelection(t, host, gen, ws, null, () => { person.disabled = true; });
-  const mode = el("select", { id: "group-history-mode" }, el("option", { value: "none" }, "Share nothing earlier"), el("option", { value: "last" }, "Last messages"), el("option", { value: "since" }, "Messages since a date"), el("option", {value:"selected"},"Selected messages"));
+  const mode = el("select", { id: "group-history-mode" }, el("option", { value: "none" }, "Share nothing earlier"), el("option", { value: "last" }, "Last messages"), el("option", { value: "since" }, "Share messages since"), el("option", {value:"selected"},"Selected messages"));
   const last = el("input", { id: "group-history-last", type: "number", min: 1, max: 64, value: "10" });
-  const since = el("input", { id: "group-history-since", type: "datetime-local" });
+  const available = (t.messages || []).filter(m => m.group_ref);
+  const shareable = available.slice(-64);
+  const since = inviteHistorySince(el, mode, available);
   dialog({ title: "Invite to " + t.title, ok: "Send invitation", focus: person,
     body: [el("label", { for: "group-invite-person", class: "field-label" }, "Single person (people list selection below)"), person, ...selection.nodes,
       !people.length && el("p", { class: "hint" }, "No other pinned person available. Open a person's conversation to check their device first."),
       el("label", { for: "group-history-mode", class: "field-label" }, "Earlier context"), mode,
       el("label", { for: "group-history-last" }, "Last messages (up to 64)"), last,
-      el("label", { for: "group-history-since" }, "Since"), since,
-      el("fieldset",{class:"share-choices"},el("legend",{},"Selected messages (up to 64)"),(t.messages || []).filter(m=>m.group_ref).slice(-64).map(m=>choice("checkbox","group-history-selected",m.id,el("span",{},dmAuthor(m,t)+": "+(firstLine(m.body,70)||"Files only"),(m.attachments || []).length>0&&el("span",{class:"kind-tag"},"Includes "+plural(m.attachments.length,"file","files")))).row)),
+      since.fields,
+      el("fieldset",{class:"share-choices"},el("legend",{},"Selected messages (up to 64)"),shareable.map(m=>choice("checkbox","group-history-selected",m.id,el("span",{},dmAuthor(m,t)+": "+(firstLine(m.body,70)||"Files only"),(m.attachments || []).length>0&&el("span",{class:"kind-tag"},"Includes "+plural(m.attachments.length,"file","files")))).row)),
       el("p", { class: "hint" }, "Selected messages include their attached files. An invitation grants no access until that person accepts; other history stays private.")],
     run: async () => {
       if (!selection.current() || state.dm !== t.id) throw Error("Conversation changed; review the invitation again.");
       const selected=new Set([...root.querySelectorAll('input[name="group-history-selected"]:checked')].map(n=>n.value));
-      const history = mode.value === "last" ? { last: Number(last.value) } : mode.value === "since" ? { since: new Date(since.value).getTime() } : mode.value==="selected"?{refs:t.messages.filter(m=>selected.has(m.id)).map(m=>m.group_ref)}:{};
-      if (mode.value === "since" && !Number.isFinite(history.since)) throw Error("Choose a valid date.");
+      const history = mode.value === "last" ? { last: Number(last.value) } : mode.value === "since" ? since.history() : mode.value==="selected"?{refs:t.messages.filter(m=>selected.has(m.id)).map(m=>m.group_ref)}:{};
       const targets = selection.reviewed() ? selection.persons() : [person.value];
       if (!targets.length || targets.some(p => !p)) throw Error("Choose at least one person to invite.");
       for (const target of targets) {
@@ -4368,7 +4369,10 @@ const lineOf = (m, n) => firstLine(isReport(m) ? reportText(m) : m.body || "(fil
 
 function bodyOf(m) {
   const body = messageBody(m);
-  if (canDo(m, "edit")) body.editSource = { dir: m.dir, revision: m.revision, text: shownText(m) };
+  const text = shownText(m);
+  if (body.classList.contains("body-markdown") && text?.includes("||"))
+    body.spoilerSource = { id: m.id, dir: m.dir, from: m.from, revision: m.revision, text };
+  if (canDo(m, "edit")) body.editSource = { dir: m.dir, revision: m.revision, text };
   return body;
 }
 
@@ -6582,7 +6586,8 @@ const Zoom = {
     const surface = $("zoom"), focused = root.getRootNode().activeElement;
     const ownedFocus = !!focused && surface.contains(focused);
     const oldContent = surface.querySelector(".zoom-layer:last-child .zoom-content");
-    const edits = this.level === 3 && oldContent ? oldContent.querySelectorAll(".edit-box") : [];
+    const edits = this.level === 3 && oldContent ? captureMessageEdits(oldContent) : [];
+    const spoilers = this.level === 3 && oldContent ? captureMessageSpoilers(oldContent, focused) : null;
     const scroll = oldContent?.scrollTop || 0;
     const atEnd = oldContent && oldContent.scrollHeight - scroll - oldContent.clientHeight < 60;
     const expanded = [...surface.querySelectorAll(".zoom-layer:last-child details[open]")].map(d => d.dataset.person || d.dataset.keep).filter(Boolean);
@@ -6595,6 +6600,7 @@ const Zoom = {
     if(entry&&currentDM&&!groupContextWaiting())visit.opening=null;
     const content = surface.querySelector(".zoom-content");
     const editFocused = edits.length > 0 && restoreMessageEdits(edits, content, focused);
+    const spoilerFocused = spoilers && restoreMessageSpoilers(content, spoilers);
     for (const d of surface.querySelectorAll("details[data-person], details[data-keep]")) d.open = expanded.includes(d.dataset.person || d.dataset.keep);
     placeUnreadDivider(content,state.readVisit,state.dm?state.dmData:state.data,state.dm?"dm":"thread");
     content.scrollTop = this.level === 2 && (atEnd || this.revealEnd) ? content.scrollHeight : scroll;
@@ -6604,7 +6610,7 @@ const Zoom = {
       const search = surface.querySelector(".zoom-search");
       search.focus({preventScroll: true});
       search.setSelectionRange(...selection);
-    } else if (ownedFocus && !editFocused) {
+    } else if (ownedFocus && !editFocused && !spoilerFocused) {
       const match = focusMenu ? surface.querySelector('details[data-keep="' + CSS.escape(focusMenu) + '"] > summary')
         : focusText && [...surface.querySelectorAll("button")].find(b => !b.disabled && b.textContent === focusText);
       if (match) match.focus({preventScroll: true}); else focusZoomLayer(surface);

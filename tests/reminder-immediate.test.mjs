@@ -34,11 +34,29 @@ test('standalone reminder controls reconcile delayed, failed and newer state wit
   await reminderLine.getByRole('button',{name:'Remind me…',exact:true}).focus();
   await page.evaluate(()=>fixture.empty());
   assert(await reminderLine.getByRole('button',{name:'Remind me…',exact:true}).evaluate(el=>el===el.getRootNode().activeElement),'unchanged reminder refresh lost Remind me focus');
+  const completionMs=[];
   for(const count of [100,1000]){
    await page.evaluate(n=>fixture.reset(n),count);
    const line=page.locator('#line');
-   const start=Date.now();await line.getByRole('button',{name:'Done',exact:true}).click();await line.getByText('Completing reminder…',{exact:true}).waitFor({timeout:500});
-   assert(Date.now()-start<500);assert.equal(await page.locator('#badge').innerText(),'0');assert.equal(await page.evaluate(()=>fixture.canonical().revision),7);
+   await line.evaluate(node=>{
+    window.reminderFeedback=new Promise(resolve=>{
+     node.addEventListener('click',event=>{
+      const measure=()=>{
+       const elapsed=performance.now()-event.timeStamp;
+       const status=node.querySelector('[role=status]');
+       const visible=status?.textContent==='Completing reminder…'&&status.getClientRects().length&&getComputedStyle(status).visibility==='visible';
+       if(visible||elapsed>=500)resolve(elapsed);
+       else requestAnimationFrame(measure);
+      };
+      requestAnimationFrame(measure);
+     },{capture:true,once:true});
+    });
+   });
+   await line.getByRole('button',{name:'Done',exact:true}).click();
+   const feedback=await page.evaluate(()=>window.reminderFeedback);
+   assert(feedback<500,`${skin} ${width} with ${count} reminders: completing feedback took ${feedback.toFixed(0)} ms`);
+   completionMs.push(Math.round(feedback));
+   assert.equal(await page.locator('#badge').innerText(),'0');assert.equal(await page.evaluate(()=>fixture.canonical().revision),7);
    await page.evaluate(()=>{fixture.act('/api/remind/done');fixture.act('/api/remind/done');});assert.equal(await page.evaluate(()=>fixture.calls.length),1);
    await page.getByRole('textbox',{name:'Unrelated draft'}).fill('Kept while backend waits');
    await page.evaluate(()=>fixture.finish(true));await line.getByRole('status').filter({hasText:'Write refused'}).waitFor();assert.equal(await page.locator('#badge').innerText(),'1');
@@ -57,6 +75,6 @@ test('standalone reminder controls reconcile delayed, failed and newer state wit
   await page.evaluate(()=>{fixture.switchWorkspace();fixture.finish(true);});
   await page.waitForFunction(()=>document.querySelector('#line').textContent==='Remind me…');
   assert.deepEqual(await page.evaluate(()=>fixture.notices),[],'old workspace failure leaked into current workspace');
-  assert.deepEqual(errors,[]);console.log(skin+' '+width+': delayed/duplicate/create/done/cancel/move/failure/retry/newer/read-only confirmation/workspace fence, 100 and 1000 reminders');await page.close();
+  assert.deepEqual(errors,[]);console.log(skin+' '+width+': delayed/duplicate/create/done/cancel/move/failure/retry/newer/read-only confirmation/workspace fence, 100 and 1000 reminders; completing feedback '+completionMs.join('/')+' ms');await page.close();
  }}finally{await browser.close();}
 });

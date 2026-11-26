@@ -218,11 +218,11 @@ const runTag = crypto.randomBytes(4).toString('hex');
 const messageShot = async (page, skin, {chat = false} = {}) => {
   if (chat) {
     // Zoom's conversation level writes each sent time into the bubble's author
-    // line instead of a <time> element. Every fixture message was sent today,
-    // so each must show today's clock time (a year-one time shows a date).
+    // line instead of a <time> element. A run that crosses midnight also has
+    // yesterday's messages. A year-one time shows a date.
     const who=await page.locator('#zoom .mini-chat .mc-bubble > .mc-who:first-child').allTextContents();
     assert.ok(who.length>0,skin+': rendered sent time exists');
-    assert.ok(who.every(t=>/· \d{1,2}:\d{2}(?:\s?[AP]M)?$/i.test(t.trim())),skin+': no year-one sent time '+JSON.stringify(who));
+    assert.ok(who.every(t=>/· (?:Yesterday )?\d{1,2}:\d{2}(?:\s?[AP]M)?$/i.test(t.trim())),skin+': no year-one sent time '+JSON.stringify(who));
   } else {
     const times=await page.locator('time[datetime]').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('datetime')));
     assert.ok(times.length>0,skin+': rendered sent time exists');

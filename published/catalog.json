@@ -407,7 +407,7 @@
       "version": "1.10.5",
       "api": 1,
       "agentnet": "v0.11.13",
-      "digest": "9d1b2c8399d0fe21e6d9eccfe1e5196637e1c094d253407c60278cfb3810592a",
+      "digest": "fc9a65622f44ccdb32878f508e3ecaedc02de405604256007cb67984dba74fad",
       "files": [
         {
           "path": "skin.json",
@@ -416,13 +416,13 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "914bf64436d31b382108bdfca3b2e5465afd99fcd58cc7cfbc9dd06a6e666257",
-          "size": 1538608
+          "sha256": "cbb6236ccae1ddd90bd88c8f96dd0dff1a8774cd5ef7f9ae094fc7a457637c3a",
+          "size": 1542164
         },
         {
           "path": "style.css",
-          "sha256": "3c890489c2b8e4e3979b8eec6624f1d3904bf69f1501394dbfaa72ff6fb8745d",
-          "size": 93571
+          "sha256": "33819771a739a73d8d474ec7549523a3233c83d7fcd65a45795a9b204d615dc6",
+          "size": 93393
         },
         {
           "path": "document.css",

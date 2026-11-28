@@ -407,7 +407,7 @@
       "version": "1.10.5",
       "api": 1,
       "agentnet": "v0.11.13",
-      "digest": "fc9a65622f44ccdb32878f508e3ecaedc02de405604256007cb67984dba74fad",
+      "digest": "fa46e4bb06a6a17629c933b15d16adeabe6219e8cebe388eceff2c8c1045b5ba",
       "files": [
         {
           "path": "skin.json",
@@ -416,18 +416,18 @@
         },
         {
           "path": "entry.mjs",
-          "sha256": "cbb6236ccae1ddd90bd88c8f96dd0dff1a8774cd5ef7f9ae094fc7a457637c3a",
-          "size": 1542164
+          "sha256": "f49e5265410e296d19d0dc93b4a7c699e7d70e43a9603458af72c0eeeb67107a",
+          "size": 1554945
         },
         {
           "path": "style.css",
-          "sha256": "33819771a739a73d8d474ec7549523a3233c83d7fcd65a45795a9b204d615dc6",
-          "size": 93393
+          "sha256": "658d2570f7375736065977dde15c748820f06f33475dc0e9f84ed3d0bcb44218",
+          "size": 94009
         },
         {
           "path": "document.css",
-          "sha256": "a6b4e4175d17d0733377b080bc2b59d1d5a0257dba6ca0d46e2f90863c7779c0",
-          "size": 9415
+          "sha256": "9a32be87b274b54f1bece87d239328a565344e86e94141b3657d7aacd92b35d2",
+          "size": 9564
         },
         {
           "path": "m/chunks/Composer.video-AAKLROU5.mjs",
